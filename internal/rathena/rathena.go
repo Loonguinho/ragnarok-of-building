@@ -88,6 +88,9 @@ type DB struct {
 	StatPoints  []int // index: base level - 1, total points at that level
 	TraitPoints []int // index: base level - 1, total trait points (4th jobs)
 	Items       map[int]*Item
+	// Refine[group][equipLevel][refine] = cumulative bonus in 1/100
+	// (group: Armor, Weapon, Shadow_Armor, Shadow_Weapon).
+	Refine map[string]map[int][]int
 }
 
 // Load reads the files under dir (data/rathena).
@@ -162,6 +165,42 @@ func Load(dir string) (*DB, error) {
 		}
 		db.StatPoints[e.Level-1] = e.Points
 		db.TraitPoints[e.Level-1] = e.TraitPoints
+	}
+
+	var rf struct {
+		Body []struct {
+			Group  string `yaml:"Group"`
+			Levels []struct {
+				Level        int `yaml:"Level"`
+				RefineLevels []struct {
+					Level int `yaml:"Level"`
+					Bonus int `yaml:"Bonus"`
+				} `yaml:"RefineLevels"`
+			} `yaml:"Levels"`
+		} `yaml:"Body"`
+	}
+	if err := readYAML(filepath.Join(re, "refine.yml"), &rf); err != nil {
+		return nil, err
+	}
+	db.Refine = map[string]map[int][]int{}
+	for _, g := range rf.Body {
+		if db.Refine[g.Group] == nil {
+			db.Refine[g.Group] = map[int][]int{}
+		}
+		for _, l := range g.Levels {
+			tbl := make([]int, 21)
+			for _, r := range l.RefineLevels {
+				if r.Level >= 1 && r.Level <= 20 {
+					tbl[r.Level] = r.Bonus
+				}
+			}
+			for i := 1; i <= 20; i++ { // carry forward if a level is missing
+				if tbl[i] == 0 {
+					tbl[i] = tbl[i-1]
+				}
+			}
+			db.Refine[g.Group][l.Level] = tbl
+		}
 	}
 
 	for _, f := range []string{"item_db_equip.yml", "item_db_etc.yml"} {

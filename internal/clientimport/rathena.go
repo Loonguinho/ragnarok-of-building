@@ -12,6 +12,7 @@ import (
 func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 	c.StatPoints = db.StatPoints
 	c.TraitPoints = db.TraitPoints
+	c.Refine = db.Refine
 	if db.Commit != "" {
 		c.Source += " + rAthena " + db.Commit[:min(8, len(db.Commit))]
 	}

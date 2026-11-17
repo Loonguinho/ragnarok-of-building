@@ -148,10 +148,12 @@ type Catalog struct {
 	Source    string        `json:"source"`
 	Items     map[int]*Item `json:"items"`
 	// Total status/trait points at each base level (index: level - 1), from rAthena.
-	StatPoints  []int          `json:"statPoints,omitempty"`
-	TraitPoints []int          `json:"traitPoints,omitempty"`
-	Skills      map[int]*Skill `json:"skills"`
-	Jobs        map[int]*Job   `json:"jobs"`
+	StatPoints  []int `json:"statPoints,omitempty"`
+	TraitPoints []int `json:"traitPoints,omitempty"`
+	// Refine[group][equipLevel][refine] = cumulative bonus in 1/100 (rAthena refine.yml).
+	Refine map[string]map[int][]int `json:"refine,omitempty"`
+	Skills map[int]*Skill           `json:"skills"`
+	Jobs   map[int]*Job             `json:"jobs"`
 }
 
 // Chain returns the job's ancestry from the root (Novice) to the job itself.

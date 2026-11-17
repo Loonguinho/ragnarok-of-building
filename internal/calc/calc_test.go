@@ -165,6 +165,34 @@ func TestNormalizeClassRestriction(t *testing.T) {
 	}
 }
 
+func TestSkillPoints(t *testing.T) {
+	c := novice()
+	c.Jobs[0].Code = "JT_NOVICE"
+	c.Jobs[0].Tree = map[int]int{0: 1, 7: 142}
+	c.Skills = map[int]*gamedata.Skill{
+		1:   {ID: 1, MaxLv: 9},
+		142: {ID: 142, MaxLv: 1, Type: "Quest"},
+		5:   {ID: 5, MaxLv: 10}, // not in the novice tree
+	}
+	b := Build{Job: 0, BaseLv: 1, JobLv: 10, Stats: [6]int{1, 1, 1, 1, 1, 1},
+		Skills: map[int]int{1: 50, 142: 1, 5: 3}}
+	Normalize(&b, c)
+	if b.Skills[1] != 9 || b.Skills[142] != 1 || len(b.Skills) != 2 {
+		t.Fatalf("skills not normalized: %v", b.Skills)
+	}
+	// 9 points for Basic Skill at job 10 fit; the quest skill is free.
+	if gi := SkillPointCheck(b, c); gi != -1 {
+		t.Errorf("job 10: over budget at step %d", gi)
+	}
+	b.JobLv = 5 // only 4 points
+	if gi := SkillPointCheck(b, c); gi != 0 {
+		t.Errorf("job 5: expected over budget at step 0, got %d", gi)
+	}
+	if r := Compute(b, c); len(r.Warnings) == 0 {
+		t.Error("no warning for skill points over budget")
+	}
+}
+
 func TestOverBudget(t *testing.T) {
 	c := novice()
 	b := Build{Job: 0, BaseLv: 1, JobLv: 1, Stats: [6]int{30, 1, 1, 1, 1, 1}}

@@ -149,6 +149,7 @@ func importSkills(a *grf.Archive, base env, c *gamedata.Catalog) error {
 			SP:    ints(row.Get("SpAmount")),
 			Range: ints(row.Get("AttackRange")),
 			Needs: reqs(row.Get("_NeedSkillList")),
+			Type:  str(row.Get("Type")),
 		}
 		if byJob, ok := row.Get("NeedSkillList").(*lua51.Table); ok {
 			s.NeedsByJob = map[int][]gamedata.Req{}

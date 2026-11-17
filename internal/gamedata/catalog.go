@@ -108,7 +108,13 @@ type Skill struct {
 	// specific jobs (the client's NeedSkillList).
 	Needs      []Req         `json:"needs,omitempty"`
 	NeedsByJob map[int][]Req `json:"needsByJob,omitempty"`
+	// Type from the client: "Quest" (learned by quest) or "Soul" (granted by
+	// Soul Link). Such skills cost no skill points.
+	Type string `json:"type,omitempty"`
 }
+
+// Free reports whether the skill costs no skill points.
+func (s *Skill) Free() bool { return s.Type == "Quest" || s.Type == "Soul" }
 
 // NeedsFor returns the prerequisites that apply to a job chain (closest job first).
 func (s *Skill) NeedsFor(chain []int) []Req {
@@ -192,6 +198,45 @@ type Catalog struct {
 	Refine map[string]map[int][]int `json:"refine,omitempty"`
 	Skills map[int]*Skill           `json:"skills"`
 	Jobs   map[int]*Job             `json:"jobs"`
+}
+
+// SkillGroup is one class step's skill tabs and its skill point budget.
+type SkillGroup struct {
+	Jobs   []int `json:"jobs"`
+	Budget int   `json:"budget"` // -1 = unknown (no job tables imported)
+}
+
+// SkillBudgets splits a job's chain into class steps with their skill point
+// budgets (renewal): max job level - 1 for completed steps, current job
+// level - 1 for the last one (jobLv <= 0 means max). A class and its
+// transcendent version (KNIGHT, KNIGHT_H) share one step. Leftover points
+// carry forward, so callers check cumulative sums per step.
+func (c *Catalog) SkillBudgets(jobID, jobLv int) []SkillGroup {
+	chain := c.Chain(jobID)
+	var groups []SkillGroup
+	for i, id := range chain {
+		j := c.Jobs[id]
+		if i > 0 && len(groups) > 0 {
+			prev := c.Jobs[chain[i-1]]
+			if j.Code == prev.Code+"_H" { // transcendent version: same step
+				groups[len(groups)-1].Jobs = append(groups[len(groups)-1].Jobs, id)
+				continue
+			}
+		}
+		groups = append(groups, SkillGroup{Jobs: []int{id}})
+	}
+	for gi := range groups {
+		last := c.Jobs[groups[gi].Jobs[len(groups[gi].Jobs)-1]]
+		switch {
+		case last.MaxJobLv == 0:
+			groups[gi].Budget = -1
+		case gi == len(groups)-1 && jobLv > 0:
+			groups[gi].Budget = max(0, min(jobLv, last.MaxJobLv)-1)
+		default:
+			groups[gi].Budget = last.MaxJobLv - 1
+		}
+	}
+	return groups
 }
 
 // Chain returns the job's ancestry from the root (Novice) to the job itself.

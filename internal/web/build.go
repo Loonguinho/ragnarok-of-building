@@ -178,7 +178,7 @@ func (s *Server) handleBuild(w http.ResponseWriter, r *http.Request) {
 	}
 	v := s.buildView(b, l)
 	s.render(w, r, "build", map[string]any{"Title": "Build — " + v.JobName, "Lang": l, "V": v,
-		"Skills": s.skillTreeData(v.Build.Job, l, v.Build.Skills)})
+		"Skills": s.skillTreeData(v.Build.Job, v.Build.JobLv, l, v.Build.Skills)})
 }
 
 // POST /build/calc: JSON build in, JSON with re-rendered window fragments out.
@@ -193,7 +193,8 @@ func (s *Server) handleBuildCalc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v := s.buildView(b, lang(r))
-	out := map[string]any{"build": v.Build, "code": v.Code, "notes": v.Notes, "html": map[string]string{}}
+	out := map[string]any{"build": v.Build, "code": v.Code, "notes": v.Notes, "html": map[string]string{},
+		"skillGroups": s.opt.Catalog.SkillBudgets(v.Build.Job, v.Build.JobLv)}
 	for _, name := range []string{"build_status", "build_basic", "build_equip", "build_bonus"} {
 		html, err := s.fragmentString("build", name, v)
 		if err != nil {
@@ -214,7 +215,7 @@ func (s *Server) handleBuildSkills(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	job, _ := strconv.Atoi(r.URL.Query().Get("job"))
-	d := s.skillTreeData(job, lang(r), nil)
+	d := s.skillTreeData(job, atoi(r.URL.Query().Get("joblv")), lang(r), nil)
 	if d == nil {
 		http.NotFound(w, r)
 		return
@@ -277,12 +278,19 @@ func (s *Server) fragmentString(page, name string, data any) (string, error) {
 }
 
 // skillTreeData prepares the skill window for a job (shared by /skills and /build).
-func (s *Server) skillTreeData(jobID int, l string, levels map[int]int) map[string]any {
+func (s *Server) skillTreeData(jobID, jobLv int, l string, levels map[int]int) map[string]any {
 	c := s.opt.Catalog
 	if _, ok := c.Jobs[jobID]; !ok {
 		return nil
 	}
 	chain := c.Chain(jobID)
+	groups := c.SkillBudgets(jobID, jobLv)
+	groupOf := map[int]int{}
+	for gi, g := range groups {
+		for _, id := range g.Jobs {
+			groupOf[id] = gi
+		}
+	}
 	js := map[int]skillJS{}
 	var tabs []skillTab
 	for _, id := range chain {
@@ -311,14 +319,16 @@ func (s *Server) skillTreeData(jobID int, l string, levels map[int]int) map[stri
 			for _, n := range sk.NeedsFor(chain) {
 				needs = append(needs, [2]int{n.Skill, n.Level})
 			}
-			js[sid] = skillJS{Max: sk.MaxLv, Needs: needs}
+			if _, seen := js[sid]; !seen { // a skill shown in two tabs belongs to the first
+				js[sid] = skillJS{Max: sk.MaxLv, Needs: needs, Group: groupOf[id], Free: sk.Free()}
+			}
 		}
 		tabs = append(tabs, skillTab{JobID: id, Name: j.Name.Get(l), Rows: rows})
 	}
 	if levels == nil {
 		levels = map[int]int{}
 	}
-	return map[string]any{"Tabs": tabs, "Tree": map[string]any{"job": jobID, "skills": js, "levels": levels}}
+	return map[string]any{"Tabs": tabs, "Tree": map[string]any{"job": jobID, "skills": js, "levels": levels, "groups": groups}}
 }
 
 func signed(v int, key string) string {

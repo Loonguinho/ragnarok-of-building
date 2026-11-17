@@ -30,6 +30,8 @@ type jobOption struct {
 type skillJS struct {
 	Max   int      `json:"max"`
 	Needs [][2]int `json:"needs,omitempty"`
+	Group int      `json:"g"`              // index into the skill point groups
+	Free  bool     `json:"free,omitempty"` // quest/soul skills cost no points
 }
 
 func (s *Server) handleSkills(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +60,7 @@ func (s *Server) handleSkills(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Slice(opts, func(i, k int) bool { return opts[i].ID < opts[k].ID })
 
-	d := s.skillTreeData(jobID, l, nil)
+	d := s.skillTreeData(jobID, 0, l, nil)
 	data["Jobs"] = opts
 	data["JobID"] = jobID
 	data["JobName"] = c.Jobs[jobID].Name.Get(l)

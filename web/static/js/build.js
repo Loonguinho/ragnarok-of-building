@@ -45,6 +45,7 @@
       build.k = build.k || {};
       code = data.code;
       for (const n of data.notes || []) say(n, true);
+      if (skillTree && data.skillGroups) skillTree.setGroups(data.skillGroups);
       for (const [id, html] of Object.entries(data.html)) {
         const el = document.getElementById(id);
         if (el) el.innerHTML = html;
@@ -261,17 +262,18 @@
 
   // ---- skills window ----
   const skillWin = document.getElementById("win-skills");
+  let skillTree = null;
   function initSkills() {
     const root = skillWin.querySelector("[data-tree]");
     if (!root || !window.ROSkillTree) return;
     const data = JSON.parse(root.dataset.tree);
-    window.ROSkillTree.init(skillWin, data, {
+    skillTree = window.ROSkillTree.init(skillWin, data, {
       levels: build.k,
       onChange: (lv) => { build.k = lv; persistSoon(); },
     });
   }
   async function loadSkills(job) {
-    const res = await fetch("/build/skills?job=" + job + "&lang=" + lang);
+    const res = await fetch("/build/skills?job=" + job + "&joblv=" + (build.jl || 0) + "&lang=" + lang);
     if (!res.ok) return;
     document.getElementById("skill-body").innerHTML = await res.text();
     initSkills();

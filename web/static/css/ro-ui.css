@@ -282,3 +282,5 @@ a { color: #1d4fa8; }
   .ro-equip--real .ro-equip__sprite { display: none; }
   .ro-bonuscols { grid-template-columns: 1fr; }
 }
+
+.ro-skillmsg { color: #b42318; font-style: normal; margin-left: 6px; }

@@ -165,8 +165,67 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 	if w, ok := b.Equip[Weapon]; ok && c.Items[w.Item].HasLocation("Both_Hand") {
 		delete(b.Equip, Shield)
 	}
+	normalizeSkills(b, c)
 	slices.Sort(notes)
 	return slices.Compact(notes) // multi-slot items are reported once
+}
+
+// treeSkills maps every skill in a job chain's tabs to its class step index.
+func treeSkills(c *gamedata.Catalog, job int) map[int]int {
+	out := map[int]int{}
+	for gi, g := range c.SkillBudgets(job, 0) {
+		for _, id := range g.Jobs {
+			for _, sk := range c.Jobs[id].Tree {
+				if _, ok := out[sk]; !ok {
+					out[sk] = gi
+				}
+			}
+		}
+	}
+	return out
+}
+
+// normalizeSkills drops skills outside the job's trees and clamps levels.
+func normalizeSkills(b *Build, c *gamedata.Catalog) {
+	if len(b.Skills) == 0 {
+		return
+	}
+	allowed := treeSkills(c, b.Job)
+	for id, lv := range b.Skills {
+		sk := c.Skills[id]
+		if _, ok := allowed[id]; !ok || sk == nil || lv <= 0 {
+			delete(b.Skills, id)
+			continue
+		}
+		b.Skills[id] = min(lv, sk.MaxLv)
+	}
+}
+
+// SkillPointCheck returns the first class step whose cumulative skill points
+// exceed the budget (renewal: leftovers carry forward), or -1 if all fit.
+func SkillPointCheck(b Build, c *gamedata.Catalog) int {
+	groups := c.SkillBudgets(b.Job, b.JobLv)
+	for _, g := range groups {
+		if g.Budget < 0 {
+			return -1
+		}
+	}
+	used := make([]int, len(groups))
+	allowed := treeSkills(c, b.Job)
+	for id, lv := range b.Skills {
+		if sk := c.Skills[id]; sk != nil && !sk.Free() {
+			used[allowed[id]] += lv
+		}
+	}
+	u, budget := 0, 0
+	for i, g := range groups {
+		u += used[i]
+		budget += g.Budget
+		if u > budget {
+			return i
+		}
+	}
+	return -1
 }
 
 // Fits reports whether an item can be equipped in a slot.
@@ -425,6 +484,10 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	}
 	if r.Points < 0 {
 		r.Warnings = append(r.Warnings, "pontos de atributo insuficientes")
+	}
+	if gi := SkillPointCheck(b, c); gi >= 0 {
+		g := c.SkillBudgets(b.Job, b.JobLv)[gi]
+		r.Warnings = append(r.Warnings, "pontos de habilidade insuficientes até "+c.Jobs[g.Jobs[len(g.Jobs)-1]].Name.Get("pt"))
 	}
 	if r.TraitPoints < 0 {
 		r.Warnings = append(r.Warnings, "pontos de traço insuficientes")

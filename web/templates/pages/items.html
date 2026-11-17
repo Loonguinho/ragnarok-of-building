@@ -1,0 +1,62 @@
+{{define "content"}}
+{{if .NoCatalog}}
+<section class="ro-window ro-window--fixed ro-center-box" style="width:340px">
+  <header class="ro-window__title">[Kafra]</header>
+  <div class="ro-window__body ro-npc">
+    Os dados do jogo ainda não foram importados.<br><br>
+    Rode <b>go run ./cmd/import</b> e reinicie o servidor.
+  </div>
+  <footer class="ro-window__footer"><a class="ro-btn" href="/">Fechar</a></footer>
+</section>
+{{else}}
+<section class="ro-window ro-itemsearch" id="win-items" data-hotkey="e" style="left:24px;top:24px">
+  <header class="ro-window__title">Itens <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <div class="ro-skillwin__bar">
+    <form class="ro-search" action="/items" method="get" onsubmit="return false">
+      <input type="hidden" name="lang" value="{{.Lang}}">
+      <input class="ro-input" type="search" name="q" value="{{.Q}}" placeholder="Nome ou ID…" autocomplete="off" autofocus
+             hx-get="/items/search" hx-trigger="input changed delay:200ms, search" hx-target="#item-results"
+             hx-include="closest form" hx-push-url="false" aria-label="Buscar item">
+    </form>
+    <nav class="ro-lang">
+      <a href="?lang=pt&q={{.Q}}"{{if eq .Lang "pt"}} class="is-active"{{end}}>PT</a>
+      <a href="?lang=es&q={{.Q}}"{{if eq .Lang "es"}} class="is-active"{{end}}>ES</a>
+      <a href="?lang=en&q={{.Q}}"{{if eq .Lang "en"}} class="is-active"{{end}}>EN</a>
+    </nav>
+  </div>
+  <div class="ro-window__body">
+    <ul class="ro-list ro-itemlist" id="item-results">{{template "item_results" .}}</ul>
+  </div>
+  <footer class="ro-window__footer"><span>{{.Count}} itens no banco</span></footer>
+</section>
+
+<div id="item-info">{{with .Item}}{{template "item_info" .}}{{end}}</div>
+{{end}}
+{{end}}
+
+{{define "item_results"}}
+{{range .Results}}
+<li class="ro-list__item ro-itemrow" tabindex="0"
+    hx-get="/items/{{.ID}}?lang={{.Lang}}" hx-target="#item-info" hx-trigger="click, keyup[key=='Enter']">
+  <img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="24" height="24" loading="lazy">
+  <span>{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}</span>
+  <small>#{{.ID}}</small>
+</li>
+{{else}}
+<li class="ro-list__empty">{{if .Q}}Nenhum item encontrado.{{else}}Digite o nome de um item (PT, ES ou EN) ou o ID.{{end}}</li>
+{{end}}
+{{end}}
+
+{{define "item_info"}}
+<section class="ro-window ro-iteminfo" id="win-iteminfo" style="left:400px;top:24px">
+  <header class="ro-window__title">{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}} <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <div class="ro-window__body ro-iteminfo__body">
+    <div class="ro-iteminfo__icon"><img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="48" height="48"></div>
+    <div class="ro-iteminfo__desc">{{roText .Desc}}</div>
+  </div>
+  <footer class="ro-window__footer">
+    <span>ID {{.ID}}</span>
+    <a class="ro-btn" href="https://www.divine-pride.net/database/item/{{.ID}}" target="_blank" rel="noopener">Divine Pride</a>
+  </footer>
+</section>
+{{end}}

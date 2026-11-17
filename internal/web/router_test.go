@@ -13,6 +13,11 @@ import (
 
 func testCatalog() *gamedata.Catalog {
 	return &gamedata.Catalog{
+		Items: map[int]*gamedata.Item{
+			4001: {ID: 4001, Name: gamedata.Text{"pt": "Carta Poring", "en": "Poring Card"},
+				Desc: gamedata.Lines{"pt": {"^0000ffSOR +2^000000"}}},
+			1201: {ID: 1201, Name: gamedata.Text{"pt": "Faca"}, Slots: 3},
+		},
 		Skills: map[int]*gamedata.Skill{
 			1: {ID: 1, Name: gamedata.Text{"pt": "Habilidades Básicas"}, MaxLv: 9},
 			5: {ID: 5, Name: gamedata.Text{"pt": "Golpe Fulminante"}, MaxLv: 10,
@@ -51,6 +56,13 @@ func TestRoutes(t *testing.T) {
 		{"/skills?job=7", "Impacto de Tyr"},
 		{"/skills?job=7", `"needs":[[5,10]]`},
 		{"/skills?job=7", `<span style="color:#777777">Ataque</span> &lt;forte&gt;`},
+		{"/items", "2 itens no banco"},
+		{"/items?q=faca", "Faca [3]"},
+		{"/items/search?q=poring+card", "Carta Poring"},
+		{"/items/search?q=poring&lang=en", "Poring Card"},
+		{"/items/search?q=zzz", "Nenhum item encontrado"},
+		{"/items/4001", `<span style="color:#0000ff">SOR +2</span>`},
+		{"/items?id=4001", "win-iteminfo"},
 	}
 	for _, c := range cases {
 		code, body := get(t, h, c.path)
@@ -61,6 +73,13 @@ func TestRoutes(t *testing.T) {
 		if !strings.Contains(body, c.want) {
 			t.Errorf("%s: body missing %q", c.path, c.want)
 		}
+	}
+}
+
+func TestItemNotFound(t *testing.T) {
+	s, _ := New(Options{Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Catalog: testCatalog()})
+	if code, _ := get(t, s.Routes(), "/items/999999"); code != http.StatusNotFound {
+		t.Errorf("status %d, want 404", code)
 	}
 }
 

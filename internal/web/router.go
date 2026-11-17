@@ -31,6 +31,7 @@ type Server struct {
 	opt   Options
 	fsys  fs.FS
 	pages map[string]*template.Template
+	items *gamedata.ItemIndex
 }
 
 // New parses templates (once, unless Dev).
@@ -44,6 +45,9 @@ func New(opt Options) (*Server, error) {
 		return nil, err
 	}
 	s.pages = pages
+	if opt.Catalog != nil {
+		s.items = gamedata.NewItemIndex(opt.Catalog)
+	}
 	return s, nil
 }
 
@@ -84,6 +88,9 @@ func (s *Server) Routes() http.Handler {
 	r.Get("/", s.simple("home", "Ragnarok of Building"))
 	r.Get("/uikit", s.simple("uikit", "RO UI Kit"))
 	r.Get("/skills", s.handleSkills)
+	r.Get("/items", s.handleItems)
+	r.Get("/items/search", s.handleItemSearch)
+	r.Get("/items/{id}", s.handleItemInfo)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
 	return r
 }

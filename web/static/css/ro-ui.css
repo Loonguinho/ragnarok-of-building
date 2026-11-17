@@ -201,3 +201,21 @@ a { color: #1d4fa8; }
   .ro-skill--empty { display: none; }
   .ro-hint { display: none; }
 }
+
+/* ---------- item search + item info ---------- */
+.ro-itemsearch { width: 360px; }
+.ro-search { flex: 1; }
+.ro-input { width: 100%; height: 20px; padding: 0 6px; font: 11px var(--ro-font); border: 1px solid var(--ro-border); border-radius: 2px; background: #fff; }
+.ro-input:focus { outline: 1px solid var(--ro-select); }
+.ro-itemlist { height: 380px; overflow-y: auto; }
+.ro-itemrow { display: flex; align-items: center; gap: 6px; }
+.ro-itemrow img { flex: none; object-fit: contain; image-rendering: pixelated; }
+.ro-itemrow span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ro-itemrow small { color: #888; }
+.ro-list__empty { padding: 8px; color: #777; }
+.ro-iteminfo { width: 340px; }
+.ro-iteminfo__body { display: flex; gap: 8px; align-items: flex-start; }
+.ro-iteminfo__icon { flex: none; width: 56px; height: 56px; display: grid; place-items: center; background: #fff; border: 1px solid #b7bcc6; }
+.ro-iteminfo__icon img { image-rendering: pixelated; }
+.ro-iteminfo__desc { flex: 1; max-height: 360px; overflow-y: auto; background: #fff; border: 1px solid #b7bcc6; padding: 5px 6px; user-select: text; }
+@media (max-width: 720px) { .ro-itemlist { height: 50vh; } }

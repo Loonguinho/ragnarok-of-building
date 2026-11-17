@@ -59,6 +59,13 @@
   document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".ro-window").forEach(init);
 
+    // Windows swapped in by HTMX (e.g. item info) get the same behavior.
+    document.body.addEventListener("htmx:afterSwap", (e) => {
+      const root = e.detail.target;
+      const wins = root.matches(".ro-window") ? [root] : root.querySelectorAll(".ro-window");
+      wins.forEach((w) => { w.classList.remove("is-hidden"); init(w); focus(w); });
+    });
+
     document.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-toggle]");
       if (!btn) return;

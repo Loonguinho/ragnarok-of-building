@@ -71,6 +71,8 @@ func TestRoutes(t *testing.T) {
 		{"/items/search?q=zzz", "Nenhum item encontrado"},
 		{"/items/4001", `<span style="color:#0000ff">SOR +2</span>`},
 		{"/items?id=4001", "win-iteminfo"},
+		{"/items/search?type=weapon", "Faca [3]"},
+		{"/items/search?type=card&q=carta", "Carta Fabre"},
 	}
 	for _, c := range cases {
 		code, body := get(t, h, c.path)
@@ -140,6 +142,17 @@ func TestBuild(t *testing.T) {
 	}
 	if code, _ := get(t, h, "/build?b=%%%"); code != http.StatusOK {
 		t.Errorf("broken share code should fall back to a default build, got %d", code)
+	}
+}
+
+func TestItemTypeFilterExcludes(t *testing.T) {
+	s, _ := New(Options{Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Catalog: testCatalog()})
+	_, body := get(t, s.Routes(), "/items/search?type=card&q=faca")
+	if strings.Contains(body, "Faca") {
+		t.Error("card filter returned a weapon")
+	}
+	if _, body := get(t, s.Routes(), "/items/search"); !strings.Contains(body, "escolha um tipo") {
+		t.Error("empty search should show the hint")
 	}
 }
 

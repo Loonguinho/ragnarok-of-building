@@ -17,6 +17,10 @@
       <input class="ro-input" type="search" name="q" value="{{.Q}}" placeholder="Nome ou ID…" autocomplete="off" autofocus
              hx-get="/items/search" hx-trigger="input changed delay:200ms, search" hx-target="#item-results"
              hx-include="closest form" hx-push-url="false" aria-label="Buscar item">
+      <select class="ro-select" name="type" aria-label="Tipo" hx-get="/items/search" hx-trigger="change"
+              hx-target="#item-results" hx-include="closest form">
+        {{range .Types}}<option value="{{index . 0}}"{{if eq (index . 0) $.Type}} selected{{end}}>{{index . 1}}</option>{{end}}
+      </select>
     </form>
     <nav class="ro-lang">
       <a href="?lang=pt&q={{.Q}}"{{if eq .Lang "pt"}} class="is-active"{{end}}>PT</a>
@@ -43,7 +47,7 @@
   <small>#{{.ID}}</small>
 </li>
 {{else}}
-<li class="ro-list__empty">{{if .Q}}Nenhum item encontrado.{{else}}Digite o nome de um item (PT, ES ou EN) ou o ID.{{end}}</li>
+<li class="ro-list__empty">{{if or .Q .Type}}Nenhum item encontrado.{{else}}Digite o nome de um item (PT, ES ou EN) ou o ID, ou escolha um tipo.{{end}}</li>
 {{end}}
 {{end}}
 

@@ -6,16 +6,27 @@ Stack: Go (chi) · HTMX + Go templates · SQLite · data from the LATAM client i
 
 ## Running
 
-You need the RO LATAM client installed (default `C:\Gravity\Ragnarok`) to generate the game data:
+You need the RO LATAM client installed (default `C:\Gravity\Ragnarok`). Then, once:
 
 ```powershell
-go run ./cmd/import                 # reads the client -> data/gen/catalog.json.gz (~1.5 s)
-go run ./cmd/server                 # http://localhost:8080
+go run ./cmd/fetchrathena   # downloads rAthena's tables (GPL-3.0) to data/rathena (not committed)
+go run ./cmd/import         # client + rAthena -> data/gen/catalog.json.gz (~2 s)
+```
+
+and every time:
+
+```powershell
+go run ./cmd/server         # http://localhost:8080
 go test ./...
 ```
 
-- `/` is the home screen (server-select style)
-- `/skills` is the skill tree window, using real client data. Pick a job, click to add a point (Shift+click for max), right-click to remove one. Prerequisites are filled in automatically.
+Re-run `go run ./cmd/import` after each game patch.
+
+**Pages**
+- `/` is the home screen, styled as the RO server-select screen
+- `/build` is the **build editor**, with Basic Info (Alt+V), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S) and Bonuses (Alt+B). The build lives in the URL, so copy the link to share it.
+- `/items` is the item database (PT/ES/EN search, filter by type)
+- `/skills` is a standalone skill tree
 - `/uikit` is the RO UI kit
 
 ### Development (hot reload)
@@ -32,17 +43,18 @@ To also reload on **Go** changes, install [Air](https://github.com/air-verse/air
 go run ./cmd/grftool C:/Gravity/Ragnarok/data.grf find skilltree       # list files in the GRF
 go run ./cmd/lubdump C:/Gravity/Ragnarok/System/iteminfo_new.lub tbl 4001
 go run ./cmd/dpcheck                                                   # test the Divine Pride key (.env)
+go run ./cmd/scriptcov                                                 # how much of the item scripts the calculator applies
 ```
 
 ## Roadmap
 
 - [x] Phase 0: scaffold + RO UI kit
 - [x] Phase 1: client data import (items, skills, trees, jobs in PT/ES/EN)
-- [ ] Phase 2: build model, stats, HP/SP/ASPD
+- [x] Phase 2: build model, stats, HP/SP/ASPD, traits (rAthena renewal formulas)
 - [~] Phase 3: in-game-style skill tree (real client data; point limits pending)
-- [ ] Phase 4: equipment, cards, enchants, refine
+- [~] Phase 4: equipment, cards, refine, class restrictions (enchants/combos pending)
 - [ ] Phase 5: damage engine + golden tests
-- [ ] Phase 6: share codes, accounts, saved builds
+- [~] Phase 6: share links + last build restored (accounts/saved builds pending)
 - [ ] Phase 6b: import items from a replay (`.rrf`)
 - [ ] Phase 7: compare + optimizer
 - [ ] Phase 8: polish

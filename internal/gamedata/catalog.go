@@ -74,6 +74,9 @@ type Item struct {
 
 // HasLocation reports whether the item can go in a slot location.
 func (it *Item) HasLocation(loc string) bool {
+	if it == nil {
+		return false
+	}
 	for _, l := range it.Locations {
 		if l == loc {
 			return true

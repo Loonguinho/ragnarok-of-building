@@ -31,7 +31,7 @@ func novice() *gamedata.Catalog {
 		}},
 		Items: map[int]*gamedata.Item{
 			1201: {ID: 1201, Type: "Weapon", SubType: "Dagger", Locations: []string{"Right_Hand"}, Attack: 17, WeaponLv: 1, Refineable: true},
-			2301: {ID: 2301, Type: "Armor", Locations: []string{"Armor"}, Defense: 10, ArmorLv: 1, Refineable: true},
+			2301: {ID: 2301, Type: "Armor", Locations: []string{"Armor"}, Defense: 10, ArmorLv: 1, Refineable: true, Slots: 1},
 			4001: {ID: 4001, Type: "Card", Locations: []string{"Armor"}, Script: "bonus bLuk,2;\nbonus bFlee2,1;"},
 			5000: {ID: 5000, Type: "Armor", Locations: []string{"Head_Top", "Head_Mid"}, Defense: 3,
 				Script: "bonus bMaxHPrate,10;\nbonus2 bAddRace,RC_All,5;"},
@@ -116,6 +116,34 @@ func TestNormalizeClamps(t *testing.T) {
 	}
 	if len(b.Equip) != 1 || b.Equip[Armor].Refine != 20 {
 		t.Errorf("equip not cleaned: %+v", b.Equip)
+	}
+}
+
+func TestNormalizeEquipRules(t *testing.T) {
+	c := novice()
+	c.Items[1201].Slots = 3
+	c.Items[1151] = &gamedata.Item{ID: 1151, Type: "Weapon", SubType: "2hSword", Locations: []string{"Both_Hand"}}
+	c.Items[2101] = &gamedata.Item{ID: 2101, Type: "Armor", Locations: []string{"Left_Hand"}}
+	b := Build{Job: 0, BaseLv: 1, JobLv: 1, Stats: [6]int{1, 1, 1, 1, 1, 1}, Equip: map[string]Equip{
+		Weapon:  {Item: 1201, Cards: [4]int{4001, 0, 0, 4001}}, // armor card on a weapon; slot 4 doesn't exist
+		Armor:   {Item: 1201},                                  // a weapon in the armor slot
+		HeadTop: {Item: 2301},                                  // armor in a head slot
+	}}
+	Normalize(&b, c)
+	if _, ok := b.Equip[Armor]; ok {
+		t.Error("weapon kept in armor slot")
+	}
+	if _, ok := b.Equip[HeadTop]; ok {
+		t.Error("armor kept in head slot")
+	}
+	if b.Equip[Weapon].Cards != [4]int{} {
+		t.Errorf("invalid cards kept: %v", b.Equip[Weapon].Cards)
+	}
+	b2 := Build{Job: 0, BaseLv: 1, JobLv: 1, Stats: [6]int{1, 1, 1, 1, 1, 1},
+		Equip: map[string]Equip{Weapon: {Item: 1151}, Shield: {Item: 2101}}}
+	Normalize(&b2, c)
+	if _, ok := b2.Equip[Shield]; ok {
+		t.Error("shield kept with a two-handed weapon")
 	}
 }
 

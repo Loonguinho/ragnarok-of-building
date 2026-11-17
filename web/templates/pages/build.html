@@ -1,0 +1,242 @@
+{{define "content"}}
+{{if .NoCatalog}}
+<section class="ro-window ro-window--fixed ro-center-box" style="width:360px">
+  <header class="ro-window__title">[Kafra]</header>
+  <div class="ro-window__body ro-npc">
+    Os dados do jogo ainda não foram importados.<br><br>
+    Rode <b>go run ./cmd/fetchrathena</b> e depois <b>go run ./cmd/import</b>, e reinicie o servidor.
+  </div>
+  <footer class="ro-window__footer"><a class="ro-btn" href="/">Fechar</a></footer>
+</section>
+{{else}}
+{{with .V}}
+<!-- Basic Info (Alt+V) -->
+<section class="ro-window ro-basic" id="win-basic" data-hotkey="v" style="left:16px;top:16px;width:250px">
+  <header class="ro-window__title">Informações Básicas</header>
+  <div class="ro-window__body" id="build_basic">{{template "build_basic" .}}</div>
+</section>
+
+<!-- Status (Alt+A) -->
+<section class="ro-window ro-statuswin" id="win-status" data-hotkey="a" style="left:16px;top:208px;width:360px">
+  <header class="ro-window__title">Atributos <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <div class="ro-window__body" id="build_status">{{template "build_status" .}}</div>
+</section>
+
+<!-- Equipment (Alt+Q) -->
+<section class="ro-window ro-equipwin" id="win-equip" data-hotkey="q" style="left:392px;top:16px;width:420px">
+  <header class="ro-window__title">Equipamentos <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <div id="build_equip">{{template "build_equip" .}}</div>
+</section>
+
+<!-- Bonuses -->
+<section class="ro-window ro-bonuswin" id="win-bonus" data-hotkey="b" style="left:392px;top:392px;width:420px">
+  <header class="ro-window__title">Bônus do Equipamento <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <div class="ro-window__body" id="build_bonus">{{template "build_bonus" .}}</div>
+</section>
+
+<!-- Slot editor + item picker (opened from Equipment) -->
+<section class="ro-window ro-slotwin is-hidden" id="win-slot" style="left:828px;top:16px;width:340px">
+  <header class="ro-window__title"><span data-slot-title>Equipamento</span> <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <div class="ro-window__body" id="slot-body"></div>
+  <div class="ro-skillwin__bar">
+    <input class="ro-input" type="search" id="pick-q" placeholder="Buscar item…" autocomplete="off" aria-label="Buscar">
+  </div>
+  <div class="ro-window__body"><ul class="ro-list ro-itemlist ro-picklist" id="pick-results"></ul></div>
+  <footer class="ro-window__footer"><span id="pick-mode">Escolha um item</span></footer>
+</section>
+{{end}}
+
+<!-- Skills (Alt+S) -->
+<section class="ro-window ro-skillwin is-hidden" id="win-skills" data-hotkey="s" data-managed="1" style="left:828px;top:16px">
+  <header class="ro-window__title">Habilidades <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <div id="skill-body">{{with .Skills}}{{template "skill_tree" .}}{{end}}</div>
+</section>
+
+<div class="ro-tooltip" id="ro-tooltip" hidden></div>
+<script>window.BUILD = {build: {{.V.Build}}, code: {{.V.Code}}, lang: {{.Lang}}};</script>
+<script src="/static/js/skilltree.js" defer></script>
+<script src="/static/js/build.js" defer></script>
+{{end}}
+{{end}}
+
+{{define "build_basic"}}
+<div class="ro-basic__name"><b>{{.JobName}}</b></div>
+<div class="ro-basic__lv">Base Lv. {{.Build.BaseLv}} · Classe Lv. {{.Build.JobLv}}</div>
+<div class="ro-bar ro-bar--hp"><span style="width:100%"></span><em>HP {{.R.HP}} / {{.R.HP}}</em></div>
+<div class="ro-bar ro-bar--sp"><span style="width:100%"></span><em>SP {{.R.SP}} / {{.R.SP}}</em></div>
+{{if .Job.Fourth}}<div class="ro-bar ro-bar--ap"><span style="width:100%"></span><em>AP {{.R.AP}}</em></div>{{end}}
+<div class="ro-bar ro-bar--exp"><span style="width:{{pct .Build.BaseLv .R.MaxBaseLv}}%"></span><em>Base {{.Build.BaseLv}}/{{.R.MaxBaseLv}}</em></div>
+<div class="ro-bar ro-bar--exp"><span style="width:{{pct .Build.JobLv .R.MaxJobLv}}%"></span><em>Classe {{.Build.JobLv}}/{{.R.MaxJobLv}}</em></div>
+<div class="ro-basic__menu">
+  <button class="ro-btn" data-toggle="win-status" title="Alt+A">Atrib</button>
+  <button class="ro-btn" data-toggle="win-equip" title="Alt+Q">Equip</button>
+  <button class="ro-btn" data-toggle="win-skills" title="Alt+S">Habil</button>
+  <button class="ro-btn" data-toggle="win-bonus" title="Alt+B">Bônus</button>
+</div>
+<div class="ro-basic__menu">
+  <button class="ro-btn" data-copy-link>Copiar link</button>
+  <button class="ro-btn" data-new-build>Novo</button>
+  <a class="ro-btn" href="/">Sair</a>
+</div>
+{{end}}
+
+{{define "build_status"}}
+<div class="ro-statusform">
+  <label>Classe
+    <select class="ro-select" data-field="job">
+      {{range .Jobs}}<option value="{{.ID}}"{{if .Selected}} selected{{end}}>{{.Name}}</option>{{end}}
+    </select>
+  </label>
+  <label>Base <input class="ro-input ro-num" type="number" min="1" max="{{.R.MaxBaseLv}}" value="{{.Build.BaseLv}}" data-field="base"></label>
+  <label>Classe <input class="ro-input ro-num" type="number" min="1" max="{{.R.MaxJobLv}}" value="{{.Build.JobLv}}" data-field="joblv"></label>
+</div>
+<div class="ro-status">
+  <table class="ro-stats">
+    {{range $i, $s := .R.Stats}}
+    <tr>
+      <th>{{index $.StatName $i}}</th>
+      <td class="ro-stats__val">{{$s.Base}}</td>
+      <td class="ro-stats__bonus">{{if $s.Bonus}}+{{$s.Bonus}}{{end}}</td>
+      <td class="ro-stats__btns">
+        <button class="ro-minus" data-stat="{{$i}}" data-delta="-1" aria-label="-{{index $.StatName $i}}"{{if le $s.Base 1}} disabled{{end}}>−</button><button class="ro-plus" data-stat="{{$i}}" data-delta="1" aria-label="+{{index $.StatName $i}}"{{if not $s.Cost}} disabled{{end}}>+</button>
+      </td>
+      <td class="ro-stats__req">{{if $s.Cost}}{{$s.Cost}}{{end}}</td>
+    </tr>
+    {{end}}
+  </table>
+  <table class="ro-derived">
+    <tr><th>ATQ</th><td>{{.R.StatusATK}} + {{.R.EquipATK}}</td></tr>
+    <tr><th>ATQM</th><td>{{.R.MATKMin}} + {{.R.EquipMATK}}</td></tr>
+    <tr><th>Precisão</th><td>{{.R.HIT}}</td></tr>
+    <tr><th>Crítico</th><td>{{f1 .R.CRIT}}</td></tr>
+    <tr><th>DEF</th><td>{{.R.HardDEF}} + {{.R.SoftDEF}}</td></tr>
+    <tr><th>DEFM</th><td>{{.R.HardMDEF}} + {{.R.SoftMDEF}}</td></tr>
+    <tr><th>Esquiva</th><td>{{.R.FLEE}} + {{.R.FLEE2}}</td></tr>
+    <tr><th>ASPD</th><td>{{.R.ASPD}}</td></tr>
+  </table>
+  <div class="ro-status__points">Pontos de atributo: <b{{if lt .R.Points 0}} class="is-bad"{{end}}>{{.R.Points}}</b>
+    <small>Shift+clique: ±10</small></div>
+</div>
+{{if .Job.Fourth}}
+<div class="ro-status ro-status--traits">
+  <table class="ro-stats">
+    {{range $i, $s := .R.Traits}}
+    <tr>
+      <th>{{index $.TraitNm $i}}</th>
+      <td class="ro-stats__val">{{$s.Base}}</td>
+      <td class="ro-stats__bonus">{{if $s.Bonus}}+{{$s.Bonus}}{{end}}</td>
+      <td class="ro-stats__btns">
+        <button class="ro-minus" data-trait="{{$i}}" data-delta="-1"{{if le $s.Base 0}} disabled{{end}}>−</button><button class="ro-plus" data-trait="{{$i}}" data-delta="1"{{if not $s.Cost}} disabled{{end}}>+</button>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+  <table class="ro-derived">
+    <tr><th>P.ATQ</th><td>{{.R.PATK}}</td></tr>
+    <tr><th>S.ATQM</th><td>{{.R.SMATK}}</td></tr>
+    <tr><th>RES</th><td>{{.R.RES}}</td></tr>
+    <tr><th>MRES</th><td>{{.R.MRES}}</td></tr>
+    <tr><th>H.PLUS</th><td>{{.R.HPLUS}}</td></tr>
+    <tr><th>C.RATE</th><td>{{.R.CRATE}}</td></tr>
+  </table>
+  <div class="ro-status__points">Pontos de traço: <b{{if lt .R.TraitPoints 0}} class="is-bad"{{end}}>{{.R.TraitPoints}}</b></div>
+</div>
+{{end}}
+<div class="ro-status__pools">HP <b>{{.R.HP}}</b> · SP <b>{{.R.SP}}</b>{{if .Job.Fourth}} · AP <b>{{.R.AP}}</b>{{end}}</div>
+{{range .R.Warnings}}<div class="ro-warning">⚠ {{.}}</div>{{end}}
+{{end}}
+
+{{define "build_equip"}}
+<nav class="ro-tabs" role="tablist">
+  <button class="ro-tab is-active" data-equip-tab="main">Equip</button>
+  <button class="ro-tab" data-equip-tab="shadow">Sombra</button>
+</nav>
+<div class="ro-window__body ro-equip ro-equip--real" data-equip-panel="main">
+  <div class="ro-equip__col">{{range .Slots}}{{if eq .Side "L"}}{{template "equip_slot" .}}{{end}}{{end}}</div>
+  <div class="ro-equip__sprite" aria-hidden="true"><span>{{$.JobName}}</span></div>
+  <div class="ro-equip__col">{{range .Slots}}{{if eq .Side "R"}}{{template "equip_slot" .}}{{end}}{{end}}</div>
+</div>
+<div class="ro-window__body ro-equip ro-equip--real" data-equip-panel="shadow" hidden>
+  <div class="ro-equip__col">{{range .Shadow}}{{if eq .Side "L"}}{{template "equip_slot" .}}{{end}}{{end}}</div>
+  <div class="ro-equip__sprite" aria-hidden="true"><span>Sombra</span></div>
+  <div class="ro-equip__col">{{range .Shadow}}{{if eq .Side "R"}}{{template "equip_slot" .}}{{end}}{{end}}</div>
+</div>
+{{range (list .Slots .Shadow)}}{{range .}}{{template "slot_editor" .}}{{end}}{{end}}
+{{end}}
+
+{{define "equip_slot"}}
+<button class="ro-eslot{{if .Item}} is-filled{{end}}" data-slot="{{.Key}}" data-loc="{{with .Item}}{{.Loc}}{{end}}" title="{{.Label}}">
+  {{with .Item}}<img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="24" height="24">{{else}}<i class="ro-eslot__empty"></i>{{end}}
+  <span>{{with .Item}}{{if $.Refine}}+{{$.Refine}} {{end}}{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}{{else}}<em>{{.Label}}</em>{{end}}</span>
+</button>
+{{end}}
+
+{{define "slot_editor"}}
+<template id="slot-editor-{{.Key}}" data-label="{{.Label}}">
+  {{if .Item}}
+  <div class="ro-slotedit">
+    <div class="ro-iteminfo__body">
+      <div class="ro-iteminfo__icon"><img src="https://static.divine-pride.net/images/items/item/{{.Item.ID}}.png" alt="" width="40" height="40"></div>
+      <div>
+        <b>{{if .Refine}}+{{.Refine}} {{end}}{{.Item.Name}}{{if .Item.Slots}} [{{.Item.Slots}}]{{end}}</b>
+        {{if .Refineable}}
+        <label class="ro-slotedit__refine">Refino
+          <select class="ro-select" data-refine>
+            {{range $r := (list 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)}}<option value="{{$r}}"{{if eq $r $.Refine}} selected{{end}}>+{{$r}}</option>{{end}}
+          </select>
+        </label>
+        {{end}}
+      </div>
+    </div>
+    {{if .Cards}}
+    <ul class="ro-list ro-cards">
+      {{range $i, $c := .Cards}}
+      <li class="ro-cardrow">
+        {{if $c}}<img src="https://static.divine-pride.net/images/items/item/{{$c.ID}}.png" alt="" width="24" height="24"><span>{{$c.Name}}</span>
+        <button class="ro-btn" data-pick-card="{{$i}}">Trocar</button><button class="ro-btn" data-remove-card="{{$i}}">×</button>
+        {{else}}<i class="ro-eslot__empty"></i><span><em>Slot {{inc $i}} vazio</em></span><button class="ro-btn" data-pick-card="{{$i}}">Carta…</button>{{end}}
+      </li>
+      {{end}}
+    </ul>
+    {{end}}
+    <div class="ro-slotedit__desc">{{roText .Item.Desc}}</div>
+    <div class="ro-slotedit__actions">
+      <button class="ro-btn" data-pick-item>Trocar item</button>
+      <button class="ro-btn" data-unequip>Remover</button>
+    </div>
+  </div>
+  {{else}}
+  <div class="ro-slotedit"><em>{{.Label}} vazio. Escolha um item abaixo.</em></div>
+  {{end}}
+</template>
+{{end}}
+
+{{define "build_bonus"}}
+{{if or .Bonuses .Extras}}
+<div class="ro-bonuscols">
+  <div>
+    <h4>Atributos</h4>
+    {{range .Bonuses}}<div class="ro-bonus"><span>{{.Label}}</span><b>{{.Value}}</b></div>{{else}}<em>—</em>{{end}}
+  </div>
+  <div>
+    <h4>Dano e resistências</h4>
+    {{range .Extras}}<div class="ro-bonus"><span>{{.Label}}</span><b>{{.Value}}</b></div>{{else}}<em>—</em>{{end}}
+  </div>
+</div>
+{{else}}
+<em>Nenhum equipamento com bônus.</em>
+{{end}}
+{{if .R.SkippedScriptEffects}}<div class="ro-note">{{.R.SkippedScriptEffects}} efeito(s) de equipamento ainda não simulado(s) (procs, combos, habilidades concedidas).</div>{{end}}
+{{end}}
+
+{{define "pick_results"}}
+{{range .Results}}
+<li class="ro-list__item ro-itemrow" tabindex="0" data-pick="{{.ID}}" data-loc="{{.Loc}}">
+  <img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="24" height="24" loading="lazy">
+  <span>{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}</span>
+  <small>#{{.ID}}</small>
+</li>
+{{else}}
+<li class="ro-list__empty">{{if .Q}}Nada encontrado para este slot.{{else}}Nenhum item disponível.{{end}}</li>
+{{end}}
+{{end}}

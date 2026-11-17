@@ -1,8 +1,10 @@
 package web
 
 import (
+	"encoding/json"
 	"html/template"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -10,6 +12,18 @@ var funcs = template.FuncMap{
 	"list":   func(v ...any) []any { return v },
 	"roText": roText,
 	"dec":    func(n int) int { return n - 1 },
+	"inc":    func(n int) int { return n + 1 },
+	"json": func(v any) string {
+		b, _ := json.Marshal(v)
+		return string(b)
+	},
+	"pct": func(a, b int) int {
+		if b <= 0 {
+			return 0
+		}
+		return min(100, a*100/b)
+	},
+	"f1": func(f float64) string { return strconv.FormatFloat(f, 'f', 1, 64) },
 }
 
 var colorCode = regexp.MustCompile(`\^([0-9a-fA-F]{6})`)

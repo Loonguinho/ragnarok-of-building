@@ -1,0 +1,26 @@
+{{define "skill_tree"}}
+<div class="ro-skillroot" data-tree="{{json .Tree}}">
+  <nav class="ro-tabs" role="tablist">
+    {{range $i, $t := .Tabs}}<button class="ro-tab{{if eq $i (len $.Tabs | dec)}} is-active{{end}}" role="tab" data-tab="{{$t.JobID}}">{{$t.Name}}</button>{{end}}
+  </nav>
+  {{range $i, $t := .Tabs}}
+  <div class="ro-skilltree" data-panel="{{$t.JobID}}"{{if ne $i (len $.Tabs | dec)}} hidden{{end}}>
+    {{range $t.Rows}}{{range .}}
+      {{if .Empty}}<div class="ro-skill ro-skill--empty"></div>
+      {{else}}
+      <div class="ro-skill" data-skill="{{.ID}}" tabindex="0">
+        <img class="ro-skill__icon" src="https://static.divine-pride.net/images/skill/{{.ID}}.png" alt="" loading="lazy" width="24" height="24">
+        <span class="ro-skill__name">{{.Name}}</span>
+        <span class="ro-skill__lv"><b data-lv>0</b>/{{.MaxLv}}</span>
+        <div class="ro-tip" hidden>{{roText .Desc}}</div>
+      </div>
+      {{end}}
+    {{end}}{{end}}
+  </div>
+  {{end}}
+  <footer class="ro-window__footer">
+    <span>Pontos usados: <b data-used>0</b> · Total: <b data-total>0</b></span>
+    <button class="ro-btn" data-reset>Resetar</button>
+  </footer>
+</div>
+{{end}}

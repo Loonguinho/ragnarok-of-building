@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -19,10 +20,13 @@ type itemView struct {
 	Slots int
 	Desc  []string
 	Lang  string
+	Loc   string // comma-separated equip locations (for client-side slot rules)
+	Type  string
 }
 
 func viewItem(it *gamedata.Item, l string) itemView {
-	return itemView{ID: it.ID, Name: it.Name.Get(l), Slots: it.Slots, Desc: it.Desc.Get(l), Lang: l}
+	return itemView{ID: it.ID, Name: it.Name.Get(l), Slots: it.Slots, Desc: it.Desc.Get(l), Lang: l,
+		Loc: strings.Join(it.Locations, ","), Type: it.Type}
 }
 
 // GET /items: the inventory-style search window plus an item info window.

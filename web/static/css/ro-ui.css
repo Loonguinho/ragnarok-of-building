@@ -219,3 +219,63 @@ a { color: #1d4fa8; }
 .ro-iteminfo__icon img { image-rendering: pixelated; }
 .ro-iteminfo__desc { flex: 1; max-height: 360px; overflow-y: auto; background: #fff; border: 1px solid #b7bcc6; padding: 5px 6px; user-select: text; }
 @media (max-width: 720px) { .ro-itemlist { height: 50vh; } }
+
+/* ---------- build editor ---------- */
+.ro-statusform { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid #c4c8d0; }
+.ro-statusform label { display: flex; gap: 3px; align-items: center; }
+.ro-statusform .ro-select { max-width: 150px; }
+.ro-num { width: 54px; }
+.ro-minus {
+  width: 13px; height: 13px; padding: 0; margin-right: 1px;
+  font: bold 10px/10px var(--ro-font);
+  background: linear-gradient(180deg, #fff, #d9dfeb);
+  border: 1px solid var(--ro-border); border-radius: 2px; cursor: pointer;
+}
+.ro-plus:disabled, .ro-minus:disabled { opacity: .35; cursor: default; }
+.ro-stats__bonus { color: #1d4fa8; min-width: 26px; }
+.ro-stats__btns { white-space: nowrap; }
+.ro-status--traits { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #c4c8d0; }
+.ro-status__pools { margin-top: 5px; padding: 3px 4px; background: #fff; border: 1px solid #c4c8d0; }
+.ro-warning { margin-top: 4px; color: #b42318; }
+.is-bad { color: #b42318; }
+.ro-status__points small { color: #888; margin-left: 6px; }
+
+.ro-basic__name { font-size: 12px; }
+.ro-basic__lv { color: #555; margin-bottom: 3px; }
+.ro-bar--ap > span { background: linear-gradient(180deg, #ffb37f, #e0702f); }
+
+.ro-equip--real { grid-template-columns: 1fr 80px 1fr; }
+.ro-equip--real .ro-equip__sprite { display: grid; place-items: end center; padding-bottom: 8px; color: #777; font-size: 10px; }
+.ro-eslot {
+  display: flex; align-items: center; gap: 4px; width: 100%; height: 30px; padding: 2px 4px;
+  font: 10px var(--ro-font); text-align: left; color: var(--ro-text);
+  background: #fff; border: 1px solid #b7bcc6; border-radius: 2px; cursor: pointer;
+}
+.ro-eslot:hover { border-color: var(--ro-border); background: #f3f7ff; }
+.ro-eslot img { flex: none; image-rendering: pixelated; }
+.ro-eslot span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ro-eslot em { color: #9aa; font-style: normal; }
+.ro-eslot__empty { flex: none; display: inline-block; width: 24px; height: 24px; background: #eef0f4; border: 1px dashed #c4c8d0; border-radius: 2px; }
+
+.ro-slotwin { z-index: 50; }
+.ro-slotedit { display: grid; gap: 6px; }
+.ro-slotedit__refine { display: flex; gap: 4px; align-items: center; margin-top: 4px; }
+.ro-slotedit__desc { max-height: 120px; overflow-y: auto; background: #fff; border: 1px solid #b7bcc6; padding: 4px 6px; user-select: text; }
+.ro-slotedit__actions { display: flex; gap: 4px; justify-content: flex-end; }
+.ro-cards { min-height: 0; }
+.ro-cardrow { display: flex; align-items: center; gap: 4px; padding: 2px; }
+.ro-cardrow span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ro-picklist { height: 220px; }
+
+.ro-bonuscols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ro-bonuscols h4 { margin: 0 0 3px; font-size: 11px; color: var(--ro-title-text); }
+.ro-bonus { display: flex; justify-content: space-between; gap: 6px; padding: 1px 0; border-bottom: 1px dotted #d8dbe2; }
+.ro-bonus b { color: #1d4fa8; white-space: nowrap; }
+.ro-note { margin-top: 6px; color: #777; font-size: 10px; }
+.ro-chat__line--error { color: #ff8a8a; }
+
+@media (max-width: 720px) {
+  .ro-equip--real { grid-template-columns: 1fr 1fr; }
+  .ro-equip--real .ro-equip__sprite { display: none; }
+  .ro-bonuscols { grid-template-columns: 1fr; }
+}

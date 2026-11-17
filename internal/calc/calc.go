@@ -8,6 +8,7 @@ import (
 	"math"
 	"slices"
 	"sort"
+	"strings"
 
 	"ragnarok-of-building/internal/gamedata"
 	"ragnarok-of-building/internal/script"
@@ -136,13 +137,69 @@ func Normalize(b *Build, c *gamedata.Catalog) {
 		}
 	}
 	for slot, e := range b.Equip {
-		if !slices.Contains(Slots, slot) || c.Items[e.Item] == nil {
+		it := c.Items[e.Item]
+		if !slices.Contains(Slots, slot) || it == nil || !Fits(it, slot) {
 			delete(b.Equip, slot)
 			continue
 		}
 		e.Refine = clamp(e.Refine, 0, maxRefine)
+		if !it.Refineable {
+			e.Refine = 0
+		}
+		for i, cd := range e.Cards {
+			card := c.Items[cd]
+			if cd != 0 && (i >= it.Slots || card == nil || !CardFits(card, slot)) {
+				e.Cards[i] = 0
+			}
+		}
 		b.Equip[slot] = e
 	}
+	// A two-handed weapon leaves no room for a shield.
+	if w, ok := b.Equip[Weapon]; ok && c.Items[w.Item].HasLocation("Both_Hand") {
+		delete(b.Equip, Shield)
+	}
+}
+
+// Fits reports whether an item can be equipped in a slot.
+func Fits(it *gamedata.Item, slot string) bool {
+	switch it.Type {
+	case "Weapon", "Armor", "ShadowGear":
+	default:
+		return false
+	}
+	for _, l := range it.Locations {
+		switch {
+		case l == slot:
+			return true
+		case l == "Both_Hand" && slot == Weapon:
+			return true
+		case l == "Both_Accessory" && (slot == AccRight || slot == AccLeft):
+			return true
+		case l == "Shadow_Both_Accessory" && (slot == ShAccR || slot == ShAccL):
+			return true
+		}
+	}
+	return false
+}
+
+// CardFits reports whether a card can be compounded on an item in a slot.
+func CardFits(card *gamedata.Item, slot string) bool {
+	if card.Type != "Card" {
+		return false
+	}
+	for _, l := range card.Locations {
+		switch {
+		case l == slot:
+			return true
+		case l == "Both_Hand" && slot == Weapon:
+			return true
+		case l == "Both_Accessory" && (slot == AccRight || slot == AccLeft):
+			return true
+		case strings.HasPrefix(l, "Head_") && strings.HasPrefix(slot, "Head_"):
+			return true
+		}
+	}
+	return false
 }
 
 func maxStat(j *gamedata.Job) int {

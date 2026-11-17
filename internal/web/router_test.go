@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -16,7 +17,10 @@ func testCatalog() *gamedata.Catalog {
 		Items: map[int]*gamedata.Item{
 			4001: {ID: 4001, Name: gamedata.Text{"pt": "Carta Poring", "en": "Poring Card"},
 				Desc: gamedata.Lines{"pt": {"^0000ffSOR +2^000000"}}},
-			1201: {ID: 1201, Name: gamedata.Text{"pt": "Faca"}, Slots: 3},
+			1201: {ID: 1201, Name: gamedata.Text{"pt": "Faca"}, Slots: 3, Type: "Weapon", SubType: "Dagger",
+				Locations: []string{"Right_Hand"}, Attack: 17, WeaponLv: 1, Refineable: true},
+			4002: {ID: 4002, Name: gamedata.Text{"pt": "Carta Fabre"}, Type: "Card", Locations: []string{"Right_Hand"},
+				Script: "bonus bVit,1;\nbonus bMaxHP,100;"},
 		},
 		Skills: map[int]*gamedata.Skill{
 			1: {ID: 1, Name: gamedata.Text{"pt": "Habilidades Básicas"}, MaxLv: 9},
@@ -25,8 +29,12 @@ func testCatalog() *gamedata.Catalog {
 			62: {ID: 62, Name: gamedata.Text{"pt": "Impacto de Tyr"}, MaxLv: 10,
 				Needs: []gamedata.Req{{Skill: 5, Level: 10}}},
 		},
+		StatPoints: []int{48, 51, 54},
+		Refine:     map[string]map[int][]int{"Weapon": {1: {0, 200, 400, 600, 800, 1000, 1200, 1400}}},
 		Jobs: map[int]*gamedata.Job{
-			0: {ID: 0, Name: gamedata.Text{"pt": "Aprendiz"}, Parent: -1, Tree: map[int]int{0: 1}},
+			0: {ID: 0, Name: gamedata.Text{"pt": "Aprendiz"}, Parent: -1, Tree: map[int]int{0: 1},
+				MaxBaseLv: 3, MaxJobLv: 10, BaseHP: []int{40, 46, 53}, BaseSP: []int{11, 12, 13},
+				JobBonus: make([][12]int, 11), BaseASPD: map[string]int{"Fist": 40, "Dagger": 55}},
 			1: {ID: 1, Name: gamedata.Text{"pt": "Espadachim"}, Parent: 0, Tree: map[int]int{0: 5}},
 			7: {ID: 7, Name: gamedata.Text{"pt": "Cavaleiro"}, Parent: 1, Tree: map[int]int{8: 62}},
 		},
@@ -56,7 +64,7 @@ func TestRoutes(t *testing.T) {
 		{"/skills?job=7", "Impacto de Tyr"},
 		{"/skills?job=7", `"needs":[[5,10]]`},
 		{"/skills?job=7", `<span style="color:#777777">Ataque</span> &lt;forte&gt;`},
-		{"/items", "2 itens no banco"},
+		{"/items", "3 itens no banco"},
 		{"/items?q=faca", "Faca [3]"},
 		{"/items/search?q=poring+card", "Carta Poring"},
 		{"/items/search?q=poring&lang=en", "Poring Card"},
@@ -73,6 +81,65 @@ func TestRoutes(t *testing.T) {
 		if !strings.Contains(body, c.want) {
 			t.Errorf("%s: body missing %q", c.path, c.want)
 		}
+	}
+}
+
+func TestBuild(t *testing.T) {
+	s, err := New(Options{Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Catalog: testCatalog()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := s.Routes()
+
+	code, body := get(t, h, "/build")
+	if code != http.StatusOK || !strings.Contains(body, "win-status") || !strings.Contains(body, "Aprendiz") {
+		t.Fatalf("GET /build: %d", code)
+	}
+
+	post := func(body string) (int, map[string]any) {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/build/calc", strings.NewReader(body)))
+		var out map[string]any
+		json.Unmarshal(rec.Body.Bytes(), &out)
+		return rec.Code, out
+	}
+	code, out := post(`{"j":0,"b":3,"jl":1,"s":[1,1,1,1,1,1],"e":{"Right_Hand":{"i":1201,"r":7,"c":[4002,0,0,0]}}}`)
+	if code != http.StatusOK {
+		t.Fatalf("calc: %d", code)
+	}
+	html := out["html"].(map[string]any)
+	if st := html["build_status"].(string); !strings.Contains(st, "2 + 31") { // status ATK at Lv3 + (17 + 7*2)
+		t.Errorf("status window lacks ATK 2 + 31:\n%s", st)
+	}
+	if eq := html["build_equip"].(string); !strings.Contains(eq, "+7 Faca [3]") || !strings.Contains(eq, "Carta Fabre") {
+		t.Error("equipment window lacks the refined weapon and its card")
+	}
+	if bn := html["build_bonus"].(string); !strings.Contains(bn, "HP Máx.") {
+		t.Error("bonus window lacks the card's HP bonus")
+	}
+
+	// The share code restores the same build.
+	share := out["code"].(string)
+	if _, body := get(t, h, "/build?b="+share); !strings.Contains(body, "+7 Faca [3]") {
+		t.Error("share link did not restore the build")
+	}
+
+	// Picker filters by slot: a weapon slot offers the knife, cards only with card=1.
+	if _, body := get(t, h, "/build/items?slot=Right_Hand&q=faca"); !strings.Contains(body, "Faca") {
+		t.Error("weapon picker lacks the knife")
+	}
+	if _, body := get(t, h, "/build/items?slot=Armor&q=faca"); strings.Contains(body, "Faca") {
+		t.Error("armor picker offers a weapon")
+	}
+	if _, body := get(t, h, "/build/items?slot=Right_Hand&card=1&q=carta"); !strings.Contains(body, "Carta Fabre") || strings.Contains(body, "Carta Poring") {
+		t.Error("card picker filter wrong")
+	}
+
+	if code, _ := post(`not json`); code != http.StatusBadRequest {
+		t.Errorf("bad JSON: %d", code)
+	}
+	if code, _ := get(t, h, "/build?b=%%%"); code != http.StatusOK {
+		t.Errorf("broken share code should fall back to a default build, got %d", code)
 	}
 }
 

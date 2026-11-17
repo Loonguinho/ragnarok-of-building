@@ -91,6 +91,10 @@ func (s *Server) Routes() http.Handler {
 	r.Get("/items", s.handleItems)
 	r.Get("/items/search", s.handleItemSearch)
 	r.Get("/items/{id}", s.handleItemInfo)
+	r.Get("/build", s.handleBuild)
+	r.Post("/build/calc", s.handleBuildCalc)
+	r.Get("/build/skills", s.handleBuildSkills)
+	r.Get("/build/items", s.handleBuildItems)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
 	return r
 }

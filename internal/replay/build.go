@@ -1,0 +1,68 @@
+package replay
+
+import (
+	"fmt"
+
+	"ragnarok-of-building/internal/calc"
+	"ragnarok-of-building/internal/gamedata"
+)
+
+// equipBits maps rAthena e_equip_pos bits to build slots (costumes and ammo
+// are not simulated).
+var equipBits = []struct {
+	bit  uint32
+	slot string
+}{
+	{0x1, calc.HeadLow}, {0x2, calc.Weapon}, {0x4, calc.Garment}, {0x8, calc.AccLeft},
+	{0x10, calc.Armor}, {0x20, calc.Shield}, {0x40, calc.Shoes}, {0x80, calc.AccRight},
+	{0x100, calc.HeadTop}, {0x200, calc.HeadMid},
+	{0x10000, calc.ShArmor}, {0x20000, calc.ShWeapon}, {0x40000, calc.ShShield},
+	{0x80000, calc.ShShoes}, {0x100000, calc.ShAccR}, {0x200000, calc.ShAccL},
+}
+
+// ToBuild turns a snapshot into a build plus notes for the user about what
+// could not be imported. The build still goes through calc.Normalize.
+func ToBuild(s *Snapshot, c *gamedata.Catalog) (calc.Build, []string) {
+	b := calc.Build{
+		Job: s.Job, BaseLv: s.BaseLv, JobLv: s.JobLv, Stats: s.Stats,
+		Equip: map[string]calc.Equip{}, Skills: map[int]int{},
+	}
+	var notes []string
+	if c.Jobs[s.Job] == nil {
+		notes = append(notes, fmt.Sprintf("Classe %d desconhecida no catálogo.", s.Job))
+	}
+	for i := range b.Stats {
+		b.Stats[i] = max(1, b.Stats[i])
+	}
+	if len(s.Traits) > 0 {
+		for i, v := range s.Traits {
+			if i >= 0 && i < len(b.Traits) {
+				b.Traits[i] = v
+			}
+		}
+	} else if j := c.Jobs[s.Job]; j != nil && j.Fourth {
+		notes = append(notes, "A gravação não trouxe os traços (POW, STA...): ajuste-os na janela de atributos.")
+	}
+	unknown := 0
+	for _, it := range s.Equipped {
+		if c.Items[it.ItemID] == nil {
+			unknown++
+			continue
+		}
+		for _, eb := range equipBits {
+			if it.Equipped&eb.bit != 0 {
+				b.Equip[eb.slot] = calc.Equip{Item: it.ItemID, Refine: it.Refine, Cards: it.Cards}
+			}
+		}
+	}
+	if unknown > 0 {
+		notes = append(notes, fmt.Sprintf("%d item(ns) equipado(s) não existem no catálogo e foram ignorados.", unknown))
+	}
+	if len(s.Equipped) == 0 {
+		notes = append(notes, "A gravação não trouxe o equipamento vestido.")
+	}
+	for id, lv := range s.Skills {
+		b.Skills[id] = lv
+	}
+	return b, notes
+}

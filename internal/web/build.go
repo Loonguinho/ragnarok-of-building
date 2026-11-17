@@ -97,6 +97,7 @@ type slotView struct {
 	Refine           int
 	Cards            []*itemView // len = item slots
 	Refineable       bool
+	CardSlots        int // positions below this are card slots; above, enchants
 }
 
 type bonusLine struct {
@@ -129,7 +130,16 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 			if it := c.Items[e.Item]; it != nil {
 				iv := viewItem(it, l)
 				sv.Item, sv.Refine, sv.Refineable = &iv, e.Refine, it.Refineable
-				for i := 0; i < min(it.Slots, 4); i++ {
+				// Show the card slots plus any enchant positions in use.
+				n := min(it.Slots, 4)
+				for i := 3; i >= n; i-- {
+					if e.Cards[i] != 0 {
+						n = i + 1
+						break
+					}
+				}
+				sv.CardSlots = it.Slots
+				for i := 0; i < n; i++ {
 					var cv *itemView
 					if ci := c.Items[e.Cards[i]]; e.Cards[i] > 0 && ci != nil {
 						x := viewItem(ci, l)
@@ -247,7 +257,8 @@ func (s *Server) handleBuildItems(w http.ResponseWriter, r *http.Request) {
 	}
 	var out []itemView
 	for _, it := range pool {
-		ok := (card && calc.CardFits(it, slot)) || (!card && calc.Fits(it, slot) && job.CanEquip(it))
+		known := it.Type != "" // the picker only offers items whose slot rules are known
+		ok := known && ((card && calc.CardFits(it, slot)) || (!card && calc.Fits(it, slot) && job.CanEquip(it)))
 		if ok && it.Name.Get(l) != "" {
 			out = append(out, viewItem(it, l))
 			if len(out) >= searchLimit {

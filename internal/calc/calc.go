@@ -176,9 +176,20 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 		if !it.Refineable {
 			e.Refine = 0
 		}
+		// The client keeps cards and enchants in the same 4 positions: the
+		// item's card slots first, enchants after them.
 		for i, cd := range e.Cards {
+			if cd == 0 {
+				continue
+			}
 			card := c.Items[cd]
-			if cd != 0 && (i >= it.Slots || card == nil || !CardFits(card, slot)) {
+			switch {
+			case card == nil:
+				e.Cards[i] = 0
+			case card.Type == "": // no rAthena data (LATAM-only): keep, cannot validate
+			case i < it.Slots && !CardFits(card, slot):
+				e.Cards[i] = 0
+			case i >= it.Slots && card.SubType != "Enchant":
 				e.Cards[i] = 0
 			}
 		}
@@ -268,9 +279,12 @@ func SkillPointCheck(b Build, c *gamedata.Catalog) int {
 	return -1
 }
 
-// Fits reports whether an item can be equipped in a slot.
+// Fits reports whether an item can be equipped in a slot. Items without
+// rAthena data (LATAM-only, Type "") cannot be checked and are allowed.
 func Fits(it *gamedata.Item, slot string) bool {
 	switch it.Type {
+	case "":
+		return true
 	case "Weapon", "Armor", "ShadowGear":
 	default:
 		return false
@@ -294,6 +308,9 @@ func Fits(it *gamedata.Item, slot string) bool {
 func CardFits(card *gamedata.Item, slot string) bool {
 	if card.Type != "Card" {
 		return false
+	}
+	if card.SubType == "Enchant" { // enchants have no location: they fit any item
+		return true
 	}
 	for _, l := range card.Locations {
 		switch {

@@ -263,7 +263,7 @@
       <li class="ro-cardrow">
         {{if $c}}<img src="https://static.divine-pride.net/images/items/item/{{$c.ID}}.png" alt="" width="24" height="24"><span>{{$c.Name}}</span>
         <button class="ro-btn" data-pick-card="{{$i}}">Trocar</button><button class="ro-btn" data-remove-card="{{$i}}">×</button>
-        {{else}}<i class="ro-eslot__empty"></i><span><em>Slot {{inc $i}} vazio</em></span><button class="ro-btn" data-pick-card="{{$i}}">Carta…</button>{{end}}
+        {{else}}<i class="ro-eslot__empty"></i><span><em>{{if lt $i $.CardSlots}}Slot {{inc $i}} vazio{{else}}Encantamento vazio{{end}}</em></span><button class="ro-btn" data-pick-card="{{$i}}">{{if lt $i $.CardSlots}}Carta…{{else}}Encantar…{{end}}</button>{{end}}
       </li>
       {{end}}
     </ul>

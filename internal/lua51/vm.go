@@ -83,11 +83,33 @@ const (
 
 const fieldsPerFlush = 50
 
+// PartialError means execution stopped at an opcode the data VM does not
+// support (e.g. a function call after the data tables). The globals returned
+// alongside it hold everything assigned before that point; callers decide
+// whether that is enough (check the globals they need).
+type PartialError struct {
+	PC     int
+	Op     uint32
+	Global string // set when stopped on an undefined global (e.g. setmetatable)
+}
+
+func (e *PartialError) Error() string {
+	if e.Global != "" {
+		return fmt.Sprintf("lua51: stopped at pc %d: undefined global %q", e.PC, e.Global)
+	}
+	return fmt.Sprintf("lua51: stopped at pc %d: unsupported opcode %d", e.PC, e.Op)
+}
+
 // Run executes the main chunk and returns the resulting globals.
 // Only table-building opcodes are supported; anything else is an error,
 // so a changed file format fails loudly instead of producing bad data.
 func Run(p *Proto) (map[string]Value, error) {
-	globals := map[string]Value{}
+	return RunEnv(p, map[string]Value{})
+}
+
+// RunEnv executes the chunk against an existing globals map, so files that
+// reference tables defined by earlier files (e.g. SKID, JOBID) resolve.
+func RunEnv(p *Proto, globals map[string]Value) (map[string]Value, error) {
 	reg := make([]Value, 256)
 	rk := func(x uint32) Value {
 		if x >= 256 {
@@ -121,7 +143,12 @@ func Run(p *Proto) (map[string]Value, error) {
 				reg[i] = nil
 			}
 		case opGETGLOBAL:
-			reg[a] = globals[p.Consts[bx].(string)]
+			name := p.Consts[bx].(string)
+			v, ok := globals[name]
+			if !ok {
+				return globals, &PartialError{PC: pc, Op: op, Global: name}
+			}
+			reg[a] = v
 		case opSETGLOBAL:
 			globals[p.Consts[bx].(string)] = reg[a]
 		case opGETTABLE:
@@ -176,7 +203,7 @@ func Run(p *Proto) (map[string]Value, error) {
 		case opRETURN:
 			return globals, nil
 		default:
-			return nil, fmt.Errorf("lua51: pc %d: unsupported opcode %d", pc, op)
+			return globals, &PartialError{PC: pc, Op: op}
 		}
 		if int(a) >= len(reg)-1 {
 			return nil, fmt.Errorf("lua51: register %d out of range", a)
@@ -193,9 +220,19 @@ func Load(b []byte) (g map[string]Value, err error) {
 			g, err = nil, fmt.Errorf("lua51: malformed chunk: %v", r)
 		}
 	}()
+	return LoadEnv(b, map[string]Value{})
+}
+
+// LoadEnv is Load with a shared globals map (see RunEnv).
+func LoadEnv(b []byte, globals map[string]Value) (g map[string]Value, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			g, err = nil, fmt.Errorf("lua51: malformed chunk: %v", r)
+		}
+	}()
 	p, err := Undump(b)
 	if err != nil {
 		return nil, err
 	}
-	return Run(p)
+	return RunEnv(p, globals)
 }

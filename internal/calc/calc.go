@@ -116,17 +116,21 @@ type Result struct {
 	HP, SP, AP          int
 	StatusATK, EquipATK int // ATK shown as "StatusATK + EquipATK"
 	// Parts of EquipATK the damage formula treats differently.
-	WeaponATK            int // weapon's own ATK (after bWeaponAtkRate)
-	WeaponRefineATK      int // refine bonus ATK
-	OtherEquipATK        int // armor ATK, bAtk, shadow weapon
-	WeaponLv             int
-	WeaponRefine         int
-	WeaponWeight         int // tenths
-	Ranged               bool
-	CritTenths           int    // CRIT in 1/10 % (rAthena cri), for crit chance
-	st, tr               [6]int // final stats/traits (for the damage formula)
-	MATKMin, MATKMax     int
-	EquipMATK            int
+	WeaponATK        int // weapon's own ATK (after bWeaponAtkRate)
+	WeaponRefineATK  int // refine bonus ATK
+	OtherEquipATK    int // armor ATK, bAtk, shadow weapon
+	WeaponLv         int
+	WeaponRefine     int
+	WeaponWeight     int // tenths
+	Ranged           bool
+	CritTenths       int    // CRIT in 1/10 % (rAthena cri), for crit chance
+	st, tr           [6]int // final stats/traits (for the damage formula)
+	MATKMin, MATKMax int
+	EquipMATK        int
+	// Parts of EquipMATK for the magic formula.
+	WeaponMATK           int // weapon's own MATK
+	WeaponRefineMATK     int // refine bonus MATK (not for bows)
+	OtherEquipMATK       int // armor MATK, bMatk
 	HIT, FLEE, FLEE2     int // FLEE2 = perfect dodge
 	CRIT                 float64
 	HardDEF, SoftDEF     int
@@ -223,10 +227,8 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 	}
 	// Only the selectors the class shows are kept.
 	allowed := map[string]bool{}
-	if j != nil {
-		for _, o := range LatamStates[j.Code] {
-			allowed[o.Key] = true
-		}
+	for _, o := range StatesFor(c, b.Job) {
+		allowed[o.Key] = true
 	}
 	for k, v := range at.States {
 		if !allowed[k] || v == 0 {
@@ -468,7 +470,10 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			r.WeaponATK = it.Attack
 			r.WeaponRefineATK = refineRaw(c, "Weapon", it.WeaponLv, e.Refine) / 100
 			r.WeaponLv, r.WeaponRefine, r.WeaponWeight = it.WeaponLv, e.Refine, it.Weight
-			r.EquipMATK += it.MagicAttack
+			r.WeaponMATK = it.MagicAttack
+			if it.SubType != "Bow" {
+				r.WeaponRefineMATK = refineRaw(c, "Weapon", it.WeaponLv, e.Refine) / 100
+			}
 			if it.WeaponLv == 5 { // 4th-gen weapons: refine also gives P.ATK/S.MATK
 				wlv5Traits += e.Refine * 2
 			}
@@ -479,7 +484,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			if it.Refineable && it.Type == "Armor" {
 				refineDef += refineRaw(c, "Armor", max(it.ArmorLv, 1), e.Refine)
 			}
-			r.EquipMATK += it.MagicAttack
+			r.OtherEquipMATK += it.MagicAttack
 			r.OtherEquipATK += it.Attack
 		}
 	}
@@ -537,7 +542,8 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	r.EquipATK = r.WeaponATK + r.WeaponRefineATK + r.OtherEquipATK
 	matk := st[INT] + st[INT]/2 + st[DEX]/5 + st[LUK]/3 + lv/4 + 5*tr[SPL]
 	r.MATKMin, r.MATKMax = matk, matk
-	r.EquipMATK += bonus["bMatk"]
+	r.OtherEquipMATK += bonus["bMatk"]
+	r.EquipMATK = r.WeaponMATK + r.WeaponRefineMATK + r.OtherEquipMATK
 
 	// HIT / FLEE / CRIT / DEF / MDEF (status_calc_misc, renewal).
 	r.HIT = lv + st[DEX] + st[LUK]/3 + 175 + 2*tr[CON] + bonus["bHit"]

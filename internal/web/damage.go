@@ -73,10 +73,8 @@ func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
 	}
 
 	// Class state selectors (Celestial Space, Exceed...).
-	if j := c.Jobs[b.Job]; j != nil {
-		for _, o := range calc.LatamStates[j.Code] {
-			v.States = append(v.States, stateView{Key: o.Key, Label: o.Label, Choices: o.Choices, Value: b.Atk.States[o.Key]})
-		}
+	for _, o := range calc.StatesFor(c, b.Job) {
+		v.States = append(v.States, stateView{Key: o.Key, Label: o.Label, Choices: o.Choices, Value: b.Atk.States[o.Key]})
 	}
 
 	// Skill ratio: manual value wins, then the LATAM formula, then the
@@ -85,12 +83,14 @@ func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
 	sk := c.Skills[b.Atk.Skill]
 	var formula *calc.SkillFormula
 	if sk != nil {
-		formula = calc.LatamFormulas[sk.Code]
+		formula = calc.FormulaFor(c, b.Job, sk.Code)
 	}
 	in := calc.FormulaInput{
 		Lv: b.Atk.Level, BaseLv: b.BaseLv, Stats: r.FinalStats(), Traits: r.FinalTraits(),
 		Learned: b.Skills, Catalog: c, Monster: m, Weapon: r.WeaponType, WeaponLv: r.WeaponLv,
 		WeaponWt: r.WeaponWeight, MaxHP: r.HP, MaxSP: r.SP, States: b.Atk.States, Stack: b.Atk.Stack,
+		JobLv: b.JobLv, HIT: r.HIT, FLEE: r.FLEE, CRIT: r.CRIT, ASPD: r.ASPD,
+		WeaponRefine: r.WeaponRefine, WeaponATK: r.WeaponATK,
 	}
 	atk := calc.Attack{Hits: b.Atk.Hits, Element: b.Atk.Element}
 	if sk != nil {

@@ -37,6 +37,14 @@ $env:DEV = "1"; go run ./cmd/server   # templates/CSS/JS: edit and refresh the b
 
 To also reload on **Go** changes, install [Air](https://github.com/air-verse/air) once with `go install github.com/air-verse/air@latest`, then just run `air` (it already sets `DEV=1`).
 
+### Regenerating the LATAM formulas
+
+```powershell
+git clone --depth 1 https://github.com/adsonpleal/latam-ro-calc tmp/latam-ro-calc
+python -I tools/latamgen/latamgen.py      # writes internal/calc/latam_gen.go + tools/latamgen/REPORT.md
+go test ./internal/calc
+```
+
 ### Data tools
 
 ```powershell
@@ -53,9 +61,9 @@ go run ./cmd/scriptcov                                                 # how muc
 - [x] Phase 2: build model, stats, HP/SP/ASPD, traits (rAthena renewal formulas)
 - [x] Phase 3: in-game-style skill tree with skill point limits per class step
 - [~] Phase 4: equipment, cards, refine, class restrictions (enchants/combos pending)
-- [~] Phase 5: physical damage vs monsters (rAthena renewal formula, breakdown); magic damage, masteries, buffs and in-game golden tests pending
+- [x] Phase 5: physical and magic damage vs monsters with LATAM formulas for every class (275 of 308 skill formulas; see the generator report)
 - [~] Phase 6: share links + last build restored (accounts/saved builds pending)
-- [ ] Phase 6b: import items from a replay (`.rrf`)
+- [x] Phase 6b: import a character from a replay (`.rrf`)
 - [ ] Phase 7: compare + optimizer
 - [ ] Phase 8: polish
 
@@ -63,7 +71,7 @@ The full design doc is in `docs/design.md`.
 
 ## Credits
 
-- **[latam-ro-calc](https://github.com/adsonpleal/latam-ro-calc)** by Adson Leal (MIT): the LATAM skill formulas and pipeline adjustments in `internal/calc/latam.go` / `damage.go` are reimplemented from its measurements against real LATAM recordings.
+- **[latam-ro-calc](https://github.com/adsonpleal/latam-ro-calc)** by Adson Leal (MIT): the LATAM skill formulas (all classes, including the 2022 rebalance LATAM uses since the 28/10/2026 client) are translated to Go by `tools/latamgen` into `internal/calc/latam_gen.go`; the physical/magic pipeline adjustments in `damage.go`/`magic.go` follow its measurements against real LATAM recordings. Coverage: `tools/latamgen/REPORT.md`.
 - **[rrfparser](https://github.com/adsonpleal/rrfparser)** by Adson Leal (MIT): format reference for the `.rrf` replay reader in `internal/replay` (independent Go implementation).
 - **[rAthena](https://github.com/rathena/rathena)** (GPL-3.0): job tables, items, monsters and renewal formulas. Its data files are downloaded locally by `cmd/fetchrathena` and not redistributed.
 - Game names, descriptions and skill trees are read from the user's own RO LATAM client. Ragnarok Online is © Gravity Co., Ltd.

@@ -7,3 +7,4 @@ testdata/replays/*.rrf
 data/gen/
 tmp/
 data/rathena/
+__pycache__/

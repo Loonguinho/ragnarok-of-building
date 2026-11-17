@@ -59,6 +59,12 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		if f.Hits != nil {
 			hits = max(1, f.Hits(a.Input))
 		}
+		if f.Partial != "" {
+			d.Notes = append(d.Notes, "Parte desta habilidade ainda não é simulada ("+f.Partial+"): o dano real pode ser maior.")
+		}
+		if f.RequiresState != "" && !a.Input.Active(f.RequiresState) {
+			d.Notes = append(d.Notes, "Esta habilidade exige o estado \""+f.RequiresState+"\" ativo.")
+		}
 		if len(f.Weapons) > 0 && !slices.Contains(f.Weapons, r.WeaponType) {
 			d.Notes = append(d.Notes, "Esta habilidade exige arma do tipo "+strings.Join(f.Weapons, " ou ")+".")
 		}
@@ -67,6 +73,11 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		ratio = 100
 	}
 	d.Ratio, d.Hits = ratio, hits
+	if f != nil && f.Magic {
+		md := magicDamage(r, c, m, a, f, ratio, hits)
+		md.Notes = append(d.Notes, md.Notes...)
+		return md
+	}
 
 	// Crit rules: basic attacks crit; skills only when the formula allows it.
 	canCrit, critRate, critDmgPart := !isSkill, 1.0, 1.0
@@ -78,7 +89,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	}
 	isMelee := !r.Ranged
 	if f != nil && f.Melee != nil {
-		isMelee = f.Melee(r.WeaponType)
+		isMelee = f.Melee(a.Input)
 	}
 
 	// Attack element: forced (endow), else the weapon's (bAtkEle), else Neutral.

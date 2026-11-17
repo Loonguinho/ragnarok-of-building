@@ -1,0 +1,66 @@
+# latamgen report
+
+Translated: 246 · partial: 29 · not translated: 33
+
+- AbyssChaser · Deft Stab (ABC_DEFT_STAB): partial: not simulated: damageRepeat
+- AbyssChaser · Chain Reaction Shot (ABC_CHAIN_REACTION_SHOT): partial: not simulated: part2
+- ArchMage · Crimson Arrow (AG_CRIMSON_ARROW): partial: not simulated: part2
+- ArchMage · All Bloom (AG_ALL_BLOOM): partial: not simulated: part2, damageRepeat
+- ArchMage · **Violent Quake** (AG_VIOLENT_QUAKE): not translated: Unsupported identifier GARDEN_HITS
+- ArchMage · Destructive Hurricane (AG_DESTRUCTIVE_HURRICANE): partial: not simulated: part2
+- ArchMage · Crystal Impact (AG_CRYSTAL_IMPACT): partial: not simulated: part2, damageRepeat
+- ArchMage · Astral Strike (AG_ASTRAL_STRIKE): partial: not simulated: part2
+- Cardinal · Arbitrium (CD_ARBITRIUM): partial: not simulated: part2
+- Creator · **Acid Bomb** (CR_ACIDDEMONSTRATION): not translated: Unsupported monster.data.vit
+- Doram · **Silvervine Stem Spear** (SU_SV_STEMSPEAR): not translated: Unsupported param _input
+- Doram · Catnip Meteor (SU_CN_METEOR): partial: element chosen by the skill at runtime (uses the weapon element here)
+- ElementalMaster · Elemental Buster (EM_ELEMENTAL_BUSTER): partial: element chosen by the skill at runtime (uses the weapon element here)
+- Genetic · **Cart Cannon** (GN_CARTCANNON): not translated: Unsupported input.ammoElement
+- Genetic · **Cart Tornado** (GN_CART_TORNADO): not translated: Unsupported status.baseStr
+- Genetic · **Spore Explosion** (GN_SPORE_EXPLOSION): not translated: Unsupported identifier isBioloWoodenFairy
+- HighPriest · **Magnus Exorcismus** (PR_MAGNUS): not translated: Unsupported identifier RaceType
+- HyperNovice · **Spiral Pierce Max** (HN_SPIRAL_PIERCE_MAX): not translated: Unsupported identifier {
+- HyperNovice · Meteor Storm Buster (HN_METEOR_STORM_BUSTER): partial: not simulated: damageRepeat
+- HyperNovice · Meteor Storm Buster (HN_METEOR_STORM_BUSTER): partial: not simulated: damageRepeat
+- ImperialGuard · **Shield Shooting** (IG_SHIELD_SHOOTING): not translated: Unsupported input.equipmentBonus
+- Kagerou · **Kunai Explosion** (KO_BAKURETSU): not translated: Unsupported expected '=', got ','
+- Mechanic · **Knuckle Boost** (NC_BOOSTKNUCKLE): not translated: Unsupported identifier isDualCannon
+- Mechanic · **Vulcan Arm** (NC_VULCANARM): not translated: Unsupported identifier isDualCannon
+- Mechanic · **Arm Cannon** (NC_ARMSCANNON): not translated: Unsupported identifier isDualCannon
+- Mechanic · **Power Swing** (NC_POWERSWING): not translated: Unsupported identifier isBattleWarrior
+- Meister · **Activation Attack Machine**: skill not found in the client
+- Meister · **Spark Blaster**: skill not found in the client
+- Meister · **Triple Laser**: skill not found in the client
+- Meister · **Mighty Smash**: skill not found in the client
+- NightWatch · Mission Bombard (NW_MISSION_BOMBARD): partial: not simulated: part2, damageRepeat
+- Paladin · **Shield Chain** (PA_SHIELDCHAIN): not translated: Unsupported input.equipmentBonus
+- Rebellion · **Dragon Tail** (RL_D_TAIL): not translated: Unsupported this.bonuses
+- Rebellion · **God's Hammer** (RL_HAMMER_OF_GOD): not translated: Unsupported this.bonuses
+- Rebellion · **God's Hammer** (RL_HAMMER_OF_GOD): not translated: Unsupported this.bonuses
+- RoyalGuard · Genesis Ray (LG_RAYOFGENESIS): partial: element chosen by the skill at runtime (uses the weapon element here)
+- RoyalGuard · **Shield Press** (LG_SHIELDPRESS): not translated: Unsupported input.equipmentBonus
+- RuneKnight · **Dragon Breath** (RK_DRAGONBREATH): not translated: Unsupported destructure non-object
+- RuneKnight · **Dragon Breath - WATER** (RK_DRAGONBREATH_WATER): not translated: Unsupported destructure non-object
+- ShadowChaser · **Psychic Wave** (SO_PSYCHIC_WAVE): not translated: Unsupported identifier lv
+- ShadowChaser · **Meteor Storm** (WZ_METEOR): not translated: Unsupported identifier {
+- ShadowChaser · **Severe Rainstorm** (WM_SEVERE_RAINSTORM): not translated: Unsupported identifier {
+- ShadowChaser · Genesis Ray (LG_RAYOFGENESIS): partial: element chosen by the skill at runtime (uses the weapon element here)
+- Shinkiro · Huuma Shuriken - Construct (SS_FUUMAKOUCHIKU): partial: not simulated: part2
+- Shiranui · Huuma Shuriken - Construct (SS_FUUMAKOUCHIKU): partial: not simulated: part2
+- Sorcerer · Psychic Wave (SO_PSYCHIC_WAVE): partial: element chosen by the skill at runtime (uses the weapon element here)
+- Sorcerer · **Poison Burst** (SO_POISON_BUSTER): not translated: Unsupported input.totalBonus
+- SpiritHandler · Hyunrok Breeze (SH_HYUN_ROKS_BREEZE): partial: element chosen by the skill at runtime (uses the weapon element here)
+- SpiritHandler · Hyunrok Cannon (SH_HYUN_ROK_CANNON): partial: element chosen by the skill at runtime (uses the weapon element here)
+- SuperNovice · **Psychic Wave** (SO_PSYCHIC_WAVE): not translated: Unsupported identifier lv
+- SuperNovice · **Shield Chain** (PA_SHIELDCHAIN): not translated: Unsupported input.equipmentBonus
+- Sura · Asura Strike (MO_EXTREMITYFIST): partial: not simulated: flatDamage, currentSpFn
+- Sura · **Fallen Empire** (SR_FALLENEMPIRE): not translated: Unsupported expected '=', got ','
+- Sura · **Knuckle Arrow** (SR_KNUCKLEARROW): not translated: Unsupported monster.isMVP
+- Sura · Lightning Ride (SR_RIDEINLIGHTNING): partial: not simulated: finalDmgFormula
+- Sura · Hell Gate (SR_GATEOFHELL): partial: not simulated: finalDmgFormula, currentHpFn, currentSpFn
+- Sura · Hell Gate (SR_GATEOFHELL): partial: not simulated: finalDmgFormula, currentHpFn, currentSpFn
+- Troubadour · Rose Blossom (TR_ROSEBLOSSOM): partial: not simulated: part2
+- Troubadour · Metallic Fury (TR_METALIC_FURY): partial: element chosen by the skill at runtime (uses the weapon element here); not simulated: part2
+- Trouvere · Rose Blossom (TR_ROSEBLOSSOM): partial: not simulated: part2
+- Trouvere · Metallic Fury (TR_METALIC_FURY): partial: element chosen by the skill at runtime (uses the weapon element here); not simulated: part2
+- Warlock · Hell Inferno (WL_HELLINFERNO): partial: not simulated: part2

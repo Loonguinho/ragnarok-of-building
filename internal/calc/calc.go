@@ -5,6 +5,7 @@
 package calc
 
 import (
+	"fmt"
 	"math"
 	"slices"
 	"sort"
@@ -116,8 +117,9 @@ type Result struct {
 }
 
 // Normalize clamps a build to the job's limits so the calculation and the UI
-// always agree on what is possible.
-func Normalize(b *Build, c *gamedata.Catalog) {
+// always agree on what is possible. It returns a note for every item it had
+// to remove because the class cannot equip it.
+func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 	j := c.Jobs[b.Job]
 	maxBase, maxJob := 99, 50
 	if j != nil && j.MaxBaseLv > 0 {
@@ -142,6 +144,11 @@ func Normalize(b *Build, c *gamedata.Catalog) {
 			delete(b.Equip, slot)
 			continue
 		}
+		if !j.CanEquip(it) {
+			notes = append(notes, it.Name.Get("pt")+" removido: a classe não pode equipar.")
+			delete(b.Equip, slot)
+			continue
+		}
 		e.Refine = clamp(e.Refine, 0, maxRefine)
 		if !it.Refineable {
 			e.Refine = 0
@@ -158,6 +165,8 @@ func Normalize(b *Build, c *gamedata.Catalog) {
 	if w, ok := b.Equip[Weapon]; ok && c.Items[w.Item].HasLocation("Both_Hand") {
 		delete(b.Equip, Shield)
 	}
+	slices.Sort(notes)
+	return slices.Compact(notes) // multi-slot items are reported once
 }
 
 // Fits reports whether an item can be equipped in a slot.
@@ -407,6 +416,13 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	// ASPD (status_base_amotion_pc, RENEWAL_ASPD).
 	r.ASPD = aspd(j, r.WeaponType, shield, st[AGI], st[DEX], ranged, bonus["bAspdRate"], bonus["bAspd"])
 
+	for _, slot := range Slots {
+		if e, ok := b.Equip[slot]; ok {
+			if it := c.Items[e.Item]; it != nil && it.EquipLvMin > b.BaseLv {
+				r.Warnings = append(r.Warnings, fmt.Sprintf("%s exige nível base %d", it.Name.Get("pt"), it.EquipLvMin))
+			}
+		}
+	}
 	if r.Points < 0 {
 		r.Warnings = append(r.Warnings, "pontos de atributo insuficientes")
 	}

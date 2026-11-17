@@ -147,6 +147,24 @@ func TestNormalizeEquipRules(t *testing.T) {
 	}
 }
 
+func TestNormalizeClassRestriction(t *testing.T) {
+	c := novice()
+	c.Jobs[0].EquipGroup, c.Jobs[0].EquipTier = "Novice", "Normal"
+	c.Items[1201].EquipJobs = []string{"Novice"}
+	c.Items[1250] = &gamedata.Item{ID: 1250, Name: gamedata.Text{"pt": "Jur"}, Type: "Weapon", SubType: "Katar",
+		Locations: []string{"Both_Hand"}, EquipJobs: []string{"Assassin"}}
+	b := Build{Job: 0, BaseLv: 1, JobLv: 1, Stats: [6]int{1, 1, 1, 1, 1, 1},
+		Equip: map[string]Equip{Weapon: {Item: 1250}}}
+	notes := Normalize(&b, c)
+	if _, ok := b.Equip[Weapon]; ok || len(notes) != 1 {
+		t.Errorf("katar kept on a novice: equip %v notes %v", b.Equip, notes)
+	}
+	b.Equip = map[string]Equip{Weapon: {Item: 1201}}
+	if notes := Normalize(&b, c); len(notes) != 0 || b.Equip[Weapon].Item != 1201 {
+		t.Errorf("knife removed: %v %v", b.Equip, notes)
+	}
+}
+
 func TestOverBudget(t *testing.T) {
 	c := novice()
 	b := Build{Job: 0, BaseLv: 1, JobLv: 1, Stats: [6]int{30, 1, 1, 1, 1, 1}}

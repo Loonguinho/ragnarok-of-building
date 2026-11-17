@@ -21,6 +21,8 @@
 }
 
 * { box-sizing: border-box; }
+/* The hidden attribute must win over component display rules (grid/flex). */
+[hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; }
 body.ro-desktop {
   font: 11px/1.35 var(--ro-font);

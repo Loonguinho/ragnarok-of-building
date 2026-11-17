@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 )
 
@@ -70,6 +71,9 @@ type Item struct {
 	EquipLvMax  int      `json:"elvMax,omitempty"`
 	Refineable  bool     `json:"refine,omitempty"`
 	Script      string   `json:"script,omitempty"`
+	// Who can equip it (rAthena Jobs/Classes); empty means everyone.
+	EquipJobs    []string `json:"jobs,omitempty"`
+	EquipClasses []string `json:"classes,omitempty"`
 }
 
 // HasLocation reports whether the item can go in a slot location.
@@ -137,6 +141,37 @@ type Job struct {
 	Upper     bool           `json:"upper,omitempty"`    // MaxHP/SP x1.25 (transcendent, primary 4th)
 	Fourth    bool           `json:"fourth,omitempty"`   // has trait stats
 	Baby      bool           `json:"baby,omitempty"`
+	// Equipment restrictions: rAthena job group (Knight, BardDancer, ...) and
+	// class tier (Normal, Upper, Baby, Third, Third_Upper, Third_Baby, Fourth).
+	EquipGroup string `json:"equipGroup,omitempty"`
+	EquipTier  string `json:"equipTier,omitempty"`
+}
+
+// tierSets expands rAthena's grouped class flags (itemdb.hpp e_item_job).
+var tierSets = map[string][]string{
+	"All_Upper": {"Upper", "Third_Upper", "Fourth"},
+	"All_Baby":  {"Baby", "Third_Baby"},
+	"All_Third": {"Third", "Third_Upper", "Third_Baby"},
+}
+
+// CanEquip mirrors rAthena's renewal pc_isItemClass + job check. Jobs without
+// imported restrictions (no EquipGroup) can equip anything.
+func (j *Job) CanEquip(it *Item) bool {
+	if j == nil || it == nil || j.EquipGroup == "" {
+		return true
+	}
+	if len(it.EquipJobs) > 0 && !slices.Contains(it.EquipJobs, "All") && !slices.Contains(it.EquipJobs, j.EquipGroup) {
+		return false
+	}
+	if len(it.EquipClasses) == 0 || slices.Contains(it.EquipClasses, "All") {
+		return true
+	}
+	for _, c := range it.EquipClasses {
+		if c == j.EquipTier || slices.Contains(tierSets[c], j.EquipTier) {
+			return true
+		}
+	}
+	return false
 }
 
 // HasStats reports whether rAthena job tables were imported for this job.

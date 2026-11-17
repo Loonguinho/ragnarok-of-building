@@ -1,6 +1,7 @@
 package clientimport
 
 import (
+	"slices"
 	"strings"
 
 	"ragnarok-of-building/internal/gamedata"
@@ -42,9 +43,13 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 			}
 		}
 		j.BaseASPD = rj.BaseASPD
-		j.Upper = isUpper(id)
+		j.Upper = isUpper(j)
 		j.Fourth = (id >= 4252 && id <= 4279) || (id >= 4302 && id <= 4330)
 		j.Baby = strings.Contains(j.Code, "_B") || strings.HasPrefix(j.Code, "JT_BABY")
+	}
+
+	for _, j := range c.Jobs {
+		j.EquipGroup, j.EquipTier = equipClass(c, j)
 	}
 
 	for id, ri := range db.Items {
@@ -58,6 +63,7 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 		it.WeaponLv, it.ArmorLv = ri.WeaponLevel, ri.ArmorLevel
 		it.EquipLvMin, it.EquipLvMax = ri.EquipLvMin, ri.EquipLvMax
 		it.Refineable, it.Script = ri.Refineable, ri.Script
+		it.EquipJobs, it.EquipClasses = ri.Jobs, ri.Classes
 		if it.Slots == 0 {
 			it.Slots = ri.Slots
 		}
@@ -66,10 +72,54 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 }
 
 // isUpper mirrors rAthena's (class & JOBL_UPPER) || pc_is_primary_fourth:
-// transcendent 1st/2nd (4001-4022), transcendent 3rd incl. mounts (4060-4087)
-// and primary 4th jobs incl. mounts (4252-4279) get MaxHP/SP x1.25.
-func isUpper(id int) bool {
-	return (id >= 4001 && id <= 4022) || (id >= 4060 && id <= 4087) || (id >= 4252 && id <= 4279)
+// transcendent classes (client codes ending in _H, including transcendent
+// 3rd jobs) and the 13 primary 4th jobs (4252-4264) get MaxHP/SP x1.25.
+func isUpper(j *gamedata.Job) bool {
+	return strings.HasSuffix(j.Code, "_H") || (j.ID >= 4252 && j.ID <= 4264)
+}
+
+// equipGroups maps client job codes to rAthena item job groups.
+var equipGroups = map[string]string{
+	"JT_NOVICE": "Novice", "JT_SWORDMAN": "Swordman", "JT_MAGICIAN": "Mage", "JT_ARCHER": "Archer",
+	"JT_ACOLYTE": "Acolyte", "JT_MERCHANT": "Merchant", "JT_THIEF": "Thief", "JT_KNIGHT": "Knight",
+	"JT_PRIEST": "Priest", "JT_WIZARD": "Wizard", "JT_BLACKSMITH": "Blacksmith", "JT_HUNTER": "Hunter",
+	"JT_ASSASSIN": "Assassin", "JT_CRUSADER": "Crusader", "JT_MONK": "Monk", "JT_SAGE": "Sage",
+	"JT_ROGUE": "Rogue", "JT_ALCHEMIST": "Alchemist", "JT_BARD": "BardDancer", "JT_DANCER": "BardDancer",
+	"JT_SUPERNOVICE": "SuperNovice", "JT_GUNSLINGER": "Gunslinger", "JT_NINJA": "Ninja",
+	"JT_TAEKWON": "Taekwon", "JT_STAR": "StarGladiator", "JT_LINKER": "SoulLinker",
+	"JT_KAGEROU": "KagerouOboro", "JT_OBORO": "KagerouOboro", "JT_REBELLION": "Rebellion", "JT_DO_SUMMONER": "Summoner",
+}
+
+var thirdJobs = []string{"RUNE_KNIGHT", "WARLOCK", "RANGER", "ARCHBISHOP", "MECHANIC", "GUILLOTINE_CROSS",
+	"ROYAL_GUARD", "SORCERER", "MINSTREL", "WANDERER", "SURA", "GENETIC", "SHADOW_CHASER"}
+
+// equipClass returns the rAthena item group (deepest base class in the
+// chain) and class tier, following map.hpp's MAPID flags.
+func equipClass(c *gamedata.Catalog, j *gamedata.Job) (group, tier string) {
+	for _, id := range c.Chain(j.ID) {
+		if g, ok := equipGroups[strings.TrimSuffix(c.Jobs[id].Code, "_H")]; ok {
+			group = g
+		}
+	}
+	base := strings.TrimSuffix(strings.TrimPrefix(j.Code, "JT_"), "_H")
+	switch {
+	case (j.ID >= 4252 && j.ID <= 4264) || j.ID == 4302 || j.ID == 4303 || j.ID == 4307:
+		tier = "Fourth" // primary 4th, Sky Emperor, Soul Ascetic, Hyper Novice
+	case slices.Contains(thirdJobs, base):
+		tier = "Third"
+		if strings.HasSuffix(j.Code, "_H") {
+			tier = "Third_Upper"
+		}
+	case slices.Contains([]string{"SUPERNOVICE2", "STAR_EMPEROR", "SOUL_REAPER", "NIGHT_WATCH", "SHINKIRO", "SHIRANUI"}, base):
+		tier = "Third" // expanded jobs in rAthena's JOBL_THIRD block
+	case strings.HasSuffix(j.Code, "_H"):
+		tier = "Upper"
+	case j.Baby:
+		tier = "Baby"
+	default:
+		tier = "Normal" // includes Kagerou/Oboro, Rebellion, Summoner, Spirit Handler
+	}
+	return group, tier
 }
 
 // canonicalType fixes inconsistent casing in rAthena (Shadowgear/ShadowGear).

@@ -32,6 +32,7 @@
       build.e = build.e || {};
       build.k = build.k || {};
       code = data.code;
+      for (const n of data.notes || []) say(n, true);
       for (const [id, html] of Object.entries(data.html)) {
         const el = document.getElementById(id);
         if (el) el.innerHTML = html;
@@ -160,7 +161,7 @@
   function search() {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(async () => {
-      const params = new URLSearchParams({ slot: slotOpen, q: pickQ.value, lang });
+      const params = new URLSearchParams({ slot: slotOpen, q: pickQ.value, lang, job: build.j });
       if (cardIndex >= 0) params.set("card", "1");
       const res = await fetch("/build/items?" + params);
       pickList.innerHTML = res.ok ? await res.text() : "";

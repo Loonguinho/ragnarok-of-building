@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"slices"
@@ -86,6 +87,7 @@ type buildView struct {
 	Extras   []bonusLine
 	HPPct    int
 	SPPct    int
+	Notes    []string // items removed by normalization (shown in the chat)
 }
 
 type slotView struct {
@@ -106,9 +108,9 @@ var traitNames = [6]string{"POW", "STA", "WIS", "SPL", "CON", "CRT"}
 
 func (s *Server) buildView(b calc.Build, l string) buildView {
 	c := s.opt.Catalog
-	calc.Normalize(&b, c)
+	notes := calc.Normalize(&b, c)
 	r := calc.Compute(b, c)
-	v := buildView{Lang: l, Build: b, Code: encodeBuild(b), Job: c.Jobs[b.Job], R: r, StatName: statNames, TraitNm: traitNames}
+	v := buildView{Lang: l, Build: b, Code: encodeBuild(b), Job: c.Jobs[b.Job], R: r, StatName: statNames, TraitNm: traitNames, Notes: notes}
 	if v.Job != nil {
 		v.JobName = v.Job.Name.Get(l)
 	}
@@ -191,7 +193,7 @@ func (s *Server) handleBuildCalc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v := s.buildView(b, lang(r))
-	out := map[string]any{"build": v.Build, "code": v.Code, "html": map[string]string{}}
+	out := map[string]any{"build": v.Build, "code": v.Code, "notes": v.Notes, "html": map[string]string{}}
 	for _, name := range []string{"build_status", "build_basic", "build_equip", "build_bonus"} {
 		html, err := s.fragmentString("build", name, v)
 		if err != nil {
@@ -229,6 +231,7 @@ func (s *Server) handleBuildItems(w http.ResponseWriter, r *http.Request) {
 	l := lang(r)
 	slot := r.URL.Query().Get("slot")
 	card := r.URL.Query().Get("card") == "1"
+	job := s.opt.Catalog.Jobs[atoi(r.URL.Query().Get("job"))]
 	q := r.URL.Query().Get("q")
 	var pool []*gamedata.Item
 	if q != "" {
@@ -241,7 +244,7 @@ func (s *Server) handleBuildItems(w http.ResponseWriter, r *http.Request) {
 	}
 	var out []itemView
 	for _, it := range pool {
-		ok := (card && calc.CardFits(it, slot)) || (!card && calc.Fits(it, slot))
+		ok := (card && calc.CardFits(it, slot)) || (!card && calc.Fits(it, slot) && job.CanEquip(it))
 		if ok && it.Name.Get(l) != "" {
 			out = append(out, viewItem(it, l))
 			if len(out) >= searchLimit {
@@ -250,6 +253,11 @@ func (s *Server) handleBuildItems(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	s.fragment(w, r, "build", "pick_results", map[string]any{"Results": out, "Q": q, "Slot": slot, "Card": card})
+}
+
+func atoi(s string) int {
+	n, _ := strconv.Atoi(s)
+	return n
 }
 
 func (s *Server) fragmentString(page, name string, data any) (string, error) {
@@ -314,6 +322,10 @@ func (s *Server) skillTreeData(jobID int, l string, levels map[int]int) map[stri
 }
 
 func signed(v int, key string) string {
+	name, _, _ := strings.Cut(key, " ")
+	if effChance[name] { // chances are stored in 1/100 %
+		return fmt.Sprintf("%+g%%", float64(v)/100)
+	}
 	s := strconv.Itoa(v)
 	if v > 0 {
 		s = "+" + s
@@ -371,6 +383,15 @@ var eleNames = map[string]string{
 	"Ele_All": "todos os elementos", "Ele_Neutral": "Neutro", "Ele_Water": "Água", "Ele_Earth": "Terra", "Ele_Fire": "Fogo",
 	"Ele_Wind": "Vento", "Ele_Poison": "Veneno", "Ele_Holy": "Sagrado", "Ele_Dark": "Sombrio", "Ele_Ghost": "Fantasma", "Ele_Undead": "Maldito",
 }
+var effChance = map[string]bool{"bAddEff": true, "bAddEff2": true, "bResEff": true, "bAddEffWhenHit": true, "bMagicAddEff": true}
+
+var effNames = map[string]string{
+	"Eff_Poison": "envenenar", "Eff_Stun": "atordoar", "Eff_Freeze": "congelar", "Eff_Curse": "amaldiçoar",
+	"Eff_Silence": "silenciar", "Eff_Sleep": "adormecer", "Eff_Blind": "cegar", "Eff_Stone": "petrificar",
+	"Eff_Bleeding": "causar sangramento", "Eff_Confusion": "confundir", "Eff_Burning": "queimar",
+	"Eff_Crystalize": "cristalizar", "Eff_DPoison": "envenenar gravemente", "Eff_Fear": "amedrontar",
+}
+
 var sizeNames = map[string]string{"Size_All": "todos os tamanhos", "Size_Small": "Pequeno", "Size_Medium": "Médio", "Size_Large": "Grande"}
 
 // extraLabel turns "bAddRace RC_DemiHuman" into readable Portuguese when known.
@@ -405,6 +426,12 @@ func extraLabel(k string, c *gamedata.Catalog, l string) string {
 		return "Dano físico vs " + name(sizeNames)
 	case "bMagicAddSize":
 		return "Dano mágico vs " + name(sizeNames)
+	case "bAddEff", "bAddEff2", "bMagicAddEff":
+		return "Chance de " + name(effNames)
+	case "bAddEffWhenHit":
+		return "Chance de " + name(effNames) + " ao ser atingido"
+	case "bResEff":
+		return "Resistência a " + strings.TrimPrefix(arg, "Eff_")
 	case "bIgnoreDefRaceRate":
 		return "Ignora DEF de " + name(raceNames)
 	case "bIgnoreMdefRaceRate":

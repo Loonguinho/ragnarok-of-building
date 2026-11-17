@@ -24,7 +24,7 @@ Re-run `go run ./cmd/import` after each game patch.
 
 **Pages**
 - `/` is the home screen, styled as the RO server-select screen
-- `/build` is the **build editor**, with Basic Info (Alt+V), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S) and Bonuses (Alt+B). The build lives in the URL, so copy the link to share it.
+- `/build` is the **build editor**, with Basic Info (Alt+V), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S), Bonuses (Alt+B) and Target/Damage (Alt+D). The build lives in the URL, so copy the link to share it.
 - `/items` is the item database (PT/ES/EN search, filter by type)
 - `/skills` is a standalone skill tree
 - `/uikit` is the RO UI kit
@@ -51,9 +51,9 @@ go run ./cmd/scriptcov                                                 # how muc
 - [x] Phase 0: scaffold + RO UI kit
 - [x] Phase 1: client data import (items, skills, trees, jobs in PT/ES/EN)
 - [x] Phase 2: build model, stats, HP/SP/ASPD, traits (rAthena renewal formulas)
-- [~] Phase 3: in-game-style skill tree (real client data; point limits pending)
+- [x] Phase 3: in-game-style skill tree with skill point limits per class step
 - [~] Phase 4: equipment, cards, refine, class restrictions (enchants/combos pending)
-- [ ] Phase 5: damage engine + golden tests
+- [~] Phase 5: physical damage vs monsters (rAthena renewal formula, breakdown); magic damage, masteries, buffs and in-game golden tests pending
 - [~] Phase 6: share links + last build restored (accounts/saved builds pending)
 - [ ] Phase 6b: import items from a replay (`.rrf`)
 - [ ] Phase 7: compare + optimizer

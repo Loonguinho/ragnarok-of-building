@@ -34,6 +34,16 @@
   <div class="ro-window__body" id="build_bonus">{{template "build_bonus" .}}</div>
 </section>
 
+<!-- Target / Damage (Alt+D) -->
+<section class="ro-window ro-dmgwin" id="win-damage" data-hotkey="d" style="left:828px;top:16px;width:380px">
+  <header class="ro-window__title">Alvo / Dano <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <div class="ro-skillwin__bar">
+    <input class="ro-input" type="search" id="mob-q" placeholder="Buscar monstro (nome ou ID)…" autocomplete="off" aria-label="Buscar monstro">
+  </div>
+  <ul class="ro-list ro-moblist" id="mob-results" hidden></ul>
+  <div class="ro-window__body" id="build_damage">{{template "build_damage" .}}</div>
+</section>
+
 <!-- Slot editor + item picker (opened from Equipment) -->
 <section class="ro-window ro-slotwin is-hidden" id="win-slot" style="left:828px;top:16px;width:340px">
   <header class="ro-window__title"><span data-slot-title>Equipamento</span> <button class="ro-window__close" aria-label="Fechar">×</button></header>
@@ -59,6 +69,64 @@
 {{end}}
 {{end}}
 
+{{define "build_damage"}}
+{{with .D}}
+<div class="ro-dmg__atk">
+  <label>Ataque
+    <select class="ro-select" data-atk="skill">
+      <option value="0">Ataque básico</option>
+      {{range .Skills}}<option value="{{.ID}}"{{if .Selected}} selected{{end}}>{{.Name}}</option>{{end}}
+    </select>
+  </label>
+  {{if .Levels}}<label>Nv
+    <select class="ro-select" data-atk="lv">{{range .Levels}}<option value="{{.}}"{{if eq . $.D.Atk.Level}} selected{{end}}>{{.}}</option>{{end}}</select>
+  </label>{{end}}
+  <label>% <input class="ro-input ro-num" type="number" min="1" value="{{.Ratio}}" data-atk="ratio" title="Fonte: {{.RatioSource}}"></label>
+  <label>Golpes <input class="ro-input ro-num ro-num--sm" type="number" min="1" max="50" value="{{.Hits}}" data-atk="hits"></label>
+  <label>Elemento
+    <select class="ro-select" data-atk="ele">{{range .Elements}}<option value="{{index . 0}}"{{if eq (index . 0) $.D.Atk.Element}} selected{{end}}>{{index . 1}}</option>{{end}}</select>
+  </label>
+</div>
+<div class="ro-dmg__src">% {{if eq .RatioSource "descrição"}}lido da descrição da habilidade{{else if eq .RatioSource "não encontrado"}}<b class="is-bad">não está na descrição: digite o % da habilidade</b>{{else if eq .RatioSource "manual"}}informado manualmente <button class="ro-btn ro-btn--sm" data-atk-auto>Usar descrição</button>{{else}}de ataque básico{{end}}</div>
+{{if .Target}}
+<div class="ro-target">
+  <div class="ro-target__head">
+    <img src="https://static.divine-pride.net/images/mobs/png/{{.Target.ID}}.png" alt="" loading="lazy">
+    <div><b>{{.Target.Name}}</b> <small>#{{.Target.ID}}</small></div>
+  </div>
+  <div class="ro-target__grid">{{range .TargetInfo}}<span>{{.Label}}</span><b>{{.Value}}</b>{{end}}</div>
+</div>
+<table class="ro-dmgtable">
+  <tr><th>Dano normal</th><td><b>{{num .Dmg.Min}} ~ {{num .Dmg.Max}}</b> <small>(média {{num .Dmg.Avg}})</small></td></tr>
+  {{if .Dmg.Crit}}<tr><th>Crítico</th><td><b>{{num .Dmg.Crit}}</b> <small>chance {{f1 .Dmg.CritChance}}%</small></td></tr>{{end}}
+  <tr><th>Chance de acerto</th><td>{{.Dmg.HitChance}}%</td></tr>
+  <tr><th>Dano esperado</th><td>{{num0 .Dmg.Expected}} <small>por uso, com erros e críticos</small></td></tr>
+  <tr><th>Usos para matar</th><td><b>{{.Dmg.HitsToKill}}</b> <small>(dano médio)</small></td></tr>
+  <tr><th>Elemento do ataque</th><td>{{.ElementName}}</td></tr>
+</table>
+<details class="ro-steps">
+  <summary>Como foi calculado (golpe médio)</summary>
+  <ol>{{range .Dmg.Steps}}<li><span>{{.Label}}</span><code>{{.Value}}</code></li>{{end}}</ol>
+</details>
+{{range .Dmg.Notes}}<div class="ro-note">{{.}}</div>{{end}}
+<div class="ro-note">Fórmula de dano físico do rAthena (renewal). O LATAM pode ter ajustes próprios em algumas habilidades.</div>
+{{else}}
+<div class="ro-npc ro-npc--hint">Busque um monstro acima para calcular o dano.</div>
+{{end}}
+{{end}}
+{{end}}
+
+{{define "mob_results"}}
+{{range .Results}}
+<li class="ro-list__item ro-itemrow" tabindex="0" data-monster="{{.ID}}">
+  <span>{{.Name}}{{if .MVP}} <em class="ro-mvp">MVP</em>{{end}}</span>
+  <small>Nv {{.Level}} · {{call $.RaceName .Race}} · {{index $.EleName .Element}} {{.ElementLv}}</small>
+</li>
+{{else}}
+<li class="ro-list__empty">Nenhum monstro encontrado.</li>
+{{end}}
+{{end}}
+
 {{define "build_basic"}}
 <div class="ro-basic__name"><b>{{.JobName}}</b></div>
 <div class="ro-basic__lv">Base Lv. {{.Build.BaseLv}} · Classe Lv. {{.Build.JobLv}}</div>
@@ -72,6 +140,7 @@
   <button class="ro-btn" data-toggle="win-equip" title="Alt+Q">Equip</button>
   <button class="ro-btn" data-toggle="win-skills" title="Alt+S">Habil</button>
   <button class="ro-btn" data-toggle="win-bonus" title="Alt+B">Bônus</button>
+  <button class="ro-btn" data-toggle="win-damage" title="Alt+D">Dano</button>
 </div>
 <div class="ro-basic__menu">
   <button class="ro-btn" data-copy-link>Copiar link</button>

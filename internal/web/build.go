@@ -88,6 +88,7 @@ type buildView struct {
 	HPPct    int
 	SPPct    int
 	Notes    []string // items removed by normalization (shown in the chat)
+	D        damageView
 }
 
 type slotView struct {
@@ -160,6 +161,7 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 		v.Extras = append(v.Extras, bonusLine{Label: extraLabel(k, c, l), Value: signed(r.Extra[k], k)})
 	}
 	v.HPPct, v.SPPct = 100, 100
+	v.D = s.damageView(b, r, l)
 	return v
 }
 
@@ -195,7 +197,7 @@ func (s *Server) handleBuildCalc(w http.ResponseWriter, r *http.Request) {
 	v := s.buildView(b, lang(r))
 	out := map[string]any{"build": v.Build, "code": v.Code, "notes": v.Notes, "html": map[string]string{},
 		"skillGroups": s.opt.Catalog.SkillBudgets(v.Build.Job, v.Build.JobLv)}
-	for _, name := range []string{"build_status", "build_basic", "build_equip", "build_bonus"} {
+	for _, name := range []string{"build_status", "build_basic", "build_equip", "build_bonus", "build_damage"} {
 		html, err := s.fragmentString("build", name, v)
 		if err != nil {
 			s.opt.Log.Error("build fragment", "name", name, "err", err)

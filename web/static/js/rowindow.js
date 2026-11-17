@@ -10,6 +10,7 @@
   const state = load();
 
   function focus(win) { win.style.zIndex = ++z; }
+  const isTop = (win) => Number(win.style.zIndex || 0) === z;
 
   function persist(win) {
     if (!win.id) return;
@@ -17,9 +18,22 @@
     save(state);
   }
 
+  // Like the client: a hidden window opens; a covered window comes to the
+  // front; only the window already in front is closed.
   function toggle(win) {
-    win.classList.toggle("is-hidden");
-    if (!win.classList.contains("is-hidden")) focus(win);
+    if (win.classList.contains("is-hidden")) {
+      show(win);
+    } else if (!isTop(win)) {
+      focus(win);
+    } else {
+      win.classList.add("is-hidden");
+      persist(win);
+    }
+  }
+
+  function show(win) {
+    win.classList.remove("is-hidden");
+    focus(win);
     persist(win);
   }
 
@@ -33,7 +47,11 @@
     win.addEventListener("mousedown", () => focus(win));
 
     const close = win.querySelector(".ro-window__close");
-    if (close) close.addEventListener("click", (e) => { e.stopPropagation(); toggle(win); });
+    if (close) close.addEventListener("click", (e) => {
+      e.stopPropagation();
+      win.classList.add("is-hidden");
+      persist(win);
+    });
 
     const bar = win.querySelector(".ro-window__title");
     if (!bar || win.classList.contains("ro-window--fixed")) return;
@@ -55,6 +73,8 @@
       bar.addEventListener("pointerup", up);
     });
   }
+
+  window.ROWin = { show, focus, toggle };
 
   document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".ro-window").forEach(init);

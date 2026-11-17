@@ -23,7 +23,9 @@ var funcs = template.FuncMap{
 		}
 		return min(100, a*100/b)
 	},
-	"f1": func(f float64) string { return strconv.FormatFloat(f, 'f', 1, 64) },
+	"f1":   func(f float64) string { return strconv.FormatFloat(f, 'f', 1, 64) },
+	"num":  fmtInt,
+	"num0": func(f float64) string { return fmtInt(int64(f + 0.5)) },
 }
 
 var colorCode = regexp.MustCompile(`\^([0-9a-fA-F]{6})`)

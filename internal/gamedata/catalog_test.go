@@ -71,3 +71,24 @@ func TestSkillBudgets(t *testing.T) {
 		t.Errorf("job level 0 should mean max: %+v", g)
 	}
 }
+
+func TestRatioAt(t *testing.T) {
+	s := &Skill{Desc: Lines{"pt": {
+		"Impacto",
+		"[Nv 1]: ^777777130%^000000 l ^7777775%^000000",
+		"[Nv 9]: ^7777771.600%^000000 l ^7777773x3 células^000000",
+	}}}
+	if v, ok := s.RatioAt(1); !ok || v != 130 {
+		t.Errorf("lv1 = %d %v, want 130", v, ok)
+	}
+	if v, ok := s.RatioAt(9); !ok || v != 1600 {
+		t.Errorf("lv9 = %d %v, want 1600 (thousands dot)", v, ok)
+	}
+	if _, ok := s.RatioAt(5); ok {
+		t.Error("lv5 should not be found")
+	}
+	en := &Skill{Desc: Lines{"en": {"[Lv 3]: 1,200%"}}}
+	if v, ok := en.RatioAt(3); !ok || v != 1200 {
+		t.Errorf("en lv3 = %d %v", v, ok)
+	}
+}

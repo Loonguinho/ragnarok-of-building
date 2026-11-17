@@ -1,0 +1,137 @@
+package web
+
+import (
+	"net/http"
+	"sort"
+	"strconv"
+	"strings"
+
+	"ragnarok-of-building/internal/calc"
+	"ragnarok-of-building/internal/gamedata"
+)
+
+// damageView is the Alvo / Dano window.
+type damageView struct {
+	Target      *gamedata.Monster
+	TargetInfo  []bonusLine
+	Dmg         calc.DamageResult
+	Skills      []atkSkill
+	Levels      []int
+	Elements    [][2]string // value, label
+	Atk         calc.AttackChoice
+	Ratio       int
+	RatioSource string // "descrição", "manual", "ataque básico", "não encontrado"
+	Hits        int
+	ElementName string
+}
+
+type atkSkill struct {
+	ID       int
+	Name     string
+	Selected bool
+}
+
+var elementPT = map[string]string{"Neutral": "Neutro", "Water": "Água", "Earth": "Terra", "Fire": "Fogo", "Wind": "Vento",
+	"Poison": "Veneno", "Holy": "Sagrado", "Dark": "Sombrio", "Ghost": "Fantasma", "Undead": "Maldito"}
+var sizePT = map[string]string{"Small": "Pequeno", "Medium": "Médio", "Large": "Grande"}
+
+func racePT(r string) string {
+	for k, v := range raceNames {
+		if strings.EqualFold(k, "RC_"+r) {
+			return v
+		}
+	}
+	return r
+}
+
+func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
+	c := s.opt.Catalog
+	v := damageView{Atk: b.Atk, Hits: max(1, b.Atk.Hits)}
+	v.Elements = append(v.Elements, [2]string{"", "Da arma"})
+	for _, e := range calc.Elements {
+		v.Elements = append(v.Elements, [2]string{e, elementPT[e]})
+	}
+	for id, lv := range b.Skills {
+		if sk := c.Skills[id]; sk != nil && lv > 0 && !sk.Free() {
+			v.Skills = append(v.Skills, atkSkill{ID: id, Name: sk.Name.Get(l), Selected: id == b.Atk.Skill})
+		}
+	}
+	sort.Slice(v.Skills, func(i, j int) bool { return v.Skills[i].Name < v.Skills[j].Name })
+	if b.Atk.Skill != 0 {
+		for i := 1; i <= b.Skills[b.Atk.Skill]; i++ {
+			v.Levels = append(v.Levels, i)
+		}
+	}
+
+	// Skill ratio: manual value wins, else the description, else 100%.
+	switch {
+	case b.Atk.Skill == 0 && b.Atk.Ratio == 0:
+		v.Ratio, v.RatioSource = 100, "ataque básico"
+	case b.Atk.Ratio > 0:
+		v.Ratio, v.RatioSource = b.Atk.Ratio, "manual"
+	default:
+		if pct, ok := c.Skills[b.Atk.Skill].RatioAt(b.Atk.Level); ok {
+			v.Ratio, v.RatioSource = pct, "descrição"
+		} else {
+			v.Ratio, v.RatioSource = 100, "não encontrado"
+		}
+	}
+
+	m := c.Monsters[b.Target]
+	if m == nil {
+		return v
+	}
+	v.Target = m
+	cls := "Normal"
+	if m.Class == "Boss" {
+		cls = "Chefe"
+	}
+	if m.MVP {
+		cls = "MVP"
+	}
+	v.TargetInfo = []bonusLine{
+		{"Nível", itoa(m.Level)}, {"HP", fmtInt(int64(m.HP))},
+		{"Raça", racePT(m.Race)}, {"Elemento", elementPT[m.Element] + " " + itoa(m.ElementLv)},
+		{"Tamanho", sizePT[m.Size]}, {"Classe", cls},
+		{"DEF", itoa(m.DEF) + " + " + itoa(m.SoftDEF())}, {"DEFM", itoa(m.MDEF) + " + " + itoa(m.SoftMDEF())},
+	}
+	if m.RES > 0 || m.MRES > 0 {
+		v.TargetInfo = append(v.TargetInfo, bonusLine{"RES / MRES", itoa(m.RES) + " / " + itoa(m.MRES)})
+	}
+	if m.DamageTaken != 100 {
+		v.TargetInfo = append(v.TargetInfo, bonusLine{"Dano recebido", itoa(m.DamageTaken) + "%"})
+	}
+	v.Dmg = calc.Damage(b, r, c, m, calc.Attack{SkillRatio: v.Ratio, Hits: b.Atk.Hits, Element: b.Atk.Element})
+	v.ElementName = elementPT[v.Dmg.Element]
+	return v
+}
+
+// GET /build/monsters?q=: monster picker results.
+func (s *Server) handleBuildMonsters(w http.ResponseWriter, r *http.Request) {
+	if s.opt.Catalog == nil {
+		http.Error(w, "catalog not loaded", http.StatusServiceUnavailable)
+		return
+	}
+	s.fragment(w, r, "build", "mob_results", map[string]any{
+		"Q": r.URL.Query().Get("q"), "Results": s.opt.Catalog.SearchMonsters(r.URL.Query().Get("q"), 40),
+		"RaceName": racePT, "EleName": elementPT,
+	})
+}
+
+func itoa(n int) string { return fmtInt(int64(n)) }
+
+// fmtInt formats with dots as thousands separators (PT style).
+func fmtInt(n int64) string {
+	s := strings.TrimPrefix(strconv.FormatInt(n, 10), "-")
+	var b strings.Builder
+	if n < 0 {
+		b.WriteByte('-')
+	}
+	for i, ch := range s {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			b.WriteByte('.')
+		}
+		b.WriteRune(ch)
+	}
+	return b.String()
+}

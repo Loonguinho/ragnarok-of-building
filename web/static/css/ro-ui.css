@@ -260,7 +260,6 @@ a { color: #1d4fa8; }
 .ro-eslot em { color: #9aa; font-style: normal; }
 .ro-eslot__empty { flex: none; display: inline-block; width: 24px; height: 24px; background: #eef0f4; border: 1px dashed #c4c8d0; border-radius: 2px; }
 
-.ro-slotwin { z-index: 50; }
 .ro-slotedit { display: grid; gap: 6px; }
 .ro-slotedit__refine { display: flex; gap: 4px; align-items: center; margin-top: 4px; }
 .ro-slotedit__desc { max-height: 120px; overflow-y: auto; background: #fff; border: 1px solid #b7bcc6; padding: 4px 6px; user-select: text; }
@@ -284,3 +283,32 @@ a { color: #1d4fa8; }
 }
 
 .ro-skillmsg { color: #b42318; font-style: normal; margin-left: 6px; }
+
+/* ---------- damage window ---------- */
+.ro-moblist { max-height: 180px; overflow-y: auto; margin: 0 8px; }
+.ro-moblist .ro-itemrow { flex-wrap: wrap; }
+.ro-moblist small { flex-basis: 100%; }
+.ro-mvp { color: #b42318; font-style: normal; font-weight: bold; font-size: 9px; }
+.ro-dmg__atk { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.ro-dmg__atk label { display: flex; gap: 3px; align-items: center; }
+.ro-dmg__atk .ro-select { max-width: 150px; }
+.ro-num--sm { width: 42px; }
+.ro-dmg__src { margin: 3px 0 6px; color: #666; font-size: 10px; }
+.ro-btn--sm { height: 15px; min-width: 0; padding: 0 5px; font-size: 10px; }
+.ro-target { background: #fff; border: 1px solid #b7bcc6; padding: 5px; margin-bottom: 6px; }
+.ro-target__head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.ro-target__head img { max-height: 40px; max-width: 48px; image-rendering: pixelated; }
+.ro-target__grid { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 1px 8px; }
+.ro-target__grid span { color: #666; }
+.ro-dmgtable { width: 100%; border-collapse: collapse; }
+.ro-dmgtable th { text-align: left; font-weight: normal; color: #4a4a6a; padding: 2px 4px 2px 0; white-space: nowrap; }
+.ro-dmgtable td { padding: 2px 0; }
+.ro-dmgtable td b { color: #b42318; font-size: 12px; }
+.ro-dmgtable small { color: #888; }
+.ro-steps { margin-top: 6px; }
+.ro-steps summary { cursor: pointer; color: var(--ro-title-text); }
+.ro-steps ol { margin: 4px 0 0; padding-left: 18px; }
+.ro-steps li { padding: 1px 0; }
+.ro-steps li span { display: block; color: #4a4a6a; }
+.ro-steps code { font: 10px Consolas, monospace; color: #333; }
+.ro-npc--hint { margin: 0; min-height: 40px; padding: 6px; }

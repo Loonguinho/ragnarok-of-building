@@ -8,7 +8,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -298,4 +301,32 @@ func Load(path string) (*Catalog, error) {
 		return nil, fmt.Errorf("gamedata: %w", err)
 	}
 	return &c, nil
+}
+
+var (
+	colorCodeRe = regexp.MustCompile(`\^[0-9a-fA-F]{6}`)
+	levelPctRe  = regexp.MustCompile(`(?i)\[\s*(?:nv|lv|niv|nível|level)\.?\s*(\d+)\s*\]\s*:\s*([\d.,]+)\s*%`)
+)
+
+// RatioAt reads the damage % for a skill level from the client description
+// ("[Nv 5]: 300%"), trying PT, ES and EN. It reports false when the
+// description gives no per-level percentage (formula-based skills).
+func (s *Skill) RatioAt(lv int) (int, bool) {
+	for _, l := range Langs {
+		for _, line := range s.Desc[l] {
+			line = colorCodeRe.ReplaceAllString(line, "")
+			m := levelPctRe.FindStringSubmatch(line)
+			if m == nil {
+				continue
+			}
+			if n, _ := strconv.Atoi(m[1]); n != lv {
+				continue
+			}
+			pct, err := strconv.Atoi(strings.NewReplacer(".", "", ",", "").Replace(m[2]))
+			if err == nil && pct > 0 {
+				return pct, true
+			}
+		}
+	}
+	return 0, false
 }

@@ -26,11 +26,18 @@
   build.k = build.k || {};
 
   // ---- server round-trip ----
+  // Every local change bumps rev. A response is only adopted if nothing
+  // changed since its request was sent; otherwise a newer request follows
+  // and the stale response is dropped (it would erase the newer change).
   let inflight = null;
   let pending = false;
+  let rev = 0;
+  const touch = () => { rev++; };
 
   async function recalc() {
+    touch();
     if (inflight) { pending = true; return; }
+    const sentRev = rev;
     inflight = fetch("/build/calc?lang=" + lang, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -40,6 +47,7 @@
       const res = await inflight;
       if (!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
+      if (sentRev !== rev) return; // stale: a newer change is queued
       build = data.build;
       build.e = build.e || {};
       build.k = build.k || {};
@@ -155,8 +163,7 @@
   function openSlot(slot) {
     slotOpen = slot;
     cardIndex = -1;
-    slotWin.classList.remove("is-hidden");
-    slotWin.style.zIndex = 50;
+    window.ROWin.show(slotWin);
     renderSlotEditor();
     pickQ.value = "";
     search();
@@ -260,6 +267,53 @@
     if (e.key === "Enter" && e.target.matches("[data-pick]")) e.target.click();
   });
 
+  // ---- target / damage window ----
+  const mobQ = document.getElementById("mob-q");
+  const mobList = document.getElementById("mob-results");
+  let mobTimer = null;
+  mobQ.addEventListener("input", () => {
+    clearTimeout(mobTimer);
+    mobTimer = setTimeout(async () => {
+      const q = mobQ.value.trim();
+      if (!q) { mobList.hidden = true; return; }
+      const res = await fetch("/build/monsters?q=" + encodeURIComponent(q));
+      mobList.innerHTML = res.ok ? await res.text() : "";
+      mobList.hidden = false;
+    }, 150);
+  });
+  document.addEventListener("click", (e) => {
+    const mob = e.target.closest("[data-monster]");
+    if (mob) {
+      build.m = Number(mob.dataset.monster);
+      mobList.hidden = true;
+      mobQ.value = "";
+      recalc();
+      return;
+    }
+    if (e.target.closest("[data-atk-auto]")) {
+      build.a = { ...(build.a || {}), r: 0 };
+      recalc();
+    }
+  });
+  document.addEventListener("keyup", (e) => {
+    if (e.key === "Enter" && e.target.matches("[data-monster]")) e.target.click();
+  });
+  document.addEventListener("change", (e) => {
+    const f = e.target.closest("[data-atk]");
+    if (!f) return;
+    const a = { ...(build.a || {}) };
+    const v = f.value;
+    switch (f.dataset.atk) {
+      case "skill": a.s = Number(v); a.l = (build.k || {})[v] || 0; a.r = 0; break; // max learned level, ratio from description
+      case "lv": a.l = Number(v); a.r = 0; break;
+      case "ratio": a.r = Number(v); break;
+      case "hits": a.h = Number(v); break;
+      case "ele": a.e = v; break;
+    }
+    build.a = a;
+    recalc();
+  });
+
   // ---- skills window ----
   const skillWin = document.getElementById("win-skills");
   let skillTree = null;
@@ -269,7 +323,7 @@
     const data = JSON.parse(root.dataset.tree);
     skillTree = window.ROSkillTree.init(skillWin, data, {
       levels: build.k,
-      onChange: (lv) => { build.k = lv; persistSoon(); },
+      onChange: (lv) => { build.k = lv; touch(); persistSoon(); },
     });
   }
   async function loadSkills(job) {

@@ -76,7 +76,21 @@ type Build struct {
 	Traits [6]int           `json:"t,omitempty"`
 	Equip  map[string]Equip `json:"e,omitempty"`
 	Skills map[int]int      `json:"k,omitempty"`
+	Target int              `json:"m,omitempty"` // monster ID for the damage window
+	Atk    AttackChoice     `json:"a,omitempty"`
 }
+
+// AttackChoice is what the damage window uses against the target.
+type AttackChoice struct {
+	Skill   int    `json:"s,omitempty"` // 0 = basic attack
+	Level   int    `json:"l,omitempty"`
+	Ratio   int    `json:"r,omitempty"` // % ATK; 0 = take it from the skill description
+	Hits    int    `json:"h,omitempty"`
+	Element string `json:"e,omitempty"` // "" = weapon element
+}
+
+// Elements an attack can be forced to (endows, elemental skills).
+var Elements = []string{"Neutral", "Water", "Earth", "Fire", "Wind", "Poison", "Holy", "Dark", "Ghost", "Undead"}
 
 // StatLine is one row of the Status window.
 type StatLine struct {
@@ -175,6 +189,23 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 		delete(b.Equip, Shield)
 	}
 	normalizeSkills(b, c)
+	if _, ok := c.Monsters[b.Target]; !ok {
+		b.Target = 0
+	}
+	at := &b.Atk
+	if at.Skill != 0 && b.Skills[at.Skill] == 0 {
+		*at = AttackChoice{Ratio: at.Ratio, Hits: at.Hits, Element: at.Element} // skill no longer learned
+	}
+	if at.Skill != 0 {
+		at.Level = clamp(at.Level, 1, b.Skills[at.Skill])
+	} else {
+		at.Level = 0
+	}
+	at.Ratio = clamp(at.Ratio, 0, 1000000)
+	at.Hits = clamp(at.Hits, 0, 50)
+	if at.Element != "" && !slices.Contains(Elements, at.Element) {
+		at.Element = ""
+	}
 	slices.Sort(notes)
 	return slices.Compact(notes) // multi-slot items are reported once
 }

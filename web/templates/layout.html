@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}}</title>
+  <link rel="stylesheet" href="/static/css/ro-ui.css">
+  <script src="/static/js/htmx.min.js" defer></script>
+  <script src="/static/js/rowindow.js" defer></script>
+</head>
+<body class="ro-desktop">
+  {{template "content" .}}
+  {{template "chatlog" .}}
+</body>
+</html>

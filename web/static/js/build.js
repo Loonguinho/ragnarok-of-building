@@ -298,6 +298,16 @@
   document.addEventListener("keyup", (e) => {
     if (e.key === "Enter" && e.target.matches("[data-monster]")) e.target.click();
   });
+  // Class states for LATAM formulas (selectors and on/off toggles).
+  document.addEventListener("change", (e) => {
+    const f = e.target.closest("[data-atk-state]");
+    if (!f) return;
+    const a = { ...(build.a || {}) };
+    a.st = { ...(a.st || {}) };
+    a.st[f.dataset.atkState] = f.type === "checkbox" ? (f.checked ? 1 : 0) : Number(f.value);
+    build.a = a;
+    recalc();
+  });
   document.addEventListener("change", (e) => {
     const f = e.target.closest("[data-atk]");
     if (!f) return;
@@ -309,6 +319,7 @@
       case "ratio": a.r = Number(v); break;
       case "hits": a.h = Number(v); break;
       case "ele": a.e = v; break;
+      case "stack": a.sk = Number(v); break;
     }
     build.a = a;
     recalc();

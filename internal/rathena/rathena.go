@@ -79,6 +79,7 @@ type Item struct {
 	Classes     []string
 	Gender      string
 	Script      string
+	Weight      int // tenths, as in rAthena
 }
 
 // DB is everything loaded from one rAthena checkout.
@@ -337,6 +338,7 @@ type itemEntry struct {
 	Classes       map[string]bool `yaml:"Classes"`
 	Gender        string          `yaml:"Gender"`
 	Script        string          `yaml:"Script"`
+	Weight        int             `yaml:"Weight"`
 }
 
 func (e itemEntry) item() *Item {
@@ -356,7 +358,7 @@ func (e itemEntry) item() *Item {
 		WeaponLevel: e.WeaponLevel, ArmorLevel: e.ArmorLevel,
 		EquipLvMin: e.EquipLevelMin, EquipLvMax: e.EquipLevelMax,
 		Refineable: e.Refineable, Jobs: keys(e.Jobs), Classes: keys(e.Classes),
-		Gender: e.Gender, Script: e.Script,
+		Gender: e.Gender, Script: e.Script, Weight: e.Weight,
 	}
 }
 

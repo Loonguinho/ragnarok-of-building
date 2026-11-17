@@ -20,9 +20,18 @@ type damageView struct {
 	Elements    [][2]string // value, label
 	Atk         calc.AttackChoice
 	Ratio       int
-	RatioSource string // "descrição", "manual", "ataque básico", "não encontrado"
+	RatioSource string // "fórmula LATAM", "descrição", "manual", "ataque básico", "não encontrado"
 	Hits        int
 	ElementName string
+	States      []stateView
+	StackMax    int // > 0 when the skill uses stacks
+	Stack       int
+}
+
+type stateView struct {
+	Key, Label string
+	Choices    [][2]string
+	Value      int
 }
 
 type atkSkill struct {
@@ -63,21 +72,55 @@ func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
 		}
 	}
 
-	// Skill ratio: manual value wins, else the description, else 100%.
+	// Class state selectors (Celestial Space, Exceed...).
+	if j := c.Jobs[b.Job]; j != nil {
+		for _, o := range calc.LatamStates[j.Code] {
+			v.States = append(v.States, stateView{Key: o.Key, Label: o.Label, Choices: o.Choices, Value: b.Atk.States[o.Key]})
+		}
+	}
+
+	// Skill ratio: manual value wins, then the LATAM formula, then the
+	// description's per-level %, then 100%.
+	m := c.Monsters[b.Target]
+	sk := c.Skills[b.Atk.Skill]
+	var formula *calc.SkillFormula
+	if sk != nil {
+		formula = calc.LatamFormulas[sk.Code]
+	}
+	in := calc.FormulaInput{
+		Lv: b.Atk.Level, BaseLv: b.BaseLv, Stats: r.FinalStats(), Traits: r.FinalTraits(),
+		Learned: b.Skills, Catalog: c, Monster: m, Weapon: r.WeaponType, WeaponLv: r.WeaponLv,
+		WeaponWt: r.WeaponWeight, MaxHP: r.HP, MaxSP: r.SP, States: b.Atk.States, Stack: b.Atk.Stack,
+	}
+	atk := calc.Attack{Hits: b.Atk.Hits, Element: b.Atk.Element}
+	if sk != nil {
+		atk.SkillCode = sk.Code
+	}
 	switch {
 	case b.Atk.Skill == 0 && b.Atk.Ratio == 0:
 		v.Ratio, v.RatioSource = 100, "ataque básico"
 	case b.Atk.Ratio > 0:
 		v.Ratio, v.RatioSource = b.Atk.Ratio, "manual"
+	case formula != nil:
+		atk.Formula, atk.Input = formula, in
+		v.Ratio, v.RatioSource = int(formula.Ratio(in)), "fórmula LATAM"
+		if formula.Hits != nil {
+			v.Hits = max(1, formula.Hits(in))
+		}
+		if formula.Stack[1] > 0 {
+			v.StackMax, v.Stack = formula.Stack[1], max(formula.Stack[0], b.Atk.Stack)
+		}
 	default:
-		if pct, ok := c.Skills[b.Atk.Skill].RatioAt(b.Atk.Level); ok {
+		if pct, ok := sk.RatioAt(b.Atk.Level); ok {
 			v.Ratio, v.RatioSource = pct, "descrição"
 		} else {
 			v.Ratio, v.RatioSource = 100, "não encontrado"
 		}
 	}
+	if atk.Formula == nil {
+		atk.SkillRatio = float64(v.Ratio)
+	}
 
-	m := c.Monsters[b.Target]
 	if m == nil {
 		return v
 	}
@@ -101,7 +144,7 @@ func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
 	if m.DamageTaken != 100 {
 		v.TargetInfo = append(v.TargetInfo, bonusLine{"Dano recebido", itoa(m.DamageTaken) + "%"})
 	}
-	v.Dmg = calc.Damage(b, r, c, m, calc.Attack{SkillRatio: v.Ratio, Hits: b.Atk.Hits, Element: b.Atk.Element})
+	v.Dmg = calc.Damage(b, r, c, m, atk)
 	v.ElementName = elementPT[v.Dmg.Element]
 	return v
 }

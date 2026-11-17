@@ -77,6 +77,7 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 		it.EquipLvMin, it.EquipLvMax = ri.EquipLvMin, ri.EquipLvMax
 		it.Refineable, it.Script = ri.Refineable, ri.Script
 		it.EquipJobs, it.EquipClasses = ri.Jobs, ri.Classes
+		it.Weight = ri.Weight
 		if it.Slots == 0 {
 			it.Slots = ri.Slots
 		}

@@ -77,6 +77,7 @@ type Item struct {
 	// Who can equip it (rAthena Jobs/Classes); empty means everyone.
 	EquipJobs    []string `json:"jobs,omitempty"`
 	EquipClasses []string `json:"classes,omitempty"`
+	Weight       int      `json:"wt,omitempty"` // tenths (rAthena)
 }
 
 // HasLocation reports whether the item can go in a slot location.

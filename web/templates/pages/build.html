@@ -87,7 +87,18 @@
     <select class="ro-select" data-atk="ele">{{range .Elements}}<option value="{{index . 0}}"{{if eq (index . 0) $.D.Atk.Element}} selected{{end}}>{{index . 1}}</option>{{end}}</select>
   </label>
 </div>
-<div class="ro-dmg__src">% {{if eq .RatioSource "descrição"}}lido da descrição da habilidade{{else if eq .RatioSource "não encontrado"}}<b class="is-bad">não está na descrição: digite o % da habilidade</b>{{else if eq .RatioSource "manual"}}informado manualmente <button class="ro-btn ro-btn--sm" data-atk-auto>Usar descrição</button>{{else}}de ataque básico{{end}}</div>
+{{if or .States .StackMax}}
+<div class="ro-dmg__atk ro-dmg__states">
+  {{range $st := .States}}
+    {{if $st.Choices}}<label>{{$st.Label}}
+      <select class="ro-select" data-atk-state="{{$st.Key}}">{{range $st.Choices}}<option value="{{index . 0}}"{{if eq (index . 0) (printf "%d" $st.Value)}} selected{{end}}>{{index . 1}}</option>{{end}}</select>
+    </label>
+    {{else}}<label><input type="checkbox" data-atk-state="{{$st.Key}}"{{if $st.Value}} checked{{end}}> {{$st.Label}}</label>{{end}}
+  {{end}}
+  {{if .StackMax}}<label>Acúmulos <input class="ro-input ro-num ro-num--sm" type="number" min="1" max="{{.StackMax}}" value="{{.Stack}}" data-atk="stack"></label>{{end}}
+</div>
+{{end}}
+<div class="ro-dmg__src">% {{if eq .RatioSource "fórmula LATAM"}}<b class="ro-latam">fórmula LATAM</b> (nível base, POW, maestrias e estados){{else if eq .RatioSource "descrição"}}lido da descrição da habilidade{{else if eq .RatioSource "não encontrado"}}<b class="is-bad">não está na descrição: digite o % da habilidade</b>{{else if eq .RatioSource "manual"}}informado manualmente <button class="ro-btn ro-btn--sm" data-atk-auto>Usar automático</button>{{else}}de ataque básico{{end}}{{if gt .Hits 1}} · {{.Hits}} golpes{{end}}</div>
 {{if .Target}}
 <div class="ro-target">
   <div class="ro-target__head">
@@ -109,7 +120,7 @@
   <ol>{{range .Dmg.Steps}}<li><span>{{.Label}}</span><code>{{.Value}}</code></li>{{end}}</ol>
 </details>
 {{range .Dmg.Notes}}<div class="ro-note">{{.}}</div>{{end}}
-<div class="ro-note">Fórmula de dano físico do rAthena (renewal). O LATAM pode ter ajustes próprios em algumas habilidades.</div>
+<div class="ro-note">Base: fórmula física do rAthena (renewal) com os ajustes do LATAM medidos pelo latam-ro-calc (MIT).{{if ne .RatioSource "fórmula LATAM"}} Esta habilidade ainda usa o % da descrição.{{end}}</div>
 {{else}}
 <div class="ro-npc ro-npc--hint">Busque um monstro acima para calcular o dano.</div>
 {{end}}

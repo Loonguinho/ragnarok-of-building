@@ -60,3 +60,10 @@ go run ./cmd/scriptcov                                                 # how muc
 - [ ] Phase 8: polish
 
 The full design doc is in `docs/design.md`.
+
+## Credits
+
+- **[latam-ro-calc](https://github.com/adsonpleal/latam-ro-calc)** by Adson Leal (MIT): the LATAM skill formulas and pipeline adjustments in `internal/calc/latam.go` / `damage.go` are reimplemented from its measurements against real LATAM recordings.
+- **[rrfparser](https://github.com/adsonpleal/rrfparser)** by Adson Leal (MIT): format reference for the `.rrf` replay reader in `internal/replay` (independent Go implementation).
+- **[rAthena](https://github.com/rathena/rathena)** (GPL-3.0): job tables, items, monsters and renewal formulas. Its data files are downloaded locally by `cmd/fetchrathena` and not redistributed.
+- Game names, descriptions and skill trees are read from the user's own RO LATAM client. Ragnarok Online is © Gravity Co., Ltd.

@@ -87,6 +87,9 @@ type AttackChoice struct {
 	Ratio   int    `json:"r,omitempty"` // % ATK; 0 = take it from the skill description
 	Hits    int    `json:"h,omitempty"`
 	Element string `json:"e,omitempty"` // "" = weapon element
+	// Class states for LATAM formulas (e.g. Celestial Space) and stacks.
+	States map[string]int `json:"st,omitempty"`
+	Stack  int            `json:"sk,omitempty"`
 }
 
 // Elements an attack can be forced to (endows, elemental skills).
@@ -118,6 +121,7 @@ type Result struct {
 	OtherEquipATK        int // armor ATK, bAtk, shadow weapon
 	WeaponLv             int
 	WeaponRefine         int
+	WeaponWeight         int // tenths
 	Ranged               bool
 	CritTenths           int    // CRIT in 1/10 % (rAthena cri), for crit chance
 	st, tr               [6]int // final stats/traits (for the damage formula)
@@ -217,6 +221,21 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 	if at.Element != "" && !slices.Contains(Elements, at.Element) {
 		at.Element = ""
 	}
+	// Only the selectors the class shows are kept.
+	allowed := map[string]bool{}
+	if j != nil {
+		for _, o := range LatamStates[j.Code] {
+			allowed[o.Key] = true
+		}
+	}
+	for k, v := range at.States {
+		if !allowed[k] || v == 0 {
+			delete(at.States, k)
+		} else {
+			at.States[k] = clamp(v, 0, 10)
+		}
+	}
+	at.Stack = clamp(at.Stack, 0, 10)
 	slices.Sort(notes)
 	return slices.Compact(notes) // multi-slot items are reported once
 }
@@ -448,7 +467,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		case it.Type == "Weapon" && slot == Weapon:
 			r.WeaponATK = it.Attack
 			r.WeaponRefineATK = refineRaw(c, "Weapon", it.WeaponLv, e.Refine) / 100
-			r.WeaponLv, r.WeaponRefine = it.WeaponLv, e.Refine
+			r.WeaponLv, r.WeaponRefine, r.WeaponWeight = it.WeaponLv, e.Refine, it.Weight
 			r.EquipMATK += it.MagicAttack
 			if it.WeaponLv == 5 { // 4th-gen weapons: refine also gives P.ATK/S.MATK
 				wlv5Traits += e.Refine * 2
@@ -464,6 +483,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			r.OtherEquipATK += it.Attack
 		}
 	}
+	LatamPassives(b, c, r.WeaponType, bonus) // class passives (e.g. War Book Mastery)
 	r.Bonuses = bonus
 	r.Extra = extra
 	r.HardDEF += refineDef / 100
@@ -640,6 +660,12 @@ func addAll(dst, src map[string]int) {
 }
 
 func clamp(v, lo, hi int) int { return max(lo, min(v, hi)) }
+
+// FinalStats returns STR..LUK with job and equipment bonuses.
+func (r Result) FinalStats() [6]int { return r.st }
+
+// FinalTraits returns POW..CRT with job and equipment bonuses.
+func (r Result) FinalTraits() [6]int { return r.tr }
 
 // SortedBonuses returns applied bonuses in a stable order for display.
 func (r Result) SortedBonuses() [][2]any {

@@ -3,6 +3,7 @@ package calc
 import (
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 
 	"ragnarok-of-building/internal/gamedata"
@@ -10,9 +11,12 @@ import (
 
 // Attack describes what is used against the target.
 type Attack struct {
-	SkillRatio int    // % of ATK (100 = basic attack)
-	Hits       int    // hits per use (skills); total damage = per-hit x hits
-	Element    string // "" = weapon element; otherwise Neutral, Fire, ...
+	SkillCode  string  // client skill code ("" = basic attack); used for bSkillAtk
+	SkillRatio float64 // % of ATK for one use (100 = basic attack)
+	Hits       int     // real damage multiplier (skills that hit N full times)
+	Element    string  // "" = weapon element; otherwise an endow/forced element
+	Formula    *SkillFormula
+	Input      FormulaInput // used when Formula is set
 }
 
 // Step is one line of the damage breakdown.
@@ -24,36 +28,60 @@ type Step struct {
 // DamageResult is the damage of one attack against one monster.
 type DamageResult struct {
 	Min, Avg, Max int64 // per use, normal (non-critical) hits
-	Crit          int64 // critical hit (basic attacks only), 0 if impossible
+	Crit          int64 // critical hit, 0 if the attack cannot crit
 	HitChance     int   // % (5-100)
 	CritChance    float64
 	Expected      float64 // average per use counting misses and crits
 	HitsToKill    int     // uses to kill at the average normal damage
 	Element       string
+	Ratio         float64 // skill % actually used
+	Hits          int
 	Steps         []Step
 	Notes         []string
 }
 
-// Damage computes a physical attack against a monster, porting rAthena's
-// renewal battle_calc_weapon_attack for players: status ATK x2 (neutral),
-// weapon ATK with variance/STR bonus/refine/size/element, equipment ATK,
-// ATK rate, card modifiers by category (race, element, size, class,
-// monster), P.ATK, crit/short/long rates, skill ratio, RES, DEF, critical
-// x(1.4 + C.RATE%) and the monster's DamageTaken.
+// Damage computes a physical attack against a monster. The base pipeline is
+// rAthena's renewal battle_calc_weapon_attack for players, with the LATAM
+// adjustments measured by latam-ro-calc (MIT): card modifier stages floored
+// one by one, status ATK taking the endow element (except poison), skill
+// criticals with a fraction of the crit damage bonus, and bSkillAtk after DEF.
 func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attack) DamageResult {
 	var d DamageResult
 	if m == nil {
 		return d
 	}
-	if a.SkillRatio <= 0 {
-		a.SkillRatio = 100
+	f := a.Formula
+	isSkill := a.SkillCode != ""
+	ratio := a.SkillRatio
+	hits := max(1, a.Hits)
+	if f != nil {
+		ratio = f.Ratio(a.Input)
+		if f.Hits != nil {
+			hits = max(1, f.Hits(a.Input))
+		}
+		if len(f.Weapons) > 0 && !slices.Contains(f.Weapons, r.WeaponType) {
+			d.Notes = append(d.Notes, "Esta habilidade exige arma do tipo "+strings.Join(f.Weapons, " ou ")+".")
+		}
 	}
-	if a.Hits <= 0 {
-		a.Hits = 1
+	if ratio <= 0 {
+		ratio = 100
 	}
-	isSkill := a.SkillRatio != 100 || a.Hits != 1
+	d.Ratio, d.Hits = ratio, hits
 
-	// Attack element: forced, else the weapon's (bAtkEle), else Neutral.
+	// Crit rules: basic attacks crit; skills only when the formula allows it.
+	canCrit, critRate, critDmgPart := !isSkill, 1.0, 1.0
+	if f != nil {
+		canCrit = f.ForceCrit || (f.CanCrit != nil && f.CanCrit(a.Input))
+		critRate, critDmgPart = f.CritRate, f.CritDmg
+	} else if isSkill {
+		critDmgPart = 0.5
+	}
+	isMelee := !r.Ranged
+	if f != nil && f.Melee != nil {
+		isMelee = f.Melee(r.WeaponType)
+	}
+
+	// Attack element: forced (endow), else the weapon's (bAtkEle), else Neutral.
 	ele := a.Element
 	if ele == "" {
 		ele = "Neutral"
@@ -71,8 +99,14 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		}
 		return 100
 	}
+	// Status ATK is neutral, except with an endow (a forced element), which
+	// it takes too, unless the endow is poison (LATAM recordings).
+	statusEle := "Neutral"
+	if a.Element != "" && a.Element != "Poison" {
+		statusEle = a.Element
+	}
 	// Negative values (healing) are treated as no damage.
-	eleNeutral, eleAtk := max(0, attr("Neutral")), max(0, attr(ele))
+	eleStatus, eleAtk := max(0, attr(statusEle)), max(0, attr(ele))
 	sizePct := 100
 	if row, ok := c.SizeFix[r.WeaponType]; ok {
 		if v, ok := row[m.Size]; ok {
@@ -80,8 +114,6 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		}
 	}
 
-	// Card modifiers (battle_calc_cardfix, attacker side): each category
-	// multiplies (100 + sum)%; the sums include the "All" variants.
 	sum := func(name string, args ...string) int {
 		n := 0
 		for k, v := range r.Extra {
@@ -90,7 +122,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 				continue
 			}
 			for _, want := range args {
-				if strings.EqualFold(parts[1], want) {
+				if strings.EqualFold(strings.Trim(parts[1], `"`), want) {
 					n += v
 					break
 				}
@@ -99,19 +131,31 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		return n
 	}
 	race := sum("bAddRace", "RC_"+m.Race, "RC_All")
-	eleMod := sum("bAddEle", "Ele_"+m.Element, "Ele_All") // vs the target's element
+	eleMod := sum("bAddEle", "Ele_"+m.Element, "Ele_All")
 	size := sum("bAddSize", "Size_"+m.Size, "Size_All")
 	class := sum("bAddClass", "Class_"+m.Class, "Class_All")
 	mob := sum("bAddDamageClass", fmt.Sprint(m.ID))
-	cardfix := int64(1000)
-	for _, v := range []int{race, eleMod, size, class, mob} {
-		cardfix = cardfix * int64(100+v) / 100
+	skillAtk := 0
+	if a.SkillCode != "" {
+		skillAtk = sum("bSkillAtk", a.SkillCode)
+	}
+	// Card modifiers: each category multiplies and is floored on its own.
+	cardfix := func(v int64) int64 {
+		for _, p := range []int{race, size, eleMod, class, mob} {
+			v = v * int64(100+p) / 100
+		}
+		return v
 	}
 
-	// Defense, with ignore-DEF and ignore-RES bonuses.
 	ignoreDef := min(100, sum("bIgnoreDefRaceRate", "RC_"+m.Race, "RC_All")+sum("bIgnoreDefClassRate", "Class_"+m.Class, "Class_All"))
 	def1 := int64(m.DEF) - int64(m.DEF)*int64(ignoreDef)/100
 	def2 := int64(m.SoftDEF()) - int64(m.SoftDEF())*int64(ignoreDef)/100
+	if f != nil && f.IgnoreDef {
+		def1 = 0
+	}
+	if f != nil && f.IgnoreSoftDef {
+		def2 = 0
+	}
 	if def1 == -400 {
 		def1 = -399
 	}
@@ -134,17 +178,15 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		wmax = math.Trunc(watk + variance + statBonus)
 	}
 
-	b2 := r.Bonuses
-	// one runs the pipeline for a given base weapon damage; steps are recorded
-	// when rec is true.
+	bn := r.Bonuses
 	one := func(weapon int64, crit, rec bool) int64 {
 		step := func(label, format string, args ...any) {
 			if rec {
 				d.Steps = append(d.Steps, Step{label, fmt.Sprintf(format, args...)})
 			}
 		}
-		status := int64(r.StatusATK) * int64(eleNeutral) / 100 * 2
-		step("ATQ de status", "%d × %d%% (neutro) × 2 = %d", r.StatusATK, eleNeutral, status)
+		status := int64(r.StatusATK) * int64(eleStatus) / 100 * 2
+		step("ATQ de status", "%d × %d%% (%s) × 2 = %d", r.StatusATK, eleStatus, strings.ToLower(statusEle), status)
 
 		w := weapon * int64(sizePct) / 100
 		w = w * int64(eleAtk) / 100
@@ -153,15 +195,14 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		eq := int64(r.OtherEquipATK) * int64(eleAtk) / 100
 		step("ATQ de equipamento", "%d × elemento %d%% = %d", r.OtherEquipATK, eleAtk, eq)
 
-		pct := (w + eq) * int64(b2["bAtkRate"]) / 100
+		pct := (w + eq) * int64(bn["bAtkRate"]) / 100
 		if pct != 0 {
-			step("ATQ %", "(arma + equip) × %d%% = %d", b2["bAtkRate"], pct)
+			step("ATQ %", "(arma + equip) × %d%% = %d", bn["bAtkRate"], pct)
 		}
 
-		w2, eq2 := w*cardfix/1000, eq*cardfix/1000
-		if cardfix != 1000 {
-			step("Modificadores de carta", "raça %+d%% · elemento %+d%% · tamanho %+d%% · classe %+d%% → ×%.3f",
-				race, eleMod, size, class, float64(cardfix)/1000)
+		w2, eq2 := cardfix(w), cardfix(eq)
+		if w2 != w || eq2 != eq {
+			step("Modificadores de carta", "raça %+d%% · tamanho %+d%% · elemento %+d%% · classe %+d%%", race, size, eleMod, class)
 		}
 
 		dmg := status + w2 + eq2 + pct
@@ -173,30 +214,26 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		}
 
 		if crit {
-			div := int64(100)
-			if isSkill {
-				div = 200
+			if cr := float64(bn["bCritAtkRate"]) * critDmgPart; cr != 0 {
+				dmg = int64(math.Floor(float64(dmg) * (100 + cr) / 100))
+				step("Dano crítico (equip)", "%+.1f%% = %d", cr, dmg)
 			}
-			if cr := int64(b2["bCritAtkRate"]); cr != 0 {
-				dmg += int64(math.Floor(float64(dmg * cr / div)))
-				step("Dano crítico (bônus)", "%+d%% = %d", cr*100/div, dmg)
-			}
-		} else if nc := int64(b2["bNonCritAtkRate"]); nc != 0 {
+		} else if nc := int64(bn["bNonCritAtkRate"]); nc != 0 {
 			dmg += dmg * nc / 100
-			step("Dano não crítico (bônus)", "%+d%% = %d", nc, dmg)
+			step("Dano não crítico (equip)", "%+d%% = %d", nc, dmg)
 		}
-		rangeRate, rangeLabel := int64(b2["bShortAtkRate"]), "Dano corpo a corpo"
-		if r.Ranged {
-			rangeRate, rangeLabel = int64(b2["bLongAtkRate"]), "Dano à distância"
+		rangeRate, rangeLabel := int64(bn["bShortAtkRate"]), "Dano corpo a corpo"
+		if !isMelee {
+			rangeRate, rangeLabel = int64(bn["bLongAtkRate"]), "Dano à distância"
 		}
 		if rangeRate != 0 {
-			dmg += dmg * rangeRate / 100
+			dmg = dmg * (100 + rangeRate) / 100
 			step(rangeLabel, "%+d%% = %d", rangeRate, dmg)
 		}
 
-		if a.SkillRatio != 100 {
-			dmg = dmg * int64(a.SkillRatio) / 100
-			step("Habilidade", "× %d%% = %d", a.SkillRatio, dmg)
+		if ratio != 100 {
+			dmg = ratioFloor(dmg, ratio)
+			step("Habilidade", "× %.0f%% = %d", ratio, dmg)
 		}
 
 		if res > 0 && dmg > 0 {
@@ -214,7 +251,15 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		if ignoreDef > 0 {
 			ign = fmt.Sprintf(" (ignora %d%%)", ignoreDef)
 		}
+		if f != nil && (f.IgnoreDef || f.IgnoreSoftDef) {
+			ign = " (habilidade ignora DEF)"
+		}
 		step("DEF do alvo", "%d × (4000+%d)/(4000+%d) − %d%s = %d", before, def1, 10*def1, def2, ign, dmg)
+
+		if skillAtk != 0 {
+			dmg = dmg * int64(100+skillAtk) / 100
+			step("Bônus na habilidade (equip)", "%+d%% = %d", skillAtk, dmg)
+		}
 
 		if crit {
 			dmg = int64(math.Floor(float64(float32(dmg) * (1.4 + 0.01*float32(r.CRATE)))))
@@ -225,10 +270,10 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 			dmg = max(1, dmg*int64(m.DamageTaken)/100)
 			step("Dano recebido pelo alvo", "× %d%% = %d", m.DamageTaken, dmg)
 		}
-		if a.Hits > 1 {
-			step("Golpes", "%d × %d = %d", dmg, a.Hits, dmg*int64(a.Hits))
+		if hits > 1 {
+			step("Golpes", "%d × %d = %d", dmg, hits, dmg*int64(hits))
 		}
-		return dmg * int64(a.Hits)
+		return dmg * int64(hits)
 	}
 
 	d.Min = one(int64(wmin), false, false)
@@ -238,9 +283,12 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	// Hit and critical chances (is_attack_hitting / is_attack_critical, renewal).
 	mobFlee := m.Level + m.Stats[AGI] + 100
 	d.HitChance = clamp(r.HIT-mobFlee, 5, 100)
-	if !isSkill {
+	if canCrit {
 		d.Crit = one(int64(wmax), true, false) // criticals use max weapon variance
-		d.CritChance = math.Max(0, float64(r.CritTenths-m.Stats[LUK]*2)/10)
+		d.CritChance = math.Max(0, float64(r.CritTenths-m.Stats[LUK]*2)/10) * critRate
+		if f != nil && f.ForceCrit {
+			d.CritChance = 100
+		}
 		d.CritChance = math.Min(100, d.CritChance)
 	}
 	cc := d.CritChance / 100

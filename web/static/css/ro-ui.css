@@ -338,3 +338,6 @@ body.ro-desktop:has(.ro-newbuild) { overflow: auto; }
 }
 .ro-jobcard:hover { filter: brightness(1.06); border-color: #1d4fa8; }
 @media (max-width: 720px) { .ro-import, .ro-classpick { width: 100%; } }
+
+.ro-dmg__states { margin-top: 3px; padding-top: 3px; border-top: 1px dashed #c4c8d0; }
+.ro-latam { color: #1d7a2f; }

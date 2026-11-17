@@ -87,9 +87,14 @@ func TestDamageElementSizeSkill(t *testing.T) {
 	if d.Element != "Fire" || d.Avg != 262 {
 		t.Errorf("fire vs water: %s %d, want Fire 262", d.Element, d.Avg)
 	}
-	// Forced element overrides the weapon.
-	if d := Damage(Build{}, r, dmgCatalog(), m, Attack{Element: "Water"}); d.Avg != 200+31 {
-		t.Errorf("water vs water: %d, want 231", d.Avg)
+	// An endow overrides the weapon and, in LATAM, reaches status ATK too:
+	// status 100 x 25% x 2 = 50, weapon 125 x 25% = 31.
+	if d := Damage(Build{}, r, dmgCatalog(), m, Attack{Element: "Water"}); d.Avg != 50+31 {
+		t.Errorf("water endow vs water: %d, want 81", d.Avg)
+	}
+	// ...except the poison endow, which leaves status ATK neutral (200).
+	if d := Damage(Build{}, r, dmgCatalog(), m, Attack{Element: "Poison"}); d.Avg != 200+125 {
+		t.Errorf("poison endow vs water: %d, want 325", d.Avg)
 	}
 	// Knuckle vs Large: 75% on the weapon part only.
 	r2 := baseResult()
@@ -100,7 +105,7 @@ func TestDamageElementSizeSkill(t *testing.T) {
 		t.Errorf("knuckle vs large: %d, want 293", d.Avg)
 	}
 	// Skill: 300% x 2 hits, no criticals.
-	d = Damage(Build{}, baseResult(), dmgCatalog(), target(0, 0, 0), Attack{SkillRatio: 300, Hits: 2})
+	d = Damage(Build{}, baseResult(), dmgCatalog(), target(0, 0, 0), Attack{SkillCode: "X", SkillRatio: 300, Hits: 2})
 	if d.Avg != 325*3*2 || d.Crit != 0 {
 		t.Errorf("skill: avg %d crit %d, want 1950 and no crit", d.Avg, d.Crit)
 	}

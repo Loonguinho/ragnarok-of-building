@@ -196,8 +196,14 @@ type Catalog struct {
 	TraitPoints []int `json:"traitPoints,omitempty"`
 	// Refine[group][equipLevel][refine] = cumulative bonus in 1/100 (rAthena refine.yml).
 	Refine map[string]map[int][]int `json:"refine,omitempty"`
-	Skills map[int]*Skill           `json:"skills"`
-	Jobs   map[int]*Job             `json:"jobs"`
+	// Monsters and damage tables (rAthena renewal).
+	Monsters map[int]*Monster `json:"monsters,omitempty"`
+	// AttrFix[defElementLevel][atkElement][defElement] = damage %.
+	AttrFix map[int]map[string]map[string]int `json:"attrFix,omitempty"`
+	// SizeFix[weaponType][Small|Medium|Large] = damage %; missing = 100.
+	SizeFix map[string]map[string]int `json:"sizeFix,omitempty"`
+	Skills  map[int]*Skill            `json:"skills"`
+	Jobs    map[int]*Job              `json:"jobs"`
 }
 
 // SkillGroup is one class step's skill tabs and its skill point budget.

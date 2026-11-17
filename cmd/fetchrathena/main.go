@@ -27,6 +27,8 @@ var files = []string{
 	"db/re/refine.yml",
 	"db/re/size_fix.yml",
 	"db/re/job_exp.yml",
+	"db/re/mob_db.yml",
+	"db/re/attr_fix.yml",
 	"src/common/mmo.hpp", // e_job enum: job name -> ID
 }
 

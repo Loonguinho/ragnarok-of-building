@@ -96,8 +96,17 @@ type Result struct {
 	MaxBaseLv   int
 	MaxJobLv    int
 
-	HP, SP, AP           int
-	StatusATK, EquipATK  int // ATK shown as "StatusATK + EquipATK"
+	HP, SP, AP          int
+	StatusATK, EquipATK int // ATK shown as "StatusATK + EquipATK"
+	// Parts of EquipATK the damage formula treats differently.
+	WeaponATK            int // weapon's own ATK (after bWeaponAtkRate)
+	WeaponRefineATK      int // refine bonus ATK
+	OtherEquipATK        int // armor ATK, bAtk, shadow weapon
+	WeaponLv             int
+	WeaponRefine         int
+	Ranged               bool
+	CritTenths           int    // CRIT in 1/10 % (rAthena cri), for crit chance
+	st, tr               [6]int // final stats/traits (for the damage formula)
 	MATKMin, MATKMax     int
 	EquipMATK            int
 	HIT, FLEE, FLEE2     int // FLEE2 = perfect dodge
@@ -349,6 +358,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	shield := false
 	seen := map[int]bool{} // multi-slot items (e.g. upper+mid headgear) count once
 	refineDef := 0         // armor refine DEF in 1/100, summed then divided (rAthena)
+	wlv5Traits := 0        // P.ATK/S.MATK from level 5 weapon refine
 	for _, slot := range Slots {
 		e, ok := b.Equip[slot]
 		if !ok {
@@ -384,17 +394,22 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		// Hard DEF/MDEF, weapon/equip ATK with refine (rAthena refine.yml).
 		switch {
 		case it.Type == "Weapon" && slot == Weapon:
-			r.EquipATK += it.Attack + refineRaw(c, "Weapon", it.WeaponLv, e.Refine)/100
+			r.WeaponATK = it.Attack
+			r.WeaponRefineATK = refineRaw(c, "Weapon", it.WeaponLv, e.Refine) / 100
+			r.WeaponLv, r.WeaponRefine = it.WeaponLv, e.Refine
 			r.EquipMATK += it.MagicAttack
+			if it.WeaponLv == 5 { // 4th-gen weapons: refine also gives P.ATK/S.MATK
+				wlv5Traits += e.Refine * 2
+			}
 		case it.Type == "Weapon" && slot == ShWeapon:
-			r.EquipATK += it.Attack
+			r.OtherEquipATK += it.Attack
 		case it.Type == "Armor" || it.Type == "ShadowGear":
 			r.HardDEF += it.Defense
 			if it.Refineable && it.Type == "Armor" {
 				refineDef += refineRaw(c, "Armor", max(it.ArmorLv, 1), e.Refine)
 			}
 			r.EquipMATK += it.MagicAttack
-			r.EquipATK += it.Attack
+			r.OtherEquipATK += it.Attack
 		}
 	}
 	r.Bonuses = bonus
@@ -436,13 +451,18 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	// ATK / MATK (status_base_atk, status_base_matk_min/max: renewal, players).
 	// Ranged weapons swap the roles of STR and DEX.
 	ranged := isRanged(r.WeaponType)
+	r.Ranged = ranged
 	main, sub := st[STR], st[DEX]
 	if ranged {
 		main, sub = st[DEX], st[STR]
 	}
 	r.StatusATK = (main*10+sub*10/5+st[LUK]*10/3+lv*10/4)/10 + 5*tr[POW]
 	r.StatusATK += bonus["bBaseAtk"]
-	r.EquipATK += bonus["bAtk"] + bonus["bAtk2"]
+	// Weapon ATK (scaled by bWeaponAtkRate, as rAthena does on wa->atk) + refine,
+	// and other equipment ATK (armor ATK, bAtk): kept apart for the damage formula.
+	r.WeaponATK += r.WeaponATK * bonus["bWeaponAtkRate"] / 100
+	r.OtherEquipATK += bonus["bAtk"] + bonus["bAtk2"]
+	r.EquipATK = r.WeaponATK + r.WeaponRefineATK + r.OtherEquipATK
 	matk := st[INT] + st[INT]/2 + st[DEX]/5 + st[LUK]/3 + lv/4 + 5*tr[SPL]
 	r.MATKMin, r.MATKMax = matk, matk
 	r.EquipMATK += bonus["bMatk"]
@@ -451,13 +471,14 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	r.HIT = lv + st[DEX] + st[LUK]/3 + 175 + 2*tr[CON] + bonus["bHit"]
 	r.FLEE = lv + st[AGI] + st[LUK]/5 + 100 + 2*tr[CON] + bonus["bFlee"]
 	r.FLEE2 = (st[LUK]+10)/10 + bonus["bFlee2"]
-	r.CRIT = float64(lv/10+10+st[LUK]*3)/10 + float64(bonus["bCritical"])
+	r.CritTenths = lv/10 + 10 + st[LUK]*3 + 10*bonus["bCritical"]
+	r.CRIT = float64(r.CritTenths) / 10
 	r.SoftDEF = int(float64(lv+st[VIT])/2+float64(st[AGI])/5) + bonus["bDef2"]
 	r.SoftMDEF = int(float64(st[INT])+float64(lv)/4+float64(st[DEX]+st[VIT])/5) + bonus["bMdef2"]
 	r.HardDEF += bonus["bDef"]
 	r.HardMDEF += bonus["bMdef"]
-	r.PATK = tr[POW]/3 + tr[CON]/5 + bonus["bPAtk"]
-	r.SMATK = tr[SPL]/3 + tr[CON]/5 + bonus["bSMatk"]
+	r.PATK = tr[POW]/3 + tr[CON]/5 + bonus["bPAtk"] + wlv5Traits
+	r.SMATK = tr[SPL]/3 + tr[CON]/5 + bonus["bSMatk"] + wlv5Traits
 	r.RES = tr[STA] + tr[STA]/3*5 + bonus["bRes"]
 	r.MRES = tr[WIS] + tr[WIS]/3*5 + bonus["bMRes"]
 	r.HPLUS = tr[CRT] + bonus["bHPlus"]
@@ -482,6 +503,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			}
 		}
 	}
+	r.st, r.tr = st, tr
 	if r.Points < 0 {
 		r.Warnings = append(r.Warnings, "pontos de atributo insuficientes")
 	}

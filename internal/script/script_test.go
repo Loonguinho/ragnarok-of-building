@@ -76,3 +76,10 @@ func FuzzEval(f *testing.F) {
 		Eval(src, Context{Refine: 4}) // must not panic or hang
 	})
 }
+
+func TestAtkEle(t *testing.T) {
+	r := Eval("bonus bAtkEle,Ele_Fire;\nbonus bStr,1;", Context{})
+	if r.Extra["bAtkEle Ele_Fire"] != 1 || r.Bonus["bStr"] != 1 || r.Skipped != 0 {
+		t.Errorf("got %+v", r)
+	}
+}

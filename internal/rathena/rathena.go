@@ -91,6 +91,11 @@ type DB struct {
 	// Refine[group][equipLevel][refine] = cumulative bonus in 1/100
 	// (group: Armor, Weapon, Shadow_Armor, Shadow_Weapon).
 	Refine map[string]map[int][]int
+	Mobs   map[int]*Mob
+	// AttrFix[defElementLevel][atkElement][defElement] = damage %.
+	AttrFix map[int]map[string]map[string]int
+	// SizeFix[weaponType][Small|Medium|Large] = damage %.
+	SizeFix map[string]map[string]int
 }
 
 // Load reads the files under dir (data/rathena).
@@ -201,6 +206,10 @@ func Load(dir string) (*DB, error) {
 			}
 			db.Refine[g.Group][l.Level] = tbl
 		}
+	}
+
+	if err := db.loadMobs(re); err != nil {
+		return nil, err
 	}
 
 	for _, f := range []string{"item_db_equip.yml", "item_db_etc.yml"} {

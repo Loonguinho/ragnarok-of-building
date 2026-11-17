@@ -198,6 +198,21 @@ func (p *parser) statement(run bool) {
 			p.pos++
 			p.statement(run && !condBad && cond == 0)
 		}
+	case t.kind == 'i' && t.s == "bonus" && p.pos+3 < len(p.toks) && (p.toks[p.pos+1].s == "bAtkEle" || p.toks[p.pos+1].s == "bDefEle"):
+		// bonus bAtkEle,Ele_Fire; takes an element constant, recorded as an extra.
+		name, ele := p.toks[p.pos+1].s, p.toks[p.pos+3]
+		p.pos += 4
+		ok := ele.kind == 'i' && strings.HasPrefix(ele.s, "Ele_") && p.accept(";")
+		if !ok {
+			p.skipStatement()
+		}
+		if run {
+			if ok {
+				p.res.Extra[name+" "+ele.s] = 1
+			} else {
+				p.res.Skipped++
+			}
+		}
 	case t.kind == 'i' && t.s == "bonus":
 		p.pos++
 		name := p.peek()
@@ -536,7 +551,8 @@ var known = map[string]bool{
 	"bHit": true, "bHitRate": true, "bFlee": true, "bFleeRate": true, "bFlee2": true, "bFlee2Rate": true,
 	"bCritical": true, "bCriticalRate": true, "bDef": true, "bDefRate": true, "bDef2": true, "bDef2Rate": true,
 	"bMdef": true, "bMdefRate": true, "bMdef2": true, "bMdef2Rate": true,
-	"bAspd": true, "bAspdRate": true, "bLongAtkRate": true, "bCritAtkRate": true,
+	"bAspd": true, "bAspdRate": true, "bLongAtkRate": true, "bShortAtkRate": true, "bCritAtkRate": true,
+	"bNonCritAtkRate": true, "bPerfectHitRate": true,
 	"bPAtk": true, "bSMatk": true, "bRes": true, "bMRes": true, "bHPlus": true, "bCRate": true,
 	"bVariableCastrate": true, "bFixedCastrate": true, "bFixedCast": true, "bDelayrate": true,
 	"bHPrecovRate": true, "bSPrecovRate": true, "bUseSPrate": true, "bSpeedRate": true, "bSpeedAddRate": true,

@@ -37,9 +37,13 @@ enum other { JOB_FAKE = 9 };
 
 // Runs against downloaded data when present (skipped in CI).
 func TestLoadReal(t *testing.T) {
-	db, err := Load(filepath.Join("..", "..", "data", "rathena"))
+	dir := filepath.Join("..", "..", "data", "rathena")
+	if _, err := os.Stat(filepath.Join(dir, "COMMIT")); err != nil {
+		t.Skip("rAthena data not downloaded (go run ./cmd/fetchrathena)")
+	}
+	db, err := Load(dir) // downloaded data must parse: fail, don't skip
 	if err != nil {
-		t.Skip("rAthena data not downloaded:", err)
+		t.Fatal(err)
 	}
 	dk := db.Jobs[4252]
 	if dk == nil {
@@ -63,6 +67,22 @@ func TestLoadReal(t *testing.T) {
 	}
 	if it := db.Items[1201]; it == nil || it.Type != "Weapon" || it.SubType != "Dagger" || it.Attack != 17 {
 		t.Errorf("Knife = %+v", it)
+	}
+	if b := db.Mobs[1039]; b == nil || b.Race != "Demon" || b.Element != "Dark" || b.ElementLv != 3 || !b.MVP || b.Class != "Boss" {
+		t.Errorf("Baphomet = %+v", b)
+	}
+	if p := db.Mobs[1002]; p == nil || p.Stats[1] != 1 { // Poring omits AGI: default 1
+		t.Errorf("Poring = %+v", p)
+	}
+	if v := db.AttrFix[1]["Water"]["Fire"]; v != 150 {
+		t.Errorf("water vs fire lv1 = %d, want 150", v)
+	}
+	// Current renewal removed most size penalties: only knuckles/whips vs Large.
+	if v := db.SizeFix["Knuckle"]["Large"]; v != 75 {
+		t.Errorf("knuckle vs large = %d, want 75", v)
+	}
+	if _, ok := db.SizeFix["Dagger"]; ok {
+		t.Error("dagger should have no size penalty entry")
 	}
 	if c := db.Items[4001]; c == nil || c.Type != "Card" {
 		t.Errorf("Poring Card = %+v", c)

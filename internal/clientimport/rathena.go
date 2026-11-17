@@ -14,6 +14,19 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 	c.StatPoints = db.StatPoints
 	c.TraitPoints = db.TraitPoints
 	c.Refine = db.Refine
+	c.AttrFix, c.SizeFix = db.AttrFix, db.SizeFix
+	c.Monsters = map[int]*gamedata.Monster{}
+	for id, m := range db.Mobs {
+		if m.HP <= 0 || m.Name == "" {
+			continue
+		}
+		c.Monsters[id] = &gamedata.Monster{
+			ID: id, Name: m.Name, Level: m.Level, HP: m.HP, DEF: m.Defense, MDEF: m.MDefense,
+			RES: m.Res, MRES: m.MRes, Stats: m.Stats, Size: m.Size, Race: m.Race,
+			Element: m.Element, ElementLv: m.ElementLv, Class: m.Class, MVP: m.MVP,
+			DamageTaken: m.DamageTaken, Modes: m.Modes,
+		}
+	}
 	if db.Commit != "" {
 		c.Source += " + rAthena " + db.Commit[:min(8, len(db.Commit))]
 	}

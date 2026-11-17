@@ -4,6 +4,18 @@
 (() => {
   const boot = window.BUILD;
   if (!boot) return;
+
+  // Opening /build without a code continues the last build (unless ?new=1).
+  {
+    const params = new URLSearchParams(location.search);
+    let last = null;
+    try { last = localStorage.getItem("ro.build.last"); } catch {}
+    if (!params.has("b") && !params.has("new") && last) {
+      params.set("b", last);
+      location.replace("/build?" + params);
+      return;
+    }
+  }
   let build = boot.build;
   let code = boot.code;
   const lang = boot.lang || "pt";
@@ -51,6 +63,7 @@
   function persist() {
     const url = new URL(location.href);
     url.searchParams.set("b", code);
+    url.searchParams.delete("new");
     history.replaceState(null, "", url);
     try { localStorage.setItem(SAVE_KEY, code); } catch {}
   }

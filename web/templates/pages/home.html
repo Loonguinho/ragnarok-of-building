@@ -6,18 +6,43 @@
     <header class="ro-window__title">Selecionar Servidor</header>
     <div class="ro-window__body">
       <ul class="ro-list" role="listbox">
-        <li class="ro-list__item is-selected" role="option" tabindex="0"><a href="/build">Novo Build</a></li>
-        <li class="ro-list__item" role="option" tabindex="0">Meus Builds</li>
-        <li class="ro-list__item" role="option" tabindex="0">Carregar código</li>
+        <li class="ro-list__item is-selected" role="option" tabindex="0"><a href="/build?new=1">Novo Build</a></li>
+        <li class="ro-list__item" role="option" tabindex="0"><a href="/build">Continuar build</a></li>
+        <li class="ro-list__item" role="option" tabindex="0"><a href="#" data-load-code>Carregar link ou código</a></li>
         <li class="ro-list__item" role="option" tabindex="0"><a href="/items">Banco de Itens</a></li>
         <li class="ro-list__item" role="option" tabindex="0"><a href="/skills">Árvore de Habilidades</a></li>
         <li class="ro-list__item" role="option" tabindex="0"><a href="/uikit">RO UI Kit</a></li>
       </ul>
     </div>
     <footer class="ro-window__footer">
-      <button class="ro-btn">OK</button>
-      <button class="ro-btn">Cancelar</button>
+      <button class="ro-btn" data-ok>OK</button>
     </footer>
   </section>
 </main>
+<script>
+  // Server-select style list: arrows/Enter/double-click like the client.
+  (() => {
+    const items = [...document.querySelectorAll(".ro-list__item")];
+    let sel = 0;
+    const select = (i) => { sel = (i + items.length) % items.length; items.forEach((el, k) => el.classList.toggle("is-selected", k === sel)); items[sel].focus(); };
+    const go = () => items[sel].querySelector("a").click();
+    items.forEach((el, i) => {
+      el.addEventListener("click", (e) => { if (e.target.tagName !== "A") select(i); });
+      el.addEventListener("dblclick", go);
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); select(sel + 1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); select(sel - 1); }
+      else if (e.key === "Enter" && document.activeElement.closest(".ro-list")) go();
+    });
+    document.querySelector("[data-ok]").addEventListener("click", go);
+    document.querySelector("[data-load-code]").addEventListener("click", (e) => {
+      e.preventDefault();
+      const v = (prompt("Cole o link ou o código do build:") || "").trim();
+      if (!v) return;
+      const m = v.match(/[?&]b=([A-Za-z0-9_-]+)/);
+      location.href = "/build?b=" + (m ? m[1] : v.replace(/[^A-Za-z0-9_-]/g, ""));
+    });
+  })();
+</script>
 {{end}}

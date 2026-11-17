@@ -183,6 +183,12 @@ func (s *Server) handleBuild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	b := defaultBuild(s.opt.Catalog)
+	// A blank build for a chosen class starts at that class's max levels.
+	if r.URL.Query().Has("job") {
+		if j := s.opt.Catalog.Jobs[atoi(r.URL.Query().Get("job"))]; j != nil && j.HasStats() {
+			b = calc.Build{Job: j.ID, BaseLv: j.MaxBaseLv, JobLv: j.MaxJobLv, Stats: [6]int{1, 1, 1, 1, 1, 1}}
+		}
+	}
 	if code := r.URL.Query().Get("b"); code != "" {
 		if d, ok := decodeBuild(code); ok {
 			b = d

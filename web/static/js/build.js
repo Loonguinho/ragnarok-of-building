@@ -342,6 +342,12 @@
   document.addEventListener("DOMContentLoaded", () => {
     initSkills();
     persist();
+    // Messages from a replay import on the start screen.
+    try {
+      const notes = JSON.parse(sessionStorage.getItem("ro.import.notes") || "[]");
+      sessionStorage.removeItem("ro.import.notes");
+      notes.forEach((n, i) => say(n, i > 0));
+    } catch {}
     say("Dica: Alt+A atributos, Alt+Q equipamentos, Alt+S habilidades.");
   });
 })();

@@ -159,3 +159,19 @@ func TestRealReplays(t *testing.T) {
 		}
 	}
 }
+
+// testdata/synthetic.rrf is buildRRF's output, committed so other packages'
+// tests (the upload endpoint) can use a real file. Regenerate with
+// UPDATE_SYNTHETIC=1 go test ./internal/replay.
+func TestSyntheticFixtureInSync(t *testing.T) {
+	want := buildRRF(t)
+	if os.Getenv("UPDATE_SYNTHETIC") == "1" {
+		if err := os.WriteFile("testdata/synthetic.rrf", want, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := os.ReadFile("testdata/synthetic.rrf")
+	if err != nil || string(got) != string(want) {
+		t.Fatal("testdata/synthetic.rrf is stale: run UPDATE_SYNTHETIC=1 go test ./internal/replay")
+	}
+}

@@ -91,6 +91,8 @@ func (s *Server) Routes() http.Handler {
 	r.Get("/items", s.handleItems)
 	r.Get("/items/search", s.handleItemSearch)
 	r.Get("/items/{id}", s.handleItemInfo)
+	r.Get("/new", s.handleNew)
+	r.Post("/build/import", s.handleImport)
 	r.Get("/build", s.handleBuild)
 	r.Post("/build/calc", s.handleBuildCalc)
 	r.Get("/build/skills", s.handleBuildSkills)

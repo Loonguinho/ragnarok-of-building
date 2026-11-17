@@ -312,3 +312,29 @@ a { color: #1d4fa8; }
 .ro-steps li span { display: block; color: #4a4a6a; }
 .ro-steps code { font: 10px Consolas, monospace; color: #333; }
 .ro-npc--hint { margin: 0; min-height: 40px; padding: 6px; }
+
+/* ---------- new build: import replay or pick a class ---------- */
+.ro-newbuild { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 16px 140px; min-height: 100vh; }
+body.ro-desktop:has(.ro-newbuild) { overflow: auto; }
+.ro-newbuild__cols { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+.ro-import { width: 340px; }
+.ro-drop {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  height: 110px; border: 2px dashed var(--ro-border); border-radius: 4px; background: #fff; cursor: pointer; text-align: center;
+}
+.ro-drop:hover, .ro-drop:focus, .ro-drop.is-over { background: #eef4ff; border-color: #1d4fa8; outline: none; }
+.ro-drop span { color: #777; }
+.ro-import__help { margin: 8px 0 0; min-height: 0; padding: 6px; font-size: 11px; }
+.ro-import__help code { font-size: 10px; }
+.ro-import__status { margin-top: 6px; min-height: 16px; }
+.ro-import__status.is-bad { color: #b42318; }
+.ro-classpick { width: 560px; }
+.ro-classpick__body { max-height: 70vh; overflow-y: auto; display: grid; gap: 8px; }
+.ro-family h4 { margin: 0 0 3px; font-size: 11px; color: var(--ro-title-text); border-bottom: 1px solid #c4c8d0; }
+.ro-family__jobs { display: flex; flex-wrap: wrap; gap: 3px; }
+.ro-jobcard {
+  padding: 2px 7px; font-size: 11px; color: var(--ro-text); text-decoration: none;
+  background: linear-gradient(180deg, var(--ro-btn-a), var(--ro-btn-b)); border: 1px solid var(--ro-border); border-radius: 3px;
+}
+.ro-jobcard:hover { filter: brightness(1.06); border-color: #1d4fa8; }
+@media (max-width: 720px) { .ro-import, .ro-classpick { width: 100%; } }

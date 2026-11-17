@@ -1,11 +1,14 @@
 package web
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -153,6 +156,59 @@ func TestItemTypeFilterExcludes(t *testing.T) {
 	}
 	if _, body := get(t, s.Routes(), "/items/search"); !strings.Contains(body, "escolha um tipo") {
 		t.Error("empty search should show the hint")
+	}
+}
+
+func TestNewAndImport(t *testing.T) {
+	c := testCatalog()
+	c.Jobs[4252] = &gamedata.Job{ID: 4252, Name: gamedata.Text{"pt": "Cavaleiro Draconiano"}, Parent: 7,
+		Tree: map[int]int{0: 62}, MaxBaseLv: 275, MaxJobLv: 60, BaseHP: make([]int, 275), BaseSP: make([]int, 275),
+		JobBonus: make([][12]int, 61), BaseASPD: map[string]int{"Fist": 40}}
+	c.Jobs[7].MaxBaseLv, c.Jobs[7].MaxJobLv = 99, 50
+	c.Jobs[7].BaseHP, c.Jobs[7].BaseSP = make([]int, 99), make([]int, 99)
+	c.Jobs[7].JobBonus = make([][12]int, 51)
+	s, _ := New(Options{Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Catalog: c})
+	h := s.Routes()
+
+	if code, body := get(t, h, "/new"); code != 200 || !strings.Contains(body, "Importar Replay") || !strings.Contains(body, "job=4252") {
+		t.Errorf("/new: %d", code)
+	}
+	// Without ?job the default build is kept (regression: job "" parsed as Novice).
+	if _, body := get(t, h, "/build"); strings.Contains(body, "Base Lv. 3 ") {
+		t.Error("/build without ?job became a Novice")
+	}
+	// Blank build for a chosen class starts at its max levels.
+	if _, body := get(t, h, "/build?new=1&job=4252"); !strings.Contains(body, "Base Lv. 275") {
+		t.Error("blank build did not start at max base level")
+	}
+
+	upload := func(name string, content []byte) (int, map[string]any) {
+		var buf bytes.Buffer
+		mw := multipart.NewWriter(&buf)
+		fw, _ := mw.CreateFormFile("file", name)
+		fw.Write(content)
+		mw.Close()
+		req := httptest.NewRequest(http.MethodPost, "/build/import", &buf)
+		req.Header.Set("Content-Type", mw.FormDataContentType())
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		var out map[string]any
+		json.Unmarshal(rec.Body.Bytes(), &out)
+		return rec.Code, out
+	}
+	rrf, err := os.ReadFile("../replay/testdata/synthetic.rrf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	code, out := upload("teste.rrf", rrf)
+	if code != 200 || out["code"] == nil {
+		t.Fatalf("import: %d %v", code, out)
+	}
+	if _, body := get(t, h, "/build?b="+out["code"].(string)); !strings.Contains(body, "+9 Faca [3]") || !strings.Contains(body, "Base Lv. 250") {
+		t.Error("imported build lacks the +9 weapon or the level")
+	}
+	if code, out := upload("x.rrf", []byte("not a replay")); code != http.StatusUnprocessableEntity || out["error"] == nil {
+		t.Errorf("garbage upload: %d %v", code, out)
 	}
 }
 

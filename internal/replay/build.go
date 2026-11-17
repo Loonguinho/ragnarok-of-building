@@ -49,8 +49,16 @@ func ToBuild(s *Snapshot, c *gamedata.Catalog) (calc.Build, []string) {
 			unknown++
 			continue
 		}
+		mask := it.Equipped
+		if mask&0x2 != 0 && mask&0x20 != 0 {
+			mask &^= 0x20 // two-handed weapon: both hand bits set, keep the weapon slot
+		}
+		if mask == 0x20 && c.Items[it.ItemID].Type == "Weapon" {
+			notes = append(notes, c.Items[it.ItemID].Name.Get("pt")+" na mão esquerda: empunhadura dupla ainda não é simulada.")
+			continue
+		}
 		for _, eb := range equipBits {
-			if it.Equipped&eb.bit != 0 {
+			if mask&eb.bit != 0 {
 				b.Equip[eb.slot] = calc.Equip{Item: it.ItemID, Refine: it.Refine, Cards: it.Cards}
 			}
 		}

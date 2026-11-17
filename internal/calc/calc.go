@@ -167,10 +167,10 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 			delete(b.Equip, slot)
 			continue
 		}
+		// Class restrictions from rAthena are not always right for LATAM
+		// (replays show gear worn that rAthena forbids), so they only warn.
 		if !j.CanEquip(it) {
-			notes = append(notes, it.Name.Get("pt")+" removido: a classe não pode equipar.")
-			delete(b.Equip, slot)
-			continue
+			notes = append(notes, it.Name.Get("pt")+": pelos dados do rAthena esta classe não usaria este item.")
 		}
 		e.Refine = clamp(e.Refine, 0, maxRefine)
 		if !it.Refineable {
@@ -241,10 +241,11 @@ func normalizeSkills(b *Build, c *gamedata.Catalog) {
 	if len(b.Skills) == 0 {
 		return
 	}
-	allowed := treeSkills(c, b.Job)
+	// Skills outside the job's trees (e.g. learned by quest, like Greed) are
+	// kept when they exist; they do not count toward the skill point budget.
 	for id, lv := range b.Skills {
 		sk := c.Skills[id]
-		if _, ok := allowed[id]; !ok || sk == nil || lv <= 0 {
+		if sk == nil || lv <= 0 {
 			delete(b.Skills, id)
 			continue
 		}
@@ -264,8 +265,9 @@ func SkillPointCheck(b Build, c *gamedata.Catalog) int {
 	used := make([]int, len(groups))
 	allowed := treeSkills(c, b.Job)
 	for id, lv := range b.Skills {
-		if sk := c.Skills[id]; sk != nil && !sk.Free() {
-			used[allowed[id]] += lv
+		gi, inTree := allowed[id]
+		if sk := c.Skills[id]; sk != nil && inTree && !sk.Free() {
+			used[gi] += lv
 		}
 	}
 	u, budget := 0, 0
@@ -295,7 +297,9 @@ func Fits(it *gamedata.Item, slot string) bool {
 			return true
 		case l == "Both_Hand" && slot == Weapon:
 			return true
-		case l == "Both_Accessory" && (slot == AccRight || slot == AccLeft):
+		// Accessories go in either slot in-game, whatever side rAthena lists
+		// (replays show "right" accessories worn on the left).
+		case (l == "Both_Accessory" || l == "Right_Accessory" || l == "Left_Accessory") && (slot == AccRight || slot == AccLeft):
 			return true
 		case l == "Shadow_Both_Accessory" && (slot == ShAccR || slot == ShAccL):
 			return true
@@ -318,7 +322,7 @@ func CardFits(card *gamedata.Item, slot string) bool {
 			return true
 		case l == "Both_Hand" && slot == Weapon:
 			return true
-		case l == "Both_Accessory" && (slot == AccRight || slot == AccLeft):
+		case (l == "Both_Accessory" || l == "Right_Accessory" || l == "Left_Accessory") && (slot == AccRight || slot == AccLeft):
 			return true
 		case strings.HasPrefix(l, "Head_") && strings.HasPrefix(slot, "Head_"):
 			return true

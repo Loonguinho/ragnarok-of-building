@@ -147,7 +147,7 @@ func TestNormalizeEquipRules(t *testing.T) {
 	}
 }
 
-func TestNormalizeClassRestriction(t *testing.T) {
+func TestNormalizeClassRestrictionWarns(t *testing.T) {
 	c := novice()
 	c.Jobs[0].EquipGroup, c.Jobs[0].EquipTier = "Novice", "Normal"
 	c.Items[1201].EquipJobs = []string{"Novice"}
@@ -156,8 +156,8 @@ func TestNormalizeClassRestriction(t *testing.T) {
 	b := Build{Job: 0, BaseLv: 1, JobLv: 1, Stats: [6]int{1, 1, 1, 1, 1, 1},
 		Equip: map[string]Equip{Weapon: {Item: 1250}}}
 	notes := Normalize(&b, c)
-	if _, ok := b.Equip[Weapon]; ok || len(notes) != 1 {
-		t.Errorf("katar kept on a novice: equip %v notes %v", b.Equip, notes)
+	if _, ok := b.Equip[Weapon]; !ok || len(notes) != 1 {
+		t.Errorf("class restriction should warn, not remove: equip %v notes %v", b.Equip, notes)
 	}
 	b.Equip = map[string]Equip{Weapon: {Item: 1201}}
 	if notes := Normalize(&b, c); len(notes) != 0 || b.Equip[Weapon].Item != 1201 {
@@ -177,8 +177,15 @@ func TestSkillPoints(t *testing.T) {
 	b := Build{Job: 0, BaseLv: 1, JobLv: 10, Stats: [6]int{1, 1, 1, 1, 1, 1},
 		Skills: map[int]int{1: 50, 142: 1, 5: 3}}
 	Normalize(&b, c)
-	if b.Skills[1] != 9 || b.Skills[142] != 1 || len(b.Skills) != 2 {
+	// Levels clamp to the max; skills outside the tree are kept (quest-learned)
+	// but do not use points.
+	if b.Skills[1] != 9 || b.Skills[142] != 1 || b.Skills[5] != 3 {
 		t.Fatalf("skills not normalized: %v", b.Skills)
+	}
+	b.Skills[99999] = 1 // unknown skill: dropped
+	Normalize(&b, c)
+	if _, ok := b.Skills[99999]; ok {
+		t.Error("unknown skill kept")
 	}
 	// 9 points for Basic Skill at job 10 fit; the quest skill is free.
 	if gi := SkillPointCheck(b, c); gi != -1 {
@@ -190,6 +197,17 @@ func TestSkillPoints(t *testing.T) {
 	}
 	if r := Compute(b, c); len(r.Warnings) == 0 {
 		t.Error("no warning for skill points over budget")
+	}
+}
+
+func TestAccessoryEitherSide(t *testing.T) {
+	c := novice()
+	c.Items[2601] = &gamedata.Item{ID: 2601, Type: "Armor", Locations: []string{"Right_Accessory"}}
+	b := Build{Job: 0, BaseLv: 1, JobLv: 1, Stats: [6]int{1, 1, 1, 1, 1, 1},
+		Equip: map[string]Equip{AccLeft: {Item: 2601}}}
+	Normalize(&b, c)
+	if _, ok := b.Equip[AccLeft]; !ok {
+		t.Error("right-listed accessory dropped from the left slot")
 	}
 }
 

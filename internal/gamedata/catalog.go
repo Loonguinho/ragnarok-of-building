@@ -48,7 +48,7 @@ func (l Lines) Get(lang string) []string {
 	return nil
 }
 
-// Item is one item from the client's iteminfo.
+// Item is one item: names/descriptions from the client, mechanics from rAthena.
 type Item struct {
 	ID       int    `json:"id"`
 	Name     Text   `json:"name"`
@@ -56,6 +56,30 @@ type Item struct {
 	Slots    int    `json:"slots"`
 	ClassNum int    `json:"classNum"`
 	Resource string `json:"resource"`
+
+	// From rAthena (empty when the item is not equipment or a card).
+	Type        string   `json:"type,omitempty"`    // Weapon, Armor, Card, ShadowGear, ...
+	SubType     string   `json:"subType,omitempty"` // weapon type: Dagger, 1hSword, ...
+	Locations   []string `json:"loc,omitempty"`     // Head_Top, Armor, Right_Hand, ...
+	Attack      int      `json:"atk,omitempty"`
+	MagicAttack int      `json:"matk,omitempty"`
+	Defense     int      `json:"def,omitempty"`
+	WeaponLv    int      `json:"wlv,omitempty"`
+	ArmorLv     int      `json:"alv,omitempty"`
+	EquipLvMin  int      `json:"elv,omitempty"`
+	EquipLvMax  int      `json:"elvMax,omitempty"`
+	Refineable  bool     `json:"refine,omitempty"`
+	Script      string   `json:"script,omitempty"`
+}
+
+// HasLocation reports whether the item can go in a slot location.
+func (it *Item) HasLocation(loc string) bool {
+	for _, l := range it.Locations {
+		if l == loc {
+			return true
+		}
+	}
+	return false
 }
 
 // Req is a skill prerequisite.
@@ -97,18 +121,37 @@ type Job struct {
 	Parent int    `json:"parent"` // -1 for none
 	// Tree maps the client's skill-window grid position (row*7+col) to a skill ID.
 	Tree map[int]int `json:"tree"`
+
+	// From rAthena.
+	MaxBaseLv int            `json:"maxBaseLv,omitempty"`
+	MaxJobLv  int            `json:"maxJobLv,omitempty"`
+	MaxWeight int            `json:"maxWeight,omitempty"`
+	BaseHP    []int          `json:"baseHp,omitempty"` // index: base level - 1
+	BaseSP    []int          `json:"baseSp,omitempty"`
+	BaseAP    []int          `json:"baseAp,omitempty"`
+	JobBonus  [][12]int      `json:"jobBonus,omitempty"` // index: job level; cumulative STR..LUK, POW..CRT
+	BaseASPD  map[string]int `json:"baseAspd,omitempty"` // weapon type -> base delay
+	Upper     bool           `json:"upper,omitempty"`    // MaxHP/SP x1.25 (transcendent, primary 4th)
+	Fourth    bool           `json:"fourth,omitempty"`   // has trait stats
+	Baby      bool           `json:"baby,omitempty"`
 }
+
+// HasStats reports whether rAthena job tables were imported for this job.
+func (j *Job) HasStats() bool { return j.MaxBaseLv > 0 && len(j.BaseHP) > 0 }
 
 // TreeColumns is the width of the client's skill window grid.
 const TreeColumns = 7
 
 // Catalog is all game data.
 type Catalog struct {
-	Generated time.Time      `json:"generated"`
-	Source    string         `json:"source"`
-	Items     map[int]*Item  `json:"items"`
-	Skills    map[int]*Skill `json:"skills"`
-	Jobs      map[int]*Job   `json:"jobs"`
+	Generated time.Time     `json:"generated"`
+	Source    string        `json:"source"`
+	Items     map[int]*Item `json:"items"`
+	// Total status/trait points at each base level (index: level - 1), from rAthena.
+	StatPoints  []int          `json:"statPoints,omitempty"`
+	TraitPoints []int          `json:"traitPoints,omitempty"`
+	Skills      map[int]*Skill `json:"skills"`
+	Jobs        map[int]*Job   `json:"jobs"`
 }
 
 // Chain returns the job's ancestry from the root (Novice) to the job itself.

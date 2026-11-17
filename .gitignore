@@ -6,3 +6,4 @@ data/cache/
 testdata/replays/*.rrf
 data/gen/
 tmp/
+data/rathena/

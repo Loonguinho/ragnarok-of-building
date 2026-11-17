@@ -11,11 +11,13 @@ import (
 	"time"
 
 	"ragnarok-of-building/internal/clientimport"
+	"ragnarok-of-building/internal/rathena"
 )
 
 func main() {
 	client := flag.String("client", `C:\Gravity\Ragnarok`, "RO LATAM client folder")
 	out := flag.String("out", "data/gen/catalog.json.gz", "output catalog file")
+	ra := flag.String("rathena", "data/rathena", "rAthena data folder (go run ./cmd/fetchrathena)")
 	flag.Parse()
 
 	start := time.Now()
@@ -23,6 +25,12 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "import:", err)
 		os.Exit(1)
+	}
+	if db, err := rathena.Load(*ra); err != nil {
+		fmt.Fprintln(os.Stderr, "warning: no rAthena data, stats/equipment will be missing:", err)
+	} else {
+		jobs, items := clientimport.MergeRathena(c, db)
+		fmt.Printf("rAthena: %d jobs with stat tables, %d items with equipment data\n", jobs, items)
 	}
 	if err := c.Save(*out); err != nil {
 		fmt.Fprintln(os.Stderr, "save:", err)

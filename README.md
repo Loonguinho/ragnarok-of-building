@@ -2,7 +2,7 @@
 
 A build simulator for **Ragnarok Online LATAM**, with a UI modeled on the game client: draggable windows, Alt+A/Q/S hotkeys, login/char-select-style screens, and NPC dialogs.
 
-Stack: Go (chi) · HTMX + Go templates · SQLite · data from the Divine Pride API · PT-BR / ES / EN.
+Stack: Go (chi) · HTMX + Go templates · SQLite · data from the LATAM client itself (+ Divine Pride for item bonuses) · PT-BR / ES / EN.
 
 ## Running
 

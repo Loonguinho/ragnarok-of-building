@@ -171,3 +171,33 @@ a { color: #1d4fa8; }
   .ro-window { position: relative !important; left: auto !important; top: auto !important; width: 100% !important; margin-bottom: 8px; }
   .ro-window__title { cursor: default; }
 }
+
+/* ---------- skill window (real data) ---------- */
+.ro-skillwin { width: 560px; }
+.ro-skillwin__bar { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 4px 8px; background: var(--ro-body-alt); border-bottom: 1px solid #c4c8d0; }
+.ro-select { font: 11px var(--ro-font); height: 18px; border: 1px solid var(--ro-border); border-radius: 2px; background: #fff; max-width: 240px; }
+.ro-lang a { padding: 0 4px; color: var(--ro-title-text); text-decoration: none; font-weight: bold; opacity: .5; }
+.ro-lang a.is-active { opacity: 1; text-decoration: underline; }
+.ro-skillwin .ro-tabs { flex-wrap: wrap; }
+.ro-skillwin .ro-skilltree { grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 6px; min-height: 200px; }
+.ro-skill--empty { visibility: hidden; }
+.ro-skill { position: relative; padding: 2px 1px; border-radius: 3px; text-align: center; }
+.ro-skill[data-skill]:hover, .ro-skill[data-skill]:focus { background: #e8f0ff; outline: 1px solid var(--ro-select); }
+.ro-skill__icon { object-fit: contain; background: transparent; border: none; image-rendering: pixelated; }
+.ro-skill__name { display: block; font-size: 9px; line-height: 1.1; height: 2.2em; overflow: hidden; color: #333; word-break: break-word; }
+.ro-skill__lv b { color: #1d4fa8; }
+.ro-skill.is-learned .ro-skill__lv b { color: #c2410c; }
+.ro-skill.is-locked .ro-skill__icon { filter: grayscale(1); opacity: .5; }
+.ro-skill.is-locked .ro-skill__name { color: #999; }
+.ro-tooltip {
+  position: fixed; z-index: 1000; max-width: 340px; padding: 6px 8px;
+  background: #fffff4; border: 1px solid var(--ro-border); border-radius: 3px;
+  box-shadow: var(--ro-shadow); font-size: 11px; pointer-events: none;
+}
+.ro-hint { position: fixed; right: 8px; bottom: 8px; margin: 0; padding: 3px 6px; background: var(--ro-chat-bg); color: #fff; border-radius: 3px; font-size: 10px; }
+.ro-center-box { margin: 20vh auto 0; }
+@media (max-width: 720px) {
+  .ro-skillwin .ro-skilltree { grid-template-columns: repeat(4, 1fr); }
+  .ro-skill--empty { display: none; }
+  .ro-hint { display: none; }
+}

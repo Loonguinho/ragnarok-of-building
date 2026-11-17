@@ -1,0 +1,18 @@
+# Hot reload for Go code: `go install github.com/air-verse/air@latest`, then run `air`.
+# Templates/CSS/JS reload on browser refresh without a rebuild (DEV=1).
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/server.exe ./cmd/server"
+  entrypoint = ["./tmp/server.exe"]
+  include_ext = ["go"]
+  exclude_dir = ["tmp", "bin", "data", "web", "docs", ".github"]
+  delay = 300
+  kill_delay = "500ms"
+
+[build.env]
+  DEV = "1"
+
+[misc]
+  clean_on_exit = true

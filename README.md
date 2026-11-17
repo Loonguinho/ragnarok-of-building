@@ -6,22 +6,40 @@ Stack: Go (chi) · HTMX + Go templates · SQLite · data from the Divine Pride A
 
 ## Running
 
-```sh
-go run ./cmd/server      # http://localhost:8080
+You need the RO LATAM client installed (default `C:\Gravity\Ragnarok`) to generate the game data:
+
+```powershell
+go run ./cmd/import                 # reads the client -> data/gen/catalog.json.gz (~1.5 s)
+go run ./cmd/server                 # http://localhost:8080
 go test ./...
 ```
 
-(`make run` / `make test` also work if you have `make`.)
-
 - `/` is the home screen (server-select style)
-- `/uikit` is the RO UI kit with every base component. Drag windows by the title bar, toggle them with **Alt+A**, **Alt+Q**, **Alt+S**, **Alt+V**.
+- `/skills` is the skill tree window, using real client data. Pick a job, click to add a point (Shift+click for max), right-click to remove one. Prerequisites are filled in automatically.
+- `/uikit` is the RO UI kit
+
+### Development (hot reload)
+
+```powershell
+$env:DEV = "1"; go run ./cmd/server   # templates/CSS/JS: edit and refresh the browser
+```
+
+To also reload on **Go** changes, install [Air](https://github.com/air-verse/air) once with `go install github.com/air-verse/air@latest`, then just run `air` (it already sets `DEV=1`).
+
+### Data tools
+
+```powershell
+go run ./cmd/grftool C:/Gravity/Ragnarok/data.grf find skilltree       # list files in the GRF
+go run ./cmd/lubdump C:/Gravity/Ragnarok/System/iteminfo_new.lub tbl 4001
+go run ./cmd/dpcheck                                                   # test the Divine Pride key (.env)
+```
 
 ## Roadmap
 
 - [x] Phase 0: scaffold + RO UI kit
-- [ ] Phase 1: Divine Pride sync → SQLite (needs `DP_API_KEY`)
+- [x] Phase 1: client data import (items, skills, trees, jobs in PT/ES/EN)
 - [ ] Phase 2: build model, stats, HP/SP/ASPD
-- [ ] Phase 3: in-game-style skill tree
+- [~] Phase 3: in-game-style skill tree (real client data; point limits pending)
 - [ ] Phase 4: equipment, cards, enchants, refine
 - [ ] Phase 5: damage engine + golden tests
 - [ ] Phase 6: share codes, accounts, saved builds

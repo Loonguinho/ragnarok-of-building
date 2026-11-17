@@ -2,49 +2,70 @@
 package web
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"ragnarok-of-building/internal/gamedata"
 	assets "ragnarok-of-building/web"
 )
 
+// Options configure the server.
+type Options struct {
+	Log     *slog.Logger
+	Catalog *gamedata.Catalog // nil until `go run ./cmd/import` has been run
+	// Dev reads templates and static files from ./web on every request
+	// (edit + refresh, no rebuild).
+	Dev bool
+}
+
 // Server holds parsed templates and dependencies for handlers.
 type Server struct {
+	opt   Options
+	fsys  fs.FS
 	pages map[string]*template.Template
-	log   *slog.Logger
 }
 
-var funcs = template.FuncMap{
-	"list": func(v ...any) []any { return v },
-}
-
-// New parses every page template together with the shared layout and partials.
-func New(log *slog.Logger) (*Server, error) {
-	pageFiles, err := fs.Glob(assets.FS, "templates/pages/*.html")
+// New parses templates (once, unless Dev).
+func New(opt Options) (*Server, error) {
+	s := &Server{opt: opt, fsys: assets.FS}
+	if opt.Dev {
+		s.fsys = os.DirFS("web")
+	}
+	pages, err := s.parse()
 	if err != nil {
 		return nil, err
 	}
-	partials, err := fs.Glob(assets.FS, "templates/partials/*.html")
+	s.pages = pages
+	return s, nil
+}
+
+func (s *Server) parse() (map[string]*template.Template, error) {
+	pageFiles, err := fs.Glob(s.fsys, "templates/pages/*.html")
 	if err != nil {
 		return nil, err
 	}
-	s := &Server{pages: map[string]*template.Template{}, log: log}
+	partials, err := fs.Glob(s.fsys, "templates/partials/*.html")
+	if err != nil {
+		return nil, err
+	}
+	pages := map[string]*template.Template{}
 	for _, p := range pageFiles {
 		files := append([]string{"templates/layout.html", p}, partials...)
-		t, err := template.New("layout.html").Funcs(funcs).ParseFS(assets.FS, files...)
+		t, err := template.New("layout.html").Funcs(funcs).ParseFS(s.fsys, files...)
 		if err != nil {
 			return nil, fmt.Errorf("parse %s: %w", p, err)
 		}
-		name := p[len("templates/pages/") : len(p)-len(".html")]
-		s.pages[name] = t
+		pages[p[len("templates/pages/"):len(p)-len(".html")]] = t
 	}
-	return s, nil
+	return pages, nil
 }
 
 // Routes returns the HTTP handler.
@@ -52,25 +73,76 @@ func (s *Server) Routes() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID, middleware.RealIP, middleware.Recoverer, middleware.Compress(5))
 
-	static, _ := fs.Sub(assets.FS, "static")
-	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.FS(static))))
+	static, _ := fs.Sub(s.fsys, "static")
+	fileServer := http.StripPrefix("/static/", http.FileServer(http.FS(static)))
+	if s.opt.Dev {
+		r.Handle("/static/*", noCache(fileServer))
+	} else {
+		r.Handle("/static/*", fileServer)
+	}
 
-	r.Get("/", s.page("home", map[string]any{"Title": "Ragnarok of Building"}))
-	r.Get("/uikit", s.page("uikit", map[string]any{"Title": "RO UI Kit"}))
+	r.Get("/", s.simple("home", "Ragnarok of Building"))
+	r.Get("/uikit", s.simple("uikit", "RO UI Kit"))
+	r.Get("/skills", s.handleSkills)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
 	return r
 }
 
-func (s *Server) page(name string, data any) http.HandlerFunc {
+func (s *Server) simple(page, title string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		t, ok := s.pages[name]
-		if !ok {
-			http.NotFound(w, r)
+		s.render(w, r, page, map[string]any{"Title": title, "Lang": lang(r)})
+	}
+}
+
+// render executes a page into a buffer first, so template errors produce a
+// clean 500 instead of a half-written page.
+func (s *Server) render(w http.ResponseWriter, r *http.Request, page string, data any) {
+	pages := s.pages
+	if s.opt.Dev {
+		p, err := s.parse()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := t.ExecuteTemplate(w, "layout.html", data); err != nil {
-			s.log.Error("render", "page", name, "err", err)
+		pages = p
+	}
+	t, ok := pages[page]
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	var buf bytes.Buffer
+	if err := t.ExecuteTemplate(&buf, "layout.html", data); err != nil {
+		s.opt.Log.Error("render", "page", page, "err", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if s.opt.Dev {
+		w.Header().Set("Cache-Control", "no-store")
+	}
+	buf.WriteTo(w)
+}
+
+func noCache(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		h.ServeHTTP(w, r)
+	})
+}
+
+// lang picks the UI language from ?lang=, then a cookie, defaulting to pt.
+func lang(r *http.Request) string {
+	l := r.URL.Query().Get("lang")
+	if l == "" {
+		if c, err := r.Cookie("lang"); err == nil {
+			l = c.Value
 		}
 	}
+	for _, ok := range gamedata.Langs {
+		if l == ok {
+			return l
+		}
+	}
+	return "pt"
 }

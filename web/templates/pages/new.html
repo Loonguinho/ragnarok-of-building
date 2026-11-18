@@ -35,7 +35,7 @@
         <div class="ro-family">
           <h4>{{.Name}}</h4>
           <div class="ro-family__jobs">
-            {{range .Jobs}}<a class="ro-jobcard" href="/build?new=1&job={{.ID}}">{{.Name}}</a>{{end}}
+            {{range .Jobs}}<a class="ro-jobcard" href="/build?new=1&job={{.ID}}"><img class="ro-jobicon" src="https://static.divine-pride.net/images/jobs/icon_jobs_{{.ID}}.png" alt="" width="25" height="25" onerror="this.style.visibility='hidden'"><span>{{.Name}}</span></a>{{end}}
           </div>
         </div>
         {{end}}

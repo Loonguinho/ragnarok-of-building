@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"ragnarok-of-building/internal/calc"
+	"ragnarok-of-building/internal/gamedata"
 	"ragnarok-of-building/internal/replay"
 )
 
@@ -28,18 +29,19 @@ func (s *Server) handleNew(w http.ResponseWriter, r *http.Request) {
 		s.render(w, r, "new", data)
 		return
 	}
-	data["Families"] = s.classFamilies(l)
+	data["Families"] = s.classFamilies(l, 0)
 	s.render(w, r, "new", data)
 }
 
 // classFamilies groups the playable classes by their first class
 // (Espadachim, Mago, ...), families by their lowest job ID.
-func (s *Server) classFamilies(l string) []classFamily {
+func (s *Server) classFamilies(l string, current int) []classFamily {
 	c := s.opt.Catalog
+	hidden := s.hiddenJobs(l, current)
 	families := map[string]*classFamily{}
 	var order []string
 	for _, j := range c.Jobs {
-		if len(j.Tree) == 0 || !j.HasStats() || j.Name.Get(l) == "" {
+		if len(j.Tree) == 0 || !j.HasStats() || j.Name.Get(l) == "" || hidden[j.ID] {
 			continue
 		}
 		chain := c.Chain(j.ID)
@@ -123,4 +125,34 @@ func (s *Server) handleImport(w http.ResponseWriter, r *http.Request) {
 			"items": len(b.Equip), "skills": len(b.Skills),
 		},
 	})
+}
+
+// hiddenJobs are the classes left out of class lists: when two playable
+// classes share a name (a 3rd job and its transcendent version, e.g.
+// JT_RUNE_KNIGHT and JT_RUNE_KNIGHT_H), only the transcendent one is
+// listed, unless the other is the build's own class (current).
+func (s *Server) hiddenJobs(l string, current int) map[int]bool {
+	byName := map[string][]*gamedata.Job{}
+	for _, j := range s.opt.Catalog.Jobs {
+		if len(j.Tree) == 0 || !j.HasStats() || j.Name.Get(l) == "" {
+			continue
+		}
+		byName[j.Name.Get(l)] = append(byName[j.Name.Get(l)], j)
+	}
+	hidden := map[int]bool{}
+	for _, js := range byName {
+		if len(js) < 2 {
+			continue
+		}
+		hasUpper := false
+		for _, j := range js {
+			hasUpper = hasUpper || j.Upper
+		}
+		for _, j := range js {
+			if hasUpper && !j.Upper && j.ID != current {
+				hidden[j.ID] = true
+			}
+		}
+	}
+	return hidden
 }

@@ -153,8 +153,9 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 	if v.Job != nil {
 		v.JobName = v.Job.Name.Get(l)
 	}
+	hiddenJobs := s.hiddenJobs(l, b.Job)
 	for _, j := range c.Jobs {
-		if len(j.Tree) == 0 || j.Name.Get(l) == "" || !j.HasStats() {
+		if len(j.Tree) == 0 || j.Name.Get(l) == "" || !j.HasStats() || hiddenJobs[j.ID] {
 			continue
 		}
 		v.Jobs = append(v.Jobs, jobOption{ID: j.ID, Name: j.Name.Get(l), Selected: j.ID == b.Job})
@@ -247,7 +248,7 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 	v.HPPct, v.SPPct = 100, 100
 	v.D = s.damageView(b, r, l)
 	v.D.Table = s.skillTable(b, r, l)
-	v.Families = s.classFamilies(l)
+	v.Families = s.classFamilies(l, b.Job)
 	return v
 }
 

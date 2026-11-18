@@ -59,3 +59,26 @@ func TestSwapItem(t *testing.T) {
 		t.Errorf("bad build: %d", code)
 	}
 }
+
+// Of two classes with the same name only the transcendent one is listed,
+// unless the build already uses the other.
+func TestHiddenJobs(t *testing.T) {
+	c := testCatalog()
+	tree := map[int]int{0: 1}
+	stats := []int{1}
+	c.Jobs[4054] = &gamedata.Job{ID: 4054, Name: gamedata.Text{"pt": "Cavaleiro Rúnico"}, Tree: tree, Parent: 7}
+	c.Jobs[4060] = &gamedata.Job{ID: 4060, Name: gamedata.Text{"pt": "Cavaleiro Rúnico"}, Tree: tree, Parent: 7, Upper: true}
+	for _, id := range []int{4054, 4060} {
+		c.Jobs[id].BaseHP, c.Jobs[id].MaxBaseLv, c.Jobs[id].MaxJobLv = stats, 1, 1
+	}
+	s, err := New(Options{Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Catalog: c, NoRateLimit: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h := s.hiddenJobs("pt", 0); !h[4054] || h[4060] {
+		t.Errorf("hidden %v, want only the non-transcendent 4054", h)
+	}
+	if h := s.hiddenJobs("pt", 4054); h[4054] {
+		t.Error("the build's own class must stay listed")
+	}
+}

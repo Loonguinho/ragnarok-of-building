@@ -33,7 +33,7 @@
     <div class="ro-family">
       <h4>{{.Name}}</h4>
       <div class="ro-family__jobs">
-        {{range .Jobs}}<button type="button" class="ro-jobcard{{if eq .ID $job}} is-current{{end}}" data-pick-job="{{.ID}}">{{.Name}}</button>{{end}}
+        {{range .Jobs}}<button type="button" class="ro-jobcard{{if eq .ID $job}} is-current{{end}}" data-pick-job="{{.ID}}"><img class="ro-jobicon" src="https://static.divine-pride.net/images/jobs/icon_jobs_{{.ID}}.png" alt="" width="25" height="25" onerror="this.style.visibility='hidden'"><span>{{.Name}}</span></button>{{end}}
       </div>
     </div>
     {{end}}
@@ -229,7 +229,7 @@
 {{end}}
 
 {{define "build_basic"}}
-<div class="ro-basic__name"><button class="ro-linkbtn" data-toggle="win-class" title="{{t "Trocar a classe"}} (Alt+J)"><b>{{.JobName}}</b> ▾</button></div>
+<div class="ro-basic__name"><button class="ro-linkbtn" data-toggle="win-class" title="{{t "Trocar a classe"}} (Alt+J)"><img class="ro-jobicon" src="https://static.divine-pride.net/images/jobs/icon_jobs_{{.Build.Job}}.png" alt="" width="25" height="25" onerror="this.style.visibility='hidden'"><b>{{.JobName}}</b> ▾</button></div>
 <div class="ro-basic__lv">Base Lv. {{.Build.BaseLv}} {{t "· Classe Lv."}} {{.Build.JobLv}}</div>
 <div class="ro-bar ro-bar--hp"><span style="width:100%"></span><em>HP {{.R.HP}} / {{.R.HP}}</em></div>
 <div class="ro-bar ro-bar--sp"><span style="width:100%"></span><em>SP {{.R.SP}} / {{.R.SP}}</em></div>

@@ -162,9 +162,9 @@ document.addEventListener("keyup", (e) => {
     const a = play();
     const url = a && !e.defaultPrevented ? leavingLink(el, e) : null;
     if (url) {
-      // Let the strong part of the click sound, then fade the tail and go.
+      // Let the click sound for half a second (fading out at the end), then go.
       e.preventDefault();
-      setTimeout(() => fadeOut(a, 120, () => { location.href = url.href; }), 260);
+      setTimeout(() => fadeOut(a, 100, () => { location.href = url.href; }), 400);
     }
   }, true);
   // Toggle (home screen).

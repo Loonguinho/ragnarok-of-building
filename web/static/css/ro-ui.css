@@ -219,14 +219,26 @@ a { color: #1d4fa8; }
 .ro-list__empty { padding: 8px; color: #777; }
 .ro-iteminfo { width: 340px; }
 /* Item tooltip: the client's item description box, following the mouse. */
-.ro-tip { position: fixed; z-index: 1000; width: 300px; max-width: calc(100vw - 8px); pointer-events: none;
+.ro-itemtip { position: fixed; z-index: 1000; width: 300px; max-width: calc(100vw - 8px); pointer-events: none;
   background: #fff; border: 1px solid #8a94a8; border-radius: 3px; box-shadow: 2px 3px 8px rgba(0,0,0,.35);
   font: 11px/1.4 var(--ro-font); color: #000; }
-.ro-tip__head { display: flex; align-items: center; gap: 6px; padding: 3px 6px; background: linear-gradient(#e9eef8, #cfd8ea); border-bottom: 1px solid #b7bcc6; }
-.ro-tip__head b { flex: 1; }
-.ro-tip__head small { color: #667; }
-.ro-tip__icon img { display: block; image-rendering: pixelated; }
-.ro-tip__desc { padding: 5px 6px; max-height: 60vh; overflow: hidden; }
+.ro-itemtip__head { display: flex; align-items: center; gap: 6px; padding: 3px 6px; background: linear-gradient(#e9eef8, #cfd8ea); border-bottom: 1px solid #b7bcc6; }
+.ro-itemtip__head b { flex: 1; }
+.ro-itemtip__head small { color: #667; }
+.ro-itemtip__icon img { display: block; image-rendering: pixelated; }
+.ro-swap { padding: 4px 6px; border-bottom: 1px solid #b7bcc6; background: #fbfcff; }
+.ro-swap__head { color: #4a4a6a; margin-bottom: 2px; }
+.ro-swap__t { width: 100%; border-collapse: collapse; }
+.ro-swap__t th { text-align: left; font-weight: normal; color: #4a4a6a; padding: 1px 4px 1px 0; }
+.ro-swap__t td { text-align: right; padding: 1px 0 1px 6px; white-space: nowrap; }
+.ro-swap__dmg th, .ro-swap__dmg td { font-weight: bold; }
+.ro-swap__none { margin: 2px 0; color: #667; font-style: italic; }
+.is-up { color: #1d7a2a; }
+.is-down { color: #b42318; }
+.ro-gain { margin-left: auto; font-size: 11px; color: #667; }
+.ro-gain.is-up { color: #1d7a2a; }
+.ro-gain.is-down { color: #b42318; }
+.ro-itemtip__desc { padding: 5px 6px; max-height: 60vh; overflow: hidden; }
 .ro-iteminfo__body { display: flex; gap: 8px; align-items: flex-start; }
 .ro-iteminfo__icon { flex: none; width: 56px; height: 56px; display: grid; place-items: center; background: #fff; border: 1px solid #b7bcc6; }
 .ro-iteminfo__icon img { image-rendering: pixelated; }

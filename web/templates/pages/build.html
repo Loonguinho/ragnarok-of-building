@@ -420,11 +420,23 @@
 {{end}}
 {{end}}
 
+{{define "swap_compare"}}
+<div class="ro-swap">
+  <div class="ro-swap__head">{{if .Current}}{{t "Comparado com"}} <b>{{.Current}}</b>{{else}}{{t "Slot vazio hoje"}}{{end}}{{with .Target}} · {{t "alvo"}}: {{.}}{{end}}</div>
+  <table class="ro-swap__t">
+    {{with .Expected}}<tr class="ro-swap__dmg"><th>{{.Label}}</th><td>{{.Old}}</td><td>→ {{.New}}</td><td class="{{if .Same}}{{else if .Better}}is-up{{else}}is-down{{end}}">{{.Diff}}</td></tr>{{end}}
+    {{range .Lines}}<tr><th>{{.Label}}</th><td>{{.Old}}</td><td>→ {{.New}}</td><td class="{{if .Better}}is-up{{else}}is-down{{end}}">{{.Diff}}</td></tr>{{end}}
+  </table>
+  {{if and (not .Lines) (not .Expected)}}<p class="ro-swap__none">{{t "Nada muda nos atributos."}}</p>{{end}}
+</div>
+{{end}}
+
 {{define "pick_results"}}
 {{range .Results}}
 <li class="ro-list__item ro-itemrow" tabindex="0" data-pick="{{.ID}}" data-loc="{{.Loc}}" data-tip-item="{{.ID}}">
   <img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="24" height="24" loading="lazy">
   <span>{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}{{if .MVP}} <em class="ro-mvp">MVP</em>{{end}}</span>
+  {{with index $.Gains .ID}}{{if .Diff}}<b class="ro-gain{{if .Same}}{{else if .Better}} is-up{{else}} is-down{{end}}" title="{{t "Dano esperado"}}">{{.Diff}}</b>{{end}}{{end}}
   <small>#{{.ID}}</small>
 </li>
 {{else}}

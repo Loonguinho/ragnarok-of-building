@@ -217,6 +217,14 @@
     pickMode.textContent = cardIndex >= 0 ? "Escolha uma carta (slot " + (cardIndex + 1) + ")" : "Escolha um item para " + tpl.dataset.label;
   }
 
+  // The item tooltip, on a picker result, also shows what swapping it in changes.
+  window.ROTipExtra = (el) => {
+    if (!el.closest("#pick-results") || !slotOpen || !el.dataset.pick) return "";
+    const p = new URLSearchParams({ b: code, slot: slotOpen, item: el.dataset.pick, lang });
+    if (cardIndex >= 0) { p.set("card", "1"); p.set("idx", cardIndex); }
+    return "/build/swap?" + p;
+  };
+
   // Random option picker: the options the item's next position can roll,
   // fetched once per item and position.
   const roptLists = new Map();
@@ -249,7 +257,7 @@
   function search() {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(async () => {
-      const params = new URLSearchParams({ slot: slotOpen, q: pickQ.value, lang, job: build.j });
+      const params = new URLSearchParams({ slot: slotOpen, q: pickQ.value, lang, job: build.j, b: code });
       if (cardIndex >= 0) {
         params.set("card", "1");
         params.set("idx", cardIndex);

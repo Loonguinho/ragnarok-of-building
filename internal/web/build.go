@@ -345,7 +345,12 @@ func (s *Server) handleBuildItems(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	s.fragment(w, r, "build", "pick_results", map[string]any{"Results": out, "Q": q, "Slot": slot, "Card": card})
+	// With the build (b=), each result shows how the expected damage changes.
+	var gains map[int]statLine
+	if b, _, _, cardIdx, ok := s.swapRequest(r); ok && slot != "" {
+		gains = s.pickGains(b, slot, out, cardIdx, l)
+	}
+	s.fragment(w, r, "build", "pick_results", map[string]any{"Results": out, "Q": q, "Slot": slot, "Card": card, "Gains": gains})
 }
 
 func atoi(s string) int {

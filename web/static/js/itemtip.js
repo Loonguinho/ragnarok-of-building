@@ -3,7 +3,7 @@
 (() => {
   const cache = new Map();
   const tip = document.createElement("div");
-  tip.className = "ro-tip";
+  tip.className = "ro-itemtip";
   tip.setAttribute("role", "tooltip");
   tip.hidden = true;
   let current = null; // element the tip is for
@@ -12,12 +12,18 @@
 
   const lang = () => new URLSearchParams(location.search).get("lang") || document.documentElement.lang.slice(0, 2) || "pt";
 
-  async function load(id) {
-    const key = lang() + "/" + id;
-    if (!cache.has(key)) {
-      cache.set(key, fetch("/items/" + id + "/tip?lang=" + lang()).then((r) => (r.ok ? r.text() : "")).catch(() => ""));
+  function get(url) {
+    if (!cache.has(url)) {
+      cache.set(url, fetch(url).then((r) => (r.ok ? r.text() : "")).catch(() => ""));
     }
-    return cache.get(key);
+    return cache.get(url);
+  }
+  // The description, plus what a page adds for the element (the build editor:
+  // the comparison with the equipped item).
+  async function load(el, id) {
+    const extra = window.ROTipExtra ? window.ROTipExtra(el) : "";
+    const [desc, more] = await Promise.all([get("/items/" + id + "/tip?lang=" + lang()), extra ? get(extra) : ""]);
+    return more ? more + desc : desc;
   }
 
   function place() {
@@ -44,7 +50,7 @@
     current = el;
     clearTimeout(timer);
     timer = setTimeout(async () => {
-      const html = await load(id);
+      const html = await load(el, id);
       if (current !== el || !html) return;
       if (fromKeyboard) {
         const r = el.getBoundingClientRect();

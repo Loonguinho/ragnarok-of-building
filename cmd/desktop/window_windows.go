@@ -31,6 +31,9 @@ func browserCandidates() []string {
 // browser start its own process, so waiting on it works; it also keeps the
 // app's window size and zoom apart from the user's browsing.
 func openWindow(dir, url string, detach bool) error {
+	if nativeWindow(dir, url) {
+		return nil
+	}
 	for _, b := range browserCandidates() {
 		if _, err := os.Stat(b); err != nil {
 			continue

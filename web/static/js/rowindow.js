@@ -122,14 +122,28 @@ document.addEventListener("keyup", (e) => {
   const base = new Audio(src);
   base.preload = "auto";
   // For troubleshooting in the console: ROClick
-  window.ROClick = { clicks: 0, played: 0, muted: !isOn(), failed: "", last: "" };
+  window.ROClick = { clicks: 0, played: 0, ended: 0, muted: !isOn(), failed: "", last: "" };
+  const VOLUME = 0.6;
   function play() {
     window.ROClick.muted = !isOn();
-    if (!isOn()) return;
+    if (!isOn()) return null;
     const a = base.cloneNode();
-    a.volume = 0.6;
+    a.volume = VOLUME;
+    a.addEventListener("ended", () => { window.ROClick.ended++; });
     const p = a.play();
     if (p) p.then(() => { window.ROClick.played++; }, (err) => { window.ROClick.failed = String(err); });
+    return a;
+  }
+  // Fade a playing click out (instead of the page change cutting it dead).
+  function fadeOut(a, ms, done) {
+    if (!a) { done(); return; }
+    const steps = 6;
+    let i = 0;
+    const t = setInterval(() => {
+      i++;
+      a.volume = Math.max(0, VOLUME * (1 - i / steps));
+      if (i >= steps) { clearInterval(t); done(); }
+    }, ms / steps);
   }
   // A plain left click on a link to another page of the site.
   function leavingLink(el, e) {
@@ -145,11 +159,12 @@ document.addEventListener("keyup", (e) => {
     if (!el || el.disabled || el.matches("[data-sound-toggle]")) return;
     window.ROClick.clicks++;
     window.ROClick.last = (el.textContent || el.className).trim().slice(0, 40);
-    play();
-    const url = isOn() && !e.defaultPrevented ? leavingLink(el, e) : null;
+    const a = play();
+    const url = a && !e.defaultPrevented ? leavingLink(el, e) : null;
     if (url) {
+      // Let the strong part of the click sound, then fade the tail and go.
       e.preventDefault();
-      setTimeout(() => { location.href = url.href; }, 150);
+      setTimeout(() => fadeOut(a, 120, () => { location.href = url.href; }), 260);
     }
   }, true);
   // Toggle (home screen).

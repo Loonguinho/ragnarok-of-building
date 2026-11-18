@@ -91,7 +91,7 @@ func (l *rateLimiter) limit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !l.allow(clientIP(r), time.Now()) {
 			w.Header().Set("Retry-After", "5")
-			http.Error(w, "muitas requisições, tente de novo em alguns segundos", http.StatusTooManyRequests)
+			http.Error(w, tr(lang(r), "muitas requisições, tente de novo em alguns segundos"), http.StatusTooManyRequests)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -109,7 +109,7 @@ func oneAtATime(n int, next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		case <-r.Context().Done():
 		case <-time.After(20 * time.Second):
-			http.Error(w, "servidor ocupado, tente de novo", http.StatusServiceUnavailable)
+			http.Error(w, tr(lang(r), "servidor ocupado, tente de novo"), http.StatusServiceUnavailable)
 		}
 	})
 }

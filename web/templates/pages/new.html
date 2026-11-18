@@ -3,36 +3,33 @@
 <section class="ro-window ro-window--fixed ro-center-box" style="width:360px">
   <header class="ro-window__title">[Kafra]</header>
   <div class="ro-window__body ro-npc">
-    Os dados do jogo ainda não foram importados.<br><br>
-    Rode <b>go run ./cmd/fetchrathena</b> e depois <b>go run ./cmd/import</b>, e reinicie o servidor.
+    {{t "Os dados do jogo ainda não foram importados."}}<br><br>
+    {{th "Rode <b>go run ./cmd/fetchrathena</b> e depois <b>go run ./cmd/import</b>, e reinicie o servidor."}}
   </div>
-  <footer class="ro-window__footer"><a class="ro-btn" href="/">Fechar</a></footer>
+  <footer class="ro-window__footer"><a class="ro-btn" href="/">{{t "Fechar"}}</a></footer>
 </section>
 {{else}}
 <main class="ro-newbuild">
   <h1 class="ro-logo">Ragnarok <span>of Building</span></h1>
   <div class="ro-newbuild__cols">
     <section class="ro-window ro-window--fixed ro-import" id="win-import">
-      <header class="ro-window__title">Importar Replay</header>
+      <header class="ro-window__title">{{t "Importar Replay"}}</header>
       <div class="ro-window__body">
         <label class="ro-drop" id="drop" tabindex="0">
           <input type="file" id="rrf" accept=".rrf" hidden>
-          <b>Arraste um arquivo .rrf aqui</b>
-          <span>ou clique para escolher</span>
+          <b>{{t "Arraste um arquivo .rrf aqui"}}</b>
+          <span>{{t "ou clique para escolher"}}</span>
         </label>
         <div class="ro-npc ro-import__help">
-          Os replays ficam na pasta <b>Replay</b> do jogo
-          (ex.: <code>C:\Gravity\Ragnarok\Replay</code>).<br>
-          Para gravar: no jogo, abra o menu de replay, comece a gravar e troque de mapa
-          (assim os traços POW/STA… também entram). O replay traz classe, níveis,
-          atributos, equipamento vestido e habilidades.
+          {{th `Os replays ficam na pasta <b>Replay</b> do jogo (ex.: <code>C:\Gravity\Ragnarok\Replay</code>).`}}<br>
+          {{t "Para gravar: no jogo, abra o menu de replay, comece a gravar e troque de mapa (assim os traços POW/STA… também entram). O replay traz classe, níveis, atributos, equipamento vestido e habilidades."}}
         </div>
         <div class="ro-import__status" id="import-status" aria-live="polite"></div>
       </div>
     </section>
 
     <section class="ro-window ro-window--fixed ro-classpick" id="win-classes">
-      <header class="ro-window__title">Build em Branco · Escolha a Classe</header>
+      <header class="ro-window__title">{{t "Build em Branco · Escolha a Classe"}}</header>
       <div class="ro-window__body ro-classpick__body">
         {{range .Families}}
         <div class="ro-family">
@@ -43,7 +40,7 @@
         </div>
         {{end}}
       </div>
-      <footer class="ro-window__footer"><a class="ro-btn" href="/">Voltar</a></footer>
+      <footer class="ro-window__footer"><a class="ro-btn" href="/">{{t "Voltar"}}</a></footer>
     </section>
   </div>
 </main>
@@ -56,20 +53,20 @@
 
     async function upload(file) {
       if (!file) return;
-      if (!file.name.toLowerCase().endsWith(".rrf")) { show("Escolha um arquivo <b>.rrf</b>.", true); return; }
-      show("Lendo <b>" + file.name.replace(/[<>&]/g, "") + "</b>…");
+      if (!file.name.toLowerCase().endsWith(".rrf")) { show(T("Escolha um arquivo <b>.rrf</b>."), true); return; }
+      show(T("Lendo <b>%s</b>…", file.name.replace(/[<>&]/g, "")));
       const form = new FormData();
       form.append("file", file);
       try {
         const res = await fetch("/build/import", { method: "POST", body: form });
         const data = await res.json();
-        if (!res.ok) { show(data.error || "Falha ao importar.", true); return; }
+        if (!res.ok) { show(data.error || T("Falha ao importar."), true); return; }
         const s = data.summary;
-        const notes = [`Replay importado: ${s.job}, Lv ${s.base}/${s.joblv}, ${s.items} equipamento(s), ${s.skills} habilidade(s).`, ...(data.notes || [])];
+        const notes = [T("Replay importado: %s, Lv %s/%s, %s equipamento(s), %s habilidade(s).", s.job, s.base, s.joblv, s.items, s.skills), ...(data.notes || [])];
         try { sessionStorage.setItem("ro.import.notes", JSON.stringify(notes)); } catch {}
         location.href = "/build?b=" + encodeURIComponent(data.code);
       } catch (e) {
-        show("Falha ao enviar o arquivo.", true);
+        show(T("Falha ao enviar o arquivo."), true);
       }
     }
 

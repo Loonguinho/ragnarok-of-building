@@ -1,11 +1,12 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="{{htmlLang}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{.Title}}</title>
+  <title>{{t .Title}}</title>
   <link rel="stylesheet" href="/static/css/ro-ui.css">
   <link rel="icon" type="image/png" href="/static/img/icon.png">
+  <script>window.I18N = {{i18nJSON}}; window.T = (s, ...a) => { let r = (window.I18N && window.I18N[s]) || s; for (const v of a) r = r.replace("%s", v); return r; };</script>
   <meta name="htmx-config" content='{"allowEval":false}'>
   <script src="/static/js/htmx.min.js" defer></script>
   <script src="/static/js/rowindow.js" defer></script>

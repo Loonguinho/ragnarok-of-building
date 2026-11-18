@@ -45,7 +45,7 @@ window.ROSkillTree = (() => {
       raise(id, to);
       if (!fits(lv)) {
         lv = before;
-        message("Pontos de habilidade insuficientes");
+        message(T("Pontos de habilidade insuficientes"));
         return false;
       }
       return true;

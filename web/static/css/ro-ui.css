@@ -149,7 +149,8 @@ a { color: #1d4fa8; }
 .ro-bar--hp > span { background: linear-gradient(180deg, #7fe07f, var(--ro-hp)); }
 .ro-bar--sp > span { background: linear-gradient(180deg, #7f9fff, var(--ro-sp)); }
 .ro-bar--exp > span { background: linear-gradient(180deg, #ffe38a, var(--ro-exp)); }
-.ro-basic__menu { display: flex; gap: 3px; margin-top: 5px; }
+.ro-basic__menu { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+.ro-basic__menu > .ro-btn { flex: 1 1 auto; min-width: 0; padding: 0 4px; text-align: center; white-space: nowrap; }
 
 /* ---------- npc dialog ---------- */
 .ro-npc { min-height: 70px; background: #fff; border: 1px solid #b7bcc6; margin: 6px; font-size: 12px; }
@@ -381,3 +382,8 @@ body.ro-desktop:has(.ro-newbuild) { overflow: auto; }
 .ro-setup__buttons { display: flex; justify-content: flex-end; gap: 4px; margin-top: 6px; }
 .ro-setup__status { margin-top: 8px; font-weight: bold; }
 .ro-setup__status.is-bad { color: #b8282f; }
+
+/* Language picker on the home screen */
+.ro-langpick { display: flex; gap: 4px; justify-content: center; margin-top: -8px; }
+.ro-langpick .ro-btn { min-width: 84px; text-align: center; text-decoration: none; }
+.ro-langpick .ro-btn.is-active { border-color: #1d4fa8; box-shadow: 0 0 0 2px #9fc0f5 inset; font-weight: bold; }

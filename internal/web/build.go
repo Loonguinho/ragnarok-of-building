@@ -114,6 +114,9 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 	c := s.opt.Catalog
 	notes := calc.Normalize(&b, c)
 	r := calc.Compute(b, c)
+	for i := range notes {
+		notes[i] = tr(l, notes[i])
+	}
 	v := buildView{Lang: l, Build: b, Code: encodeBuild(b), Job: c.Jobs[b.Job], R: r, StatName: statNames, TraitNm: traitNames, Notes: notes}
 	if v.Job != nil {
 		v.JobName = v.Job.Name.Get(l)
@@ -226,7 +229,7 @@ func (s *Server) handleBuildCalc(w http.ResponseWriter, r *http.Request) {
 	out := map[string]any{"build": v.Build, "code": v.Code, "notes": v.Notes, "html": map[string]string{},
 		"skillGroups": s.opt.Catalog.SkillBudgets(v.Build.Job, v.Build.JobLv)}
 	for _, name := range []string{"build_status", "build_basic", "build_equip", "build_bonus", "build_damage", "build_buffs"} {
-		html, err := s.fragmentString("build", name, v)
+		html, err := s.fragmentString(lang(r), "build", name, v)
 		if err != nil {
 			s.opt.Log.Error("build fragment", "name", name, "err", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
@@ -292,7 +295,7 @@ func atoi(s string) int {
 	return n
 }
 
-func (s *Server) fragmentString(page, name string, data any) (string, error) {
+func (s *Server) fragmentString(l, page, name string, data any) (string, error) {
 	pages := s.pages
 	if s.opt.Dev {
 		p, err := s.parse()
@@ -302,7 +305,7 @@ func (s *Server) fragmentString(page, name string, data any) (string, error) {
 		pages = p
 	}
 	var buf bytes.Buffer
-	if err := pages[page].ExecuteTemplate(&buf, name, data); err != nil {
+	if err := pages[l+"/"+page].ExecuteTemplate(&buf, name, data); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
@@ -437,6 +440,7 @@ var sizeNames = map[string]string{"Size_All": "todos os tamanhos", "Size_Small":
 
 // extraLabel turns "bAddRace RC_DemiHuman" into readable Portuguese when known.
 func extraLabel(k string, c *gamedata.Catalog, l string) string {
+	T := func(s string) string { return tr(l, s) }
 	parts := strings.Fields(k)
 	if len(parts) < 2 {
 		return k
@@ -444,47 +448,47 @@ func extraLabel(k string, c *gamedata.Catalog, l string) string {
 	arg := parts[1]
 	name := func(m map[string]string) string {
 		if n, ok := m[arg]; ok {
-			return n
+			return T(n)
 		}
 		return arg
 	}
 	switch parts[0] {
 	case "bAddRace":
-		return "Dano físico vs " + name(raceNames)
+		return T("Dano físico vs ") + name(raceNames)
 	case "bMagicAddRace":
-		return "Dano mágico vs " + name(raceNames)
+		return T("Dano mágico vs ") + name(raceNames)
 	case "bSubRace":
-		return "Resistência a " + name(raceNames)
+		return T("Resistência a ") + name(raceNames)
 	case "bAddEle":
-		return "Dano físico vs " + name(eleNames)
+		return T("Dano físico vs ") + name(eleNames)
 	case "bMagicAddEle":
-		return "Dano mágico vs " + name(eleNames)
+		return T("Dano mágico vs ") + name(eleNames)
 	case "bMagicAtkEle":
-		return "Dano mágico de " + name(eleNames)
+		return T("Dano mágico de ") + name(eleNames)
 	case "bSubEle":
-		return "Resistência a " + name(eleNames)
+		return T("Resistência a ") + name(eleNames)
 	case "bAddSize":
-		return "Dano físico vs " + name(sizeNames)
+		return T("Dano físico vs ") + name(sizeNames)
 	case "bMagicAddSize":
-		return "Dano mágico vs " + name(sizeNames)
+		return T("Dano mágico vs ") + name(sizeNames)
 	case "bAddEff", "bAddEff2", "bMagicAddEff":
-		return "Chance de " + name(effNames)
+		return T("Chance de ") + name(effNames)
 	case "bAddEffWhenHit":
-		return "Chance de " + name(effNames) + " ao ser atingido"
+		return T("Chance de ") + name(effNames) + T(" ao ser atingido")
 	case "bResEff":
-		return "Resistência a " + strings.TrimPrefix(arg, "Eff_")
+		return T("Resistência a ") + strings.TrimPrefix(arg, "Eff_")
 	case "bIgnoreDefRaceRate":
-		return "Ignora DEF de " + name(raceNames)
+		return T("Ignora DEF de ") + name(raceNames)
 	case "bIgnoreMdefRaceRate":
-		return "Ignora DEFM de " + name(raceNames)
+		return T("Ignora DEFM de ") + name(raceNames)
 	case "bSkillAtk", "bSkillCooldown", "bSkillVariableCast", "bSkillFixedCast":
 		label := map[string]string{"bSkillAtk": "Dano de ", "bSkillCooldown": "Recarga de ", "bSkillVariableCast": "Conjuração variável de ", "bSkillFixedCast": "Conjuração fixa de "}[parts[0]]
 		for _, sk := range c.Skills {
 			if sk.Code == strings.Trim(arg, `"`) {
-				return label + sk.Name.Get(l)
+				return T(label) + sk.Name.Get(l)
 			}
 		}
-		return label + arg
+		return T(label) + arg
 	}
 	return k
 }

@@ -76,7 +76,7 @@ func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
 
 	// Class state selectors (Celestial Space, Exceed...).
 	for _, o := range calc.StatesFor(c, b.Job) {
-		v.States = append(v.States, stateView{Key: o.Key, Label: o.Label, Choices: o.Choices, Value: b.Atk.States[o.Key]})
+		v.States = append(v.States, stateView{Key: o.Key, Label: skillLabel(c, l, o.Label), Choices: o.Choices, Value: b.Atk.States[o.Key]})
 	}
 
 	// Skill ratio: manual value wins, then the LATAM formula, then the
@@ -147,8 +147,8 @@ func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
 	}
 	v.TargetInfo = []bonusLine{
 		{"Nível", itoa(m.Level)}, {"HP", fmtInt(int64(m.HP))},
-		{"Raça", racePT(m.Race)}, {"Elemento", elementPT[m.Element] + " " + itoa(m.ElementLv)},
-		{"Tamanho", sizePT[m.Size]}, {"Classe", cls},
+		{"Raça", tr(l, racePT(m.Race))}, {"Elemento", tr(l, elementPT[m.Element]) + " " + itoa(m.ElementLv)},
+		{"Tamanho", tr(l, sizePT[m.Size])}, {"Classe", tr(l, cls)},
 		{"DEF", itoa(m.DEF) + " + " + itoa(m.SoftDEF())}, {"DEFM", itoa(m.MDEF) + " + " + itoa(m.SoftMDEF())},
 	}
 	if m.RES > 0 || m.MRES > 0 {
@@ -158,19 +158,21 @@ func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
 		v.TargetInfo = append(v.TargetInfo, bonusLine{"Dano recebido", itoa(m.DamageTaken) + "%"})
 	}
 	v.Dmg = calc.Damage(b, r, c, m, atk)
-	v.ElementName = elementPT[v.Dmg.Element]
+	v.ElementName = tr(l, elementPT[v.Dmg.Element])
 	return v
 }
 
 // GET /build/monsters?q=: monster picker results.
 func (s *Server) handleBuildMonsters(w http.ResponseWriter, r *http.Request) {
+	r0 := r
 	if s.opt.Catalog == nil {
 		http.Error(w, "catalog not loaded", http.StatusServiceUnavailable)
 		return
 	}
 	s.fragment(w, r, "build", "mob_results", map[string]any{
 		"Q": r.URL.Query().Get("q"), "Results": s.opt.Catalog.SearchMonsters(r.URL.Query().Get("q"), 40),
-		"RaceName": racePT, "EleName": elementPT,
+		"RaceName": func(r string) string { return tr(lang(r0), racePT(r)) },
+		"EleName":  func(e string) string { return tr(lang(r0), elementPT[e]) },
 	})
 }
 
@@ -190,4 +192,21 @@ func fmtInt(n int64) string {
 		b.WriteRune(ch)
 	}
 	return b.String()
+}
+
+// skillLabel shows a state named after a skill (its PT client name) with the
+// skill's name in the chosen language; other labels go through the
+// dictionary in the template.
+func skillLabel(c *gamedata.Catalog, l, label string) string {
+	if l == "pt" {
+		return label
+	}
+	for _, sk := range c.Skills {
+		if sk.Name.Get("pt") == label {
+			if n := sk.Name.Get(l); n != "" {
+				return n
+			}
+		}
+	}
+	return label
 }

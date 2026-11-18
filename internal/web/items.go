@@ -150,7 +150,7 @@ func (s *Server) fragment(w http.ResponseWriter, r *http.Request, page, name str
 		}
 		pages = p
 	}
-	t, ok := pages[page]
+	t, ok := pages[lang(r)+"/"+page]
 	if !ok {
 		http.NotFound(w, r)
 		return

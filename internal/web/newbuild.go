@@ -73,7 +73,7 @@ func (s *Server) handleImport(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"error": msg})
 	}
 	if s.opt.Catalog == nil {
-		fail(http.StatusServiceUnavailable, "Os dados do jogo não foram importados no servidor.")
+		fail(http.StatusServiceUnavailable, tr(lang(r), "Os dados do jogo não foram importados no servidor."))
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxReplayUpload+1<<20)
@@ -81,26 +81,29 @@ func (s *Server) handleImport(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var tooBig *http.MaxBytesError
 		if errors.As(err, &tooBig) {
-			fail(http.StatusRequestEntityTooLarge, "Arquivo grande demais (máx. 16 MB).")
+			fail(http.StatusRequestEntityTooLarge, tr(lang(r), "Arquivo grande demais (máx. 16 MB)."))
 			return
 		}
-		fail(http.StatusBadRequest, "Envie um arquivo .rrf.")
+		fail(http.StatusBadRequest, tr(lang(r), "Envie um arquivo .rrf."))
 		return
 	}
 	defer f.Close()
 	buf, err := io.ReadAll(io.LimitReader(f, maxReplayUpload+1))
 	if err != nil || len(buf) > maxReplayUpload {
-		fail(http.StatusRequestEntityTooLarge, "Arquivo grande demais (máx. 16 MB).")
+		fail(http.StatusRequestEntityTooLarge, tr(lang(r), "Arquivo grande demais (máx. 16 MB)."))
 		return
 	}
 	snap, err := replay.Decode(buf)
 	if err != nil {
 		s.opt.Log.Info("replay import rejected", "err", err)
-		fail(http.StatusUnprocessableEntity, "Não consegui ler este replay. Ele é um .rrf gravado pelo cliente do RO LATAM?")
+		fail(http.StatusUnprocessableEntity, tr(lang(r), "Não consegui ler este replay. Ele é um .rrf gravado pelo cliente do RO LATAM?"))
 		return
 	}
 	b, notes := replay.ToBuild(snap, s.opt.Catalog)
 	notes = append(notes, calc.Normalize(&b, s.opt.Catalog)...)
+	for i := range notes {
+		notes[i] = tr(lang(r), notes[i])
+	}
 	jobName := ""
 	if j := s.opt.Catalog.Jobs[b.Job]; j != nil {
 		jobName = j.Name.Get(lang(r))

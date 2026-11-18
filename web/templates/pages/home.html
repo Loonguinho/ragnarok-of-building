@@ -1,44 +1,47 @@
 {{define "content"}}
 <main class="ro-home">
   <h1 class="ro-logo">Ragnarok <span>of Building</span></h1>
+  <nav class="ro-langpick" aria-label="{{t "Idioma"}}">
+    {{range uiLangs}}<a class="ro-btn{{if eq .Code lang}} is-active{{end}}" href="/?lang={{.Code}}" hreflang="{{.HTML}}" lang="{{.HTML}}"{{if eq .Code lang}} aria-current="true"{{end}}>{{.Label}}</a>{{end}}
+  </nav>
 
   {{if not .Ready}}
   <section class="ro-window ro-window--fixed" style="width:360px">
     <header class="ro-window__title">[Kafra]</header>
     <div class="ro-window__body ro-npc">
-      Os dados do jogo ainda não foram importados.<br><br>
-      Rode <b>go run ./cmd/fetchrathena</b> e depois <b>go run ./cmd/import</b>, e reinicie.
+      {{t "Os dados do jogo ainda não foram importados."}}<br><br>
+      {{th "Rode <b>go run ./cmd/fetchrathena</b> e depois <b>go run ./cmd/import</b>, e reinicie o servidor."}}
     </div>
   </section>
   {{else}}
   <div class="ro-home__cols">
     <!-- Builds saved in this browser, like the client's character select -->
     <section class="ro-window ro-window--fixed ro-charsel">
-      <header class="ro-window__title">Personagens <small id="slot-count"></small></header>
+      <header class="ro-window__title">{{t "Personagens"}} <small id="slot-count"></small></header>
       <div class="ro-window__body ro-charsel__body">
-        <div class="ro-charsel__grid" id="slots" role="listbox" aria-label="Builds salvos">
-          <a class="ro-charslot ro-charslot--empty" href="/new">+ Novo build</a>
+        <div class="ro-charsel__grid" id="slots" role="listbox" aria-label="{{t "Builds salvos"}}">
+          <a class="ro-charslot ro-charslot--empty" href="/new">{{t "+ Novo build"}}</a>
         </div>
         <aside class="ro-charsel__info" id="slot-info" aria-live="polite">
-          <p class="ro-npc">Nenhum build salvo ainda.<br><br>Monte um build e aperte <b>Salvar</b> (ou <b>Ctrl+S</b>) para ele aparecer aqui.<br><br><small>Os builds ficam salvos neste navegador.</small></p>
+          <p class="ro-npc">{{t "Nenhum build salvo ainda."}}<br><br>{{th "Monte um build e aperte <b>Salvar</b> (ou <b>Ctrl+S</b>) para ele aparecer aqui."}}<br><br><small>{{t "Os builds ficam salvos neste navegador."}}</small></p>
         </aside>
       </div>
       <footer class="ro-window__footer" id="slot-actions" hidden>
-        <a class="ro-btn" id="slot-open" href="#">Abrir</a>
-        <button class="ro-btn" type="button" id="slot-delete">Excluir</button>
+        <a class="ro-btn" id="slot-open" href="#">{{t "Abrir"}}</a>
+        <button class="ro-btn" type="button" id="slot-delete">{{t "Excluir"}}</button>
       </footer>
     </section>
 
     <!-- Main menu -->
     <section class="ro-window ro-window--fixed ro-homemenu">
-      <header class="ro-window__title">Menu</header>
+      <header class="ro-window__title">{{t "Menu"}}</header>
       <div class="ro-window__body">
         <nav class="ro-homemenu__list">
-          <a class="ro-homemenu__item" href="/new"><b>Novo build</b><span>Importar um replay (.rrf) ou começar em branco</span></a>
-          <a class="ro-homemenu__item" href="/build"><b>Continuar</b><span>Volta ao último build aberto</span></a>
-          <a class="ro-homemenu__item" href="#" data-load-code><b>Abrir link</b><span>Cole o link de um build compartilhado</span></a>
-          <a class="ro-homemenu__item" href="/items"><b>Banco de Itens</b><span>Buscar itens, cartas e encantamentos</span></a>
-          <a class="ro-homemenu__item" href="/skills"><b>Árvore de Habilidades</b><span>Ver as habilidades de cada classe</span></a>
+          <a class="ro-homemenu__item" href="/new"><b>{{t "Novo build"}}</b><span>{{t "Importar um replay (.rrf) ou começar em branco"}}</span></a>
+          <a class="ro-homemenu__item" href="/build"><b>{{t "Continuar"}}</b><span>{{t "Volta ao último build aberto"}}</span></a>
+          <a class="ro-homemenu__item" href="#" data-load-code><b>{{t "Abrir link"}}</b><span>{{t "Cole o link de um build compartilhado"}}</span></a>
+          <a class="ro-homemenu__item" href="/items"><b>{{t "Banco de Itens"}}</b><span>{{t "Buscar itens, cartas e encantamentos"}}</span></a>
+          <a class="ro-homemenu__item" href="/skills"><b>{{t "Árvore de Habilidades"}}</b><span>{{t "Ver as habilidades de cada classe"}}</span></a>
         </nav>
       </div>
     </section>
@@ -50,7 +53,7 @@
     const load = document.querySelector("[data-load-code]");
     if (load) load.addEventListener("click", (e) => {
       e.preventDefault();
-      const v = (prompt("Cole o link do build (ou só o código):") || "").trim();
+      const v = (prompt(T("Cole o link do build (ou só o código):")) || "").trim();
       if (!v) return;
       const m = v.match(/[?&]b=([A-Za-z0-9_-]+)/);
       location.href = "/build?b=" + (m ? m[1] : v.replace(/[^A-Za-z0-9_-]/g, ""));
@@ -63,7 +66,7 @@
     const actions = document.getElementById("slot-actions");
     const open = document.getElementById("slot-open");
     const count = document.getElementById("slot-count");
-    const fmt = (t) => new Date(t).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+    const fmt = (t) => new Date(t).toLocaleString(document.documentElement.lang || "pt-BR", { dateStyle: "short", timeStyle: "short" });
     let list = [], sel = 0;
 
     function render() {
@@ -78,7 +81,7 @@
         b.dataset.slot = i;
         const name = document.createElement("b"); name.textContent = e.name;
         const job = document.createElement("span"); job.textContent = e.job || "?";
-        const lv = document.createElement("small"); lv.textContent = `Nv. ${e.b || "?"} / ${e.jl || "?"}`;
+        const lv = document.createElement("small"); lv.textContent = `${T("Nv.")} ${e.b || "?"} / ${e.jl || "?"}`;
         b.append(name, job, lv);
         b.addEventListener("click", () => select(i));
         b.addEventListener("dblclick", () => open.click());
@@ -94,7 +97,7 @@
       const e = list[sel];
       grid.querySelectorAll("[data-slot]").forEach((el, k) => el.classList.toggle("is-selected", k === sel));
       const dl = document.createElement("dl");
-      for (const [k, v] of [["Nome", e.name], ["Classe", e.job || "?"], ["Nível", `${e.b || "?"} / ${e.jl || "?"}`], ["Salvo em", fmt(e.t)]]) {
+      for (const [k, v] of [[T("Nome"), e.name], [T("Classe"), e.job || "?"], [T("Nível"), `${e.b || "?"} / ${e.jl || "?"}`], [T("Salvo em"), fmt(e.t)]]) {
         const dt = document.createElement("dt"); dt.textContent = k;
         const dd = document.createElement("dd"); dd.textContent = v;
         dl.append(dt, dd);
@@ -106,7 +109,7 @@
 
     document.getElementById("slot-delete").addEventListener("click", () => {
       const e = list[sel];
-      if (e && confirm(`Excluir o build "${e.name}"?`)) { ROSaved.remove(e.id); render(); }
+      if (e && confirm(T('Excluir o build "%s"?', e.name))) { ROSaved.remove(e.id); render(); }
     });
     document.addEventListener("keydown", (e) => {
       if (!list.length || !document.activeElement.closest("#slots")) return;

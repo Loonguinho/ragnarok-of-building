@@ -62,14 +62,18 @@ func (s *Server) parse() (map[string]*template.Template, error) {
 	if err != nil {
 		return nil, err
 	}
+	// One template set per interface language ("en/build"), each with its
+	// own t/th functions.
 	pages := map[string]*template.Template{}
-	for _, p := range pageFiles {
-		files := append([]string{"templates/layout.html", p}, partials...)
-		t, err := template.New("layout.html").Funcs(funcs).ParseFS(s.fsys, files...)
-		if err != nil {
-			return nil, fmt.Errorf("parse %s: %w", p, err)
+	for _, ul := range uiLangs {
+		for _, p := range pageFiles {
+			files := append([]string{"templates/layout.html", p}, partials...)
+			t, err := template.New("layout.html").Funcs(funcs).Funcs(langFuncs(ul.Code)).ParseFS(s.fsys, files...)
+			if err != nil {
+				return nil, fmt.Errorf("parse %s: %w", p, err)
+			}
+			pages[ul.Code+"/"+p[len("templates/pages/"):len(p)-len(".html")]] = t
 		}
-		pages[p[len("templates/pages/"):len(p)-len(".html")]] = t
 	}
 	return pages, nil
 }
@@ -77,7 +81,7 @@ func (s *Server) parse() (map[string]*template.Template, error) {
 // Routes returns the HTTP handler.
 func (s *Server) Routes() http.Handler {
 	r := chi.NewRouter()
-	r.Use(middleware.RequestID, middleware.RealIP, middleware.Recoverer, middleware.Compress(5), securityHeaders)
+	r.Use(middleware.RequestID, middleware.RealIP, middleware.Recoverer, middleware.Compress(5), securityHeaders, rememberLang)
 	// Per-IP limits: the damage window recalculates on every change, replay
 	// uploads are the heaviest request.
 	calcLimit := newRateLimiter(10, 40)
@@ -130,7 +134,7 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, page string, dat
 		}
 		pages = p
 	}
-	t, ok := pages[page]
+	t, ok := pages[lang(r)+"/"+page]
 	if !ok {
 		http.NotFound(w, r)
 		return
@@ -162,6 +166,9 @@ func lang(r *http.Request) string {
 		if c, err := r.Cookie("lang"); err == nil {
 			l = c.Value
 		}
+	}
+	if l == "" {
+		l = acceptLang(r.Header.Get("Accept-Language"))
 	}
 	for _, ok := range gamedata.Langs {
 		if l == ok {

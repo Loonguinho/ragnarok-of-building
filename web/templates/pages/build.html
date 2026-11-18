@@ -3,48 +3,48 @@
 <section class="ro-window ro-window--fixed ro-center-box" style="width:360px">
   <header class="ro-window__title">[Kafra]</header>
   <div class="ro-window__body ro-npc">
-    Os dados do jogo ainda não foram importados.<br><br>
-    Rode <b>go run ./cmd/fetchrathena</b> e depois <b>go run ./cmd/import</b>, e reinicie o servidor.
+    {{t "Os dados do jogo ainda não foram importados."}}<br><br>
+    {{th "Rode <b>go run ./cmd/fetchrathena</b> e depois <b>go run ./cmd/import</b>, e reinicie o servidor."}}
   </div>
-  <footer class="ro-window__footer"><a class="ro-btn" href="/">Fechar</a></footer>
+  <footer class="ro-window__footer"><a class="ro-btn" href="/">{{t "Fechar"}}</a></footer>
 </section>
 {{else}}
 {{with .V}}
 <!-- Basic Info (Alt+V) -->
-<section class="ro-window ro-basic" id="win-basic" data-hotkey="v" style="left:16px;top:16px;width:250px">
-  <header class="ro-window__title">Informações Básicas</header>
+<section class="ro-window ro-basic" id="win-basic" data-hotkey="v" style="left:16px;top:16px;width:290px">
+  <header class="ro-window__title">{{t "Informações Básicas"}}</header>
   <div class="ro-window__body" id="build_basic">{{template "build_basic" .}}</div>
 </section>
 
 <!-- Status (Alt+A) -->
 <section class="ro-window ro-statuswin" id="win-status" data-hotkey="a" style="left:16px;top:208px;width:360px">
-  <header class="ro-window__title">Atributos <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <header class="ro-window__title">{{t "Atributos"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
   <div class="ro-window__body" id="build_status">{{template "build_status" .}}</div>
 </section>
 
 <!-- Equipment (Alt+Q) -->
 <section class="ro-window ro-equipwin" id="win-equip" data-hotkey="q" style="left:392px;top:16px;width:420px">
-  <header class="ro-window__title">Equipamentos <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <header class="ro-window__title">{{t "Equipamentos"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
   <div id="build_equip">{{template "build_equip" .}}</div>
 </section>
 
 <!-- Bonuses -->
 <section class="ro-window ro-bonuswin" id="win-bonus" data-hotkey="b" style="left:392px;top:392px;width:420px">
-  <header class="ro-window__title">Bônus do Equipamento <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <header class="ro-window__title">{{t "Bônus do Equipamento"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
   <div class="ro-window__body" id="build_bonus">{{template "build_bonus" .}}</div>
 </section>
 
 <!-- Buffs (Alt+U) -->
 <section class="ro-window ro-buffwin is-hidden" id="win-buffs" data-hotkey="u" style="left:392px;top:16px;width:330px">
-  <header class="ro-window__title">Buffs e Consumíveis <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <header class="ro-window__title">{{t "Buffs e Consumíveis"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
   <div class="ro-window__body" id="build_buffs">{{template "build_buffs" .}}</div>
 </section>
 
 <!-- Target / Damage (Alt+D) -->
 <section class="ro-window ro-dmgwin" id="win-damage" data-hotkey="d" style="left:828px;top:16px;width:380px">
-  <header class="ro-window__title">Alvo / Dano <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <header class="ro-window__title">{{t "Alvo / Dano"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
   <div class="ro-skillwin__bar">
-    <input class="ro-input" type="search" id="mob-q" placeholder="Buscar monstro (nome ou ID)…" autocomplete="off" aria-label="Buscar monstro">
+    <input class="ro-input" type="search" id="mob-q" placeholder="{{t "Buscar monstro (nome ou ID)…"}}" autocomplete="off" aria-label="{{t "Buscar monstro"}}">
   </div>
   <ul class="ro-list ro-moblist" id="mob-results" hidden></ul>
   <div class="ro-window__body" id="build_damage">{{template "build_damage" .}}</div>
@@ -52,19 +52,19 @@
 
 <!-- Slot editor + item picker (opened from Equipment) -->
 <section class="ro-window ro-slotwin is-hidden" id="win-slot" style="left:828px;top:16px;width:340px">
-  <header class="ro-window__title"><span data-slot-title>Equipamento</span> <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <header class="ro-window__title"><span data-slot-title>{{t "Equipamento"}}</span> <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
   <div class="ro-window__body" id="slot-body"></div>
   <div class="ro-skillwin__bar">
-    <input class="ro-input" type="search" id="pick-q" placeholder="Buscar item…" autocomplete="off" aria-label="Buscar">
+    <input class="ro-input" type="search" id="pick-q" placeholder="{{t "Buscar item…"}}" autocomplete="off" aria-label="{{t "Buscar"}}">
   </div>
   <div class="ro-window__body"><ul class="ro-list ro-itemlist ro-picklist" id="pick-results"></ul></div>
-  <footer class="ro-window__footer"><span id="pick-mode">Escolha um item</span></footer>
+  <footer class="ro-window__footer"><span id="pick-mode">{{t "Escolha um item"}}</span></footer>
 </section>
 {{end}}
 
 <!-- Skills (Alt+S) -->
 <section class="ro-window ro-skillwin is-hidden" id="win-skills" data-hotkey="s" data-managed="1" style="left:828px;top:16px">
-  <header class="ro-window__title">Habilidades <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <header class="ro-window__title">{{t "Habilidades"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
   <div id="skill-body">{{with .Skills}}{{template "skill_tree" .}}{{end}}</div>
 </section>
 
@@ -78,58 +78,58 @@
 {{define "build_damage"}}
 {{with .D}}
 <div class="ro-dmg__atk">
-  <label>Ataque
+  <label>{{t "Ataque"}}
     <select class="ro-select" data-atk="skill">
-      <option value="0">Ataque básico</option>
+      <option value="0">{{t "Ataque básico"}}</option>
       {{range .Skills}}<option value="{{.ID}}"{{if .Selected}} selected{{end}}>{{.Name}}</option>{{end}}
     </select>
   </label>
-  {{if .Levels}}<label>Nv
+  {{if .Levels}}<label>{{t "Nv"}}
     <select class="ro-select" data-atk="lv">{{range .Levels}}<option value="{{.}}"{{if eq . $.D.Atk.Level}} selected{{end}}>{{.}}</option>{{end}}</select>
   </label>{{end}}
   <label>% <input class="ro-input ro-num" type="number" min="1" value="{{.Ratio}}" data-atk="ratio" title="Fonte: {{.RatioSource}}"></label>
-  <label>Golpes <input class="ro-input ro-num ro-num--sm" type="number" min="1" max="50" value="{{.Hits}}" data-atk="hits"></label>
-  <label>Elemento
-    <select class="ro-select" data-atk="ele">{{range .Elements}}<option value="{{index . 0}}"{{if eq (index . 0) $.D.Atk.Element}} selected{{end}}>{{index . 1}}</option>{{end}}</select>
+  <label>{{t "Golpes"}} <input class="ro-input ro-num ro-num--sm" type="number" min="1" max="50" value="{{.Hits}}" data-atk="hits"></label>
+  <label>{{t "Elemento"}}
+    <select class="ro-select" data-atk="ele">{{range .Elements}}<option value="{{index . 0}}"{{if eq (index . 0) $.D.Atk.Element}} selected{{end}}>{{t (index . 1)}}</option>{{end}}</select>
   </label>
 </div>
 {{if or .States .StackMax .Variants}}
 <div class="ro-dmg__atk ro-dmg__states">
   {{range $st := .States}}
-    {{if $st.Choices}}<label>{{$st.Label}}
-      <select class="ro-select" data-atk-state="{{$st.Key}}">{{range $st.Choices}}<option value="{{index . 0}}"{{if eq (index . 0) (printf "%d" $st.Value)}} selected{{end}}>{{index . 1}}</option>{{end}}</select>
+    {{if $st.Choices}}<label>{{t $st.Label}}
+      <select class="ro-select" data-atk-state="{{$st.Key}}">{{range $st.Choices}}<option value="{{index . 0}}"{{if eq (index . 0) (printf "%d" $st.Value)}} selected{{end}}>{{t (index . 1)}}</option>{{end}}</select>
     </label>
-    {{else}}<label><input type="checkbox" data-atk-state="{{$st.Key}}"{{if $st.Value}} checked{{end}}> {{$st.Label}}</label>{{end}}
+    {{else}}<label><input type="checkbox" data-atk-state="{{$st.Key}}"{{if $st.Value}} checked{{end}}> {{t $st.Label}}</label>{{end}}
   {{end}}
-  {{if .Variants}}{{$cur := .Variant}}<label>Dano <select class="ro-select" data-atk="variant">{{range $i, $n := .Variants}}<option value="{{$i}}"{{if eq $i $cur}} selected{{end}}>{{$n}}</option>{{end}}</select></label>{{end}}
-  {{if .StackMax}}<label>Acúmulos <input class="ro-input ro-num ro-num--sm" type="number" min="1" max="{{.StackMax}}" value="{{.Stack}}" data-atk="stack"></label>{{end}}
+  {{if .Variants}}{{$cur := .Variant}}<label>{{t "Linha de dano"}} <select class="ro-select" data-atk="variant">{{range $i, $n := .Variants}}<option value="{{$i}}"{{if eq $i $cur}} selected{{end}}>{{t $n}}</option>{{end}}</select></label>{{end}}
+  {{if .StackMax}}<label>{{t "Acúmulos"}} <input class="ro-input ro-num ro-num--sm" type="number" min="1" max="{{.StackMax}}" value="{{.Stack}}" data-atk="stack"></label>{{end}}
 </div>
 {{end}}
-<div class="ro-dmg__src">% {{if eq .RatioSource "fórmula LATAM"}}<b class="ro-latam">fórmula LATAM</b> (nível base, POW, maestrias e estados){{else if eq .RatioSource "fórmula bROWiki"}}<b class="ro-latam">fórmula LATAM</b> (corrigida pelo bROWiki){{else if eq .RatioSource "descrição"}}lido da descrição da habilidade{{else if eq .RatioSource "não encontrado"}}<b class="is-bad">não está na descrição: digite o % da habilidade</b>{{else if eq .RatioSource "manual"}}informado manualmente <button class="ro-btn ro-btn--sm" data-atk-auto>Usar automático</button>{{else}}de ataque básico{{end}}{{if gt .Hits 1}} · {{.Hits}} golpes{{end}}</div>
+<div class="ro-dmg__src">% {{if eq .RatioSource "fórmula LATAM"}}<b class="ro-latam">{{t "fórmula LATAM"}}</b> {{t "(nível base, POW, maestrias e estados)"}}{{else if eq .RatioSource "fórmula bROWiki"}}<b class="ro-latam">{{t "fórmula LATAM"}}</b> {{t "(corrigida pelo bROWiki)"}}{{else if eq .RatioSource "descrição"}}{{t "lido da descrição da habilidade"}}{{else if eq .RatioSource "não encontrado"}}<b class="is-bad">{{t "não está na descrição: digite o % da habilidade"}}</b>{{else if eq .RatioSource "manual"}}{{t "informado manualmente"}} <button class="ro-btn ro-btn--sm" data-atk-auto>{{t "Usar automático"}}</button>{{else}}{{t "de ataque básico"}}{{end}}{{if gt .Hits 1}} · {{.Hits}} {{t "golpes"}}{{end}}</div>
 {{if .Target}}
 <div class="ro-target">
   <div class="ro-target__head">
     <img src="https://static.divine-pride.net/images/mobs/png/{{.Target.ID}}.png" alt="" loading="lazy">
     <div><b>{{.Target.Name}}</b> <small>#{{.Target.ID}}</small></div>
   </div>
-  <div class="ro-target__grid">{{range .TargetInfo}}<span>{{.Label}}</span><b>{{.Value}}</b>{{end}}</div>
+  <div class="ro-target__grid">{{range .TargetInfo}}<span>{{t .Label}}</span><b>{{t .Value}}</b>{{end}}</div>
 </div>
 <table class="ro-dmgtable">
-  <tr><th>Dano normal</th><td><b>{{num .Dmg.Min}} ~ {{num .Dmg.Max}}</b> <small>(média {{num .Dmg.Avg}})</small></td></tr>
-  {{if .Dmg.Crit}}<tr><th>Crítico</th><td><b>{{num .Dmg.Crit}}</b> <small>chance {{f1 .Dmg.CritChance}}%</small></td></tr>{{end}}
-  <tr><th>Chance de acerto</th><td>{{.Dmg.HitChance}}%</td></tr>
-  <tr><th>Dano esperado</th><td>{{num0 .Dmg.Expected}} <small>por uso, com erros e críticos</small></td></tr>
-  <tr><th>Usos para matar</th><td><b>{{.Dmg.HitsToKill}}</b> <small>(dano médio)</small></td></tr>
-  <tr><th>Elemento do ataque</th><td>{{.ElementName}}</td></tr>
+  <tr><th>{{t "Dano normal"}}</th><td><b>{{num .Dmg.Min}} ~ {{num .Dmg.Max}}</b> <small>{{t "(média"}} {{num .Dmg.Avg}})</small></td></tr>
+  {{if .Dmg.Crit}}<tr><th>{{t "Crítico"}}</th><td><b>{{num .Dmg.Crit}}</b> <small>{{t "chance"}} {{f1 .Dmg.CritChance}}%</small></td></tr>{{end}}
+  <tr><th>{{t "Chance de acerto"}}</th><td>{{.Dmg.HitChance}}%</td></tr>
+  <tr><th>{{t "Dano esperado"}}</th><td>{{num0 .Dmg.Expected}} <small>{{t "por uso, com erros e críticos"}}</small></td></tr>
+  <tr><th>{{t "Usos para matar"}}</th><td><b>{{.Dmg.HitsToKill}}</b> <small>{{t "(dano médio)"}}</small></td></tr>
+  <tr><th>{{t "Elemento do ataque"}}</th><td>{{.ElementName}}</td></tr>
 </table>
 <details class="ro-steps">
-  <summary>Como foi calculado (golpe médio)</summary>
-  <ol>{{range .Dmg.Steps}}<li><span>{{.Label}}</span><code>{{.Value}}</code></li>{{end}}</ol>
+  <summary>{{t "Como foi calculado (golpe médio)"}}</summary>
+  <ol>{{range .Dmg.Steps}}<li><span>{{t .Label}}</span><code>{{t .Value}}</code></li>{{end}}</ol>
 </details>
-{{range .Dmg.Notes}}<div class="ro-note">{{.}}</div>{{end}}
-<div class="ro-note">Base: fórmula física do rAthena (renewal) com os ajustes do LATAM medidos pelo latam-ro-calc (MIT).{{if ne .RatioSource "fórmula LATAM"}} Esta habilidade ainda usa o % da descrição.{{end}}</div>
+{{range .Dmg.Notes}}<div class="ro-note">{{t .}}</div>{{end}}
+<div class="ro-note">{{t "Base: fórmula física do rAthena (renewal) com os ajustes do LATAM medidos pelo latam-ro-calc (MIT)."}}{{if ne .RatioSource "fórmula LATAM"}} {{t "Esta habilidade ainda usa o % da descrição."}}{{end}}</div>
 {{else}}
-<div class="ro-npc ro-npc--hint">Busque um monstro acima para calcular o dano.</div>
+<div class="ro-npc ro-npc--hint">{{t "Busque um monstro acima para calcular o dano."}}</div>
 {{end}}
 {{end}}
 {{end}}
@@ -138,52 +138,52 @@
 {{range .Results}}
 <li class="ro-list__item ro-itemrow" tabindex="0" data-monster="{{.ID}}">
   <span>{{.Name}}{{if .MVP}} <em class="ro-mvp">MVP</em>{{end}}</span>
-  <small>Nv {{.Level}} · {{call $.RaceName .Race}} · {{index $.EleName .Element}} {{.ElementLv}}</small>
+  <small>{{t "Nv"}} {{.Level}} · {{call $.RaceName .Race}} · {{call $.EleName .Element}} {{.ElementLv}}</small>
 </li>
 {{else}}
-<li class="ro-list__empty">Nenhum monstro encontrado.</li>
+<li class="ro-list__empty">{{t "Nenhum monstro encontrado."}}</li>
 {{end}}
 {{end}}
 
 {{define "build_basic"}}
 <div class="ro-basic__name"><b>{{.JobName}}</b></div>
-<div class="ro-basic__lv">Base Lv. {{.Build.BaseLv}} · Classe Lv. {{.Build.JobLv}}</div>
+<div class="ro-basic__lv">Base Lv. {{.Build.BaseLv}} {{t "· Classe Lv."}} {{.Build.JobLv}}</div>
 <div class="ro-bar ro-bar--hp"><span style="width:100%"></span><em>HP {{.R.HP}} / {{.R.HP}}</em></div>
 <div class="ro-bar ro-bar--sp"><span style="width:100%"></span><em>SP {{.R.SP}} / {{.R.SP}}</em></div>
 {{if .Job.Fourth}}<div class="ro-bar ro-bar--ap"><span style="width:100%"></span><em>AP {{.R.AP}}</em></div>{{end}}
-<div class="ro-bar ro-bar--exp"><span style="width:{{pct .Build.BaseLv .R.MaxBaseLv}}%"></span><em>Base {{.Build.BaseLv}}/{{.R.MaxBaseLv}}</em></div>
-<div class="ro-bar ro-bar--exp"><span style="width:{{pct .Build.JobLv .R.MaxJobLv}}%"></span><em>Classe {{.Build.JobLv}}/{{.R.MaxJobLv}}</em></div>
+<div class="ro-bar ro-bar--exp"><span style="width:{{pct .Build.BaseLv .R.MaxBaseLv}}%"></span><em>{{t "Base"}} {{.Build.BaseLv}}/{{.R.MaxBaseLv}}</em></div>
+<div class="ro-bar ro-bar--exp"><span style="width:{{pct .Build.JobLv .R.MaxJobLv}}%"></span><em>{{t "Classe"}} {{.Build.JobLv}}/{{.R.MaxJobLv}}</em></div>
 <div class="ro-basic__menu">
-  <button class="ro-btn" data-toggle="win-status" title="Alt+A">Atrib</button>
-  <button class="ro-btn" data-toggle="win-equip" title="Alt+Q">Equip</button>
-  <button class="ro-btn" data-toggle="win-skills" title="Alt+S">Habil</button>
-  <button class="ro-btn" data-toggle="win-bonus" title="Alt+B">Bônus</button>
-  <button class="ro-btn" data-toggle="win-damage" title="Alt+D">Dano</button>
+  <button class="ro-btn" data-toggle="win-status" title="Alt+A">{{t "Atrib"}}</button>
+  <button class="ro-btn" data-toggle="win-equip" title="Alt+Q">{{t "Equip"}}</button>
+  <button class="ro-btn" data-toggle="win-skills" title="Alt+S">{{t "Habil"}}</button>
+  <button class="ro-btn" data-toggle="win-bonus" title="Alt+B">{{t "Bônus"}}</button>
+  <button class="ro-btn" data-toggle="win-damage" title="Alt+D">{{t "Dano"}}</button>
   <button class="ro-btn" data-toggle="win-buffs" title="Alt+U">Buffs</button>
 </div>
 <div class="ro-basic__menu">
-  <button class="ro-btn" data-save-build title="Salvar neste navegador (Ctrl+S)">Salvar</button>
-  <button class="ro-btn" data-copy-link title="Copiar o link para compartilhar">Copiar link</button>
-  <button class="ro-btn" data-new-build>Novo</button>
-  <a class="ro-btn" href="/">Início</a>
+  <button class="ro-btn" data-save-build title="{{t "Salvar neste navegador (Ctrl+S)"}}">{{t "Salvar"}}</button>
+  <button class="ro-btn" data-copy-link title="{{t "Copiar o link para compartilhar"}}">{{t "Copiar link"}}</button>
+  <button class="ro-btn" data-new-build>{{t "Novo"}}</button>
+  <a class="ro-btn" href="/">{{t "Início"}}</a>
 </div>
 {{end}}
 
 {{define "build_status"}}
 <div class="ro-statusform">
-  <label>Classe
+  <label>{{t "Classe"}}
     <select class="ro-select" data-field="job">
       {{range .Jobs}}<option value="{{.ID}}"{{if .Selected}} selected{{end}}>{{.Name}}</option>{{end}}
     </select>
   </label>
-  <label>Base <input class="ro-input ro-num" type="number" min="1" max="{{.R.MaxBaseLv}}" value="{{.Build.BaseLv}}" data-field="base"></label>
-  <label>Classe <input class="ro-input ro-num" type="number" min="1" max="{{.R.MaxJobLv}}" value="{{.Build.JobLv}}" data-field="joblv"></label>
+  <label>{{t "Base"}} <input class="ro-input ro-num" type="number" min="1" max="{{.R.MaxBaseLv}}" value="{{.Build.BaseLv}}" data-field="base"></label>
+  <label>{{t "Classe"}} <input class="ro-input ro-num" type="number" min="1" max="{{.R.MaxJobLv}}" value="{{.Build.JobLv}}" data-field="joblv"></label>
 </div>
 <div class="ro-status">
   <table class="ro-stats">
     {{range $i, $s := .R.Stats}}
     <tr>
-      <th>{{index $.StatName $i}}</th>
+      <th>{{t (index $.StatName $i)}}</th>
       <td class="ro-stats__val">{{$s.Base}}</td>
       <td class="ro-stats__bonus">{{if $s.Bonus}}+{{$s.Bonus}}{{end}}</td>
       <td class="ro-stats__btns">
@@ -194,17 +194,17 @@
     {{end}}
   </table>
   <table class="ro-derived">
-    <tr><th>ATQ</th><td>{{.R.StatusATK}} + {{.R.EquipATK}}</td></tr>
-    <tr><th>ATQM</th><td>{{.R.MATKMin}} + {{.R.EquipMATK}}</td></tr>
-    <tr><th>Precisão</th><td>{{.R.HIT}}</td></tr>
-    <tr><th>Crítico</th><td>{{f1 .R.CRIT}}</td></tr>
+    <tr><th>{{t "ATQ"}}</th><td>{{.R.StatusATK}} + {{.R.EquipATK}}</td></tr>
+    <tr><th>{{t "ATQM"}}</th><td>{{.R.MATKMin}} + {{.R.EquipMATK}}</td></tr>
+    <tr><th>{{t "Precisão"}}</th><td>{{.R.HIT}}</td></tr>
+    <tr><th>{{t "Crítico"}}</th><td>{{f1 .R.CRIT}}</td></tr>
     <tr><th>DEF</th><td>{{.R.HardDEF}} + {{.R.SoftDEF}}</td></tr>
-    <tr><th>DEFM</th><td>{{.R.HardMDEF}} + {{.R.SoftMDEF}}</td></tr>
-    <tr><th>Esquiva</th><td>{{.R.FLEE}} + {{.R.FLEE2}}</td></tr>
+    <tr><th>{{t "DEFM"}}</th><td>{{.R.HardMDEF}} + {{.R.SoftMDEF}}</td></tr>
+    <tr><th>{{t "Esquiva"}}</th><td>{{.R.FLEE}} + {{.R.FLEE2}}</td></tr>
     <tr><th>ASPD</th><td>{{.R.ASPD}}</td></tr>
   </table>
-  <div class="ro-status__points">Pontos de atributo: <b{{if lt .R.Points 0}} class="is-bad"{{end}}>{{.R.Points}}</b>
-    <small>Shift+clique: ±10</small></div>
+  <div class="ro-status__points">{{t "Pontos de atributo:"}} <b{{if lt .R.Points 0}} class="is-bad"{{end}}>{{.R.Points}}</b>
+    <small>{{t "Shift+clique: ±10"}}</small></div>
 </div>
 {{if .Job.Fourth}}
 <div class="ro-status ro-status--traits">
@@ -221,24 +221,24 @@
     {{end}}
   </table>
   <table class="ro-derived">
-    <tr><th>P.ATQ</th><td>{{.R.PATK}}</td></tr>
-    <tr><th>S.ATQM</th><td>{{.R.SMATK}}</td></tr>
+    <tr><th>{{t "P.ATQ"}}</th><td>{{.R.PATK}}</td></tr>
+    <tr><th>{{t "S.ATQM"}}</th><td>{{.R.SMATK}}</td></tr>
     <tr><th>RES</th><td>{{.R.RES}}</td></tr>
     <tr><th>MRES</th><td>{{.R.MRES}}</td></tr>
     <tr><th>H.PLUS</th><td>{{.R.HPLUS}}</td></tr>
     <tr><th>C.RATE</th><td>{{.R.CRATE}}</td></tr>
   </table>
-  <div class="ro-status__points">Pontos de traço: <b{{if lt .R.TraitPoints 0}} class="is-bad"{{end}}>{{.R.TraitPoints}}</b></div>
+  <div class="ro-status__points">{{t "Pontos de traço:"}} <b{{if lt .R.TraitPoints 0}} class="is-bad"{{end}}>{{.R.TraitPoints}}</b></div>
 </div>
 {{end}}
-<div class="ro-status__pools">HP <b>{{.R.HP}}</b> · SP <b>{{.R.SP}}</b>{{if .Job.Fourth}} · AP <b>{{.R.AP}}</b>{{end}}</div>
-{{range .R.Warnings}}<div class="ro-warning">⚠ {{.}}</div>{{end}}
+<div class="ro-status__pools">HP <b>{{.R.HP}}</b> {{t "· SP"}} <b>{{.R.SP}}</b>{{if .Job.Fourth}} {{t "· AP"}} <b>{{.R.AP}}</b>{{end}}</div>
+{{range .R.Warnings}}<div class="ro-warning">⚠ {{t .}}</div>{{end}}
 {{end}}
 
 {{define "build_equip"}}
 <nav class="ro-tabs" role="tablist">
-  <button class="ro-tab is-active" data-equip-tab="main">Equip</button>
-  <button class="ro-tab" data-equip-tab="shadow">Sombra</button>
+  <button class="ro-tab is-active" data-equip-tab="main">{{t "Equip"}}</button>
+  <button class="ro-tab" data-equip-tab="shadow">{{t "Sombra"}}</button>
 </nav>
 <div class="ro-window__body ro-equip ro-equip--real" data-equip-panel="main">
   <div class="ro-equip__col">{{range .Slots}}{{if eq .Side "L"}}{{template "equip_slot" .}}{{end}}{{end}}</div>
@@ -247,21 +247,21 @@
 </div>
 <div class="ro-window__body ro-equip ro-equip--real" data-equip-panel="shadow" hidden>
   <div class="ro-equip__col">{{range .Shadow}}{{if eq .Side "L"}}{{template "equip_slot" .}}{{end}}{{end}}</div>
-  <div class="ro-equip__sprite" aria-hidden="true"><span>Sombra</span></div>
+  <div class="ro-equip__sprite" aria-hidden="true"><span>{{t "Sombra"}}</span></div>
   <div class="ro-equip__col">{{range .Shadow}}{{if eq .Side "R"}}{{template "equip_slot" .}}{{end}}{{end}}</div>
 </div>
 {{range (list .Slots .Shadow)}}{{range .}}{{template "slot_editor" .}}{{end}}{{end}}
 {{end}}
 
 {{define "equip_slot"}}
-<button class="ro-eslot{{if .Item}} is-filled{{end}}" data-slot="{{.Key}}" data-loc="{{with .Item}}{{.Loc}}{{end}}" title="{{.Label}}">
+<button class="ro-eslot{{if .Item}} is-filled{{end}}" data-slot="{{.Key}}" data-loc="{{with .Item}}{{.Loc}}{{end}}" title="{{t .Label}}">
   {{with .Item}}<img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="24" height="24">{{else}}<i class="ro-eslot__empty"></i>{{end}}
-  <span>{{with .Item}}{{if $.Refine}}+{{$.Refine}} {{end}}{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}{{else}}<em>{{.Label}}</em>{{end}}</span>
+  <span>{{with .Item}}{{if $.Refine}}+{{$.Refine}} {{end}}{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}{{else}}<em>{{t .Label}}</em>{{end}}</span>
 </button>
 {{end}}
 
 {{define "slot_editor"}}
-<template id="slot-editor-{{.Key}}" data-label="{{.Label}}">
+<template id="slot-editor-{{.Key}}" data-label="{{t .Label}}">
   {{if .Item}}
   <div class="ro-slotedit">
     <div class="ro-iteminfo__body">
@@ -269,7 +269,7 @@
       <div>
         <b>{{if .Refine}}+{{.Refine}} {{end}}{{.Item.Name}}{{if .Item.Slots}} [{{.Item.Slots}}]{{end}}</b>
         {{if .Refineable}}
-        <label class="ro-slotedit__refine">Refino
+        <label class="ro-slotedit__refine">{{t "Refino"}}
           <select class="ro-select" data-refine>
             {{range $r := (list 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)}}<option value="{{$r}}"{{if eq $r $.Refine}} selected{{end}}>+{{$r}}</option>{{end}}
           </select>
@@ -282,20 +282,20 @@
       {{range $i, $c := .Cards}}
       <li class="ro-cardrow">
         {{if $c}}<img src="https://static.divine-pride.net/images/items/item/{{$c.ID}}.png" alt="" width="24" height="24"><span>{{$c.Name}}</span>
-        <button class="ro-btn" data-pick-card="{{$i}}">Trocar</button><button class="ro-btn" data-remove-card="{{$i}}">×</button>
-        {{else}}<i class="ro-eslot__empty"></i><span><em>{{if lt $i $.CardSlots}}Slot {{inc $i}} vazio{{else}}Encantamento vazio{{end}}</em></span><button class="ro-btn" data-pick-card="{{$i}}">{{if lt $i $.CardSlots}}Carta…{{else}}Encantar…{{end}}</button>{{end}}
+        <button class="ro-btn" data-pick-card="{{$i}}">{{t "Trocar"}}</button><button class="ro-btn" data-remove-card="{{$i}}">×</button>
+        {{else}}<i class="ro-eslot__empty"></i><span><em>{{if lt $i $.CardSlots}}Slot {{inc $i}} {{t "vazio"}}{{else}}{{t "Encantamento vazio"}}{{end}}</em></span><button class="ro-btn" data-pick-card="{{$i}}">{{if lt $i $.CardSlots}}{{t "Carta…"}}{{else}}{{t "Encantar…"}}{{end}}</button>{{end}}
       </li>
       {{end}}
     </ul>
     {{end}}
     <div class="ro-slotedit__desc">{{roText .Item.Desc}}</div>
     <div class="ro-slotedit__actions">
-      <button class="ro-btn" data-pick-item>Trocar item</button>
-      <button class="ro-btn" data-unequip>Remover</button>
+      <button class="ro-btn" data-pick-item>{{t "Trocar item"}}</button>
+      <button class="ro-btn" data-unequip>{{t "Remover"}}</button>
     </div>
   </div>
   {{else}}
-  <div class="ro-slotedit"><em>{{.Label}} vazio. Escolha um item abaixo.</em></div>
+  <div class="ro-slotedit"><em>{{t .Label}} {{t "vazio. Escolha um item abaixo."}}</em></div>
   {{end}}
 </template>
 {{end}}
@@ -303,38 +303,38 @@
 {{define "build_buffs"}}
 {{range .Buffs}}
 <fieldset class="ro-buffs">
-  <legend>{{.Name}}</legend>
+  <legend>{{t .Name}}</legend>
   {{range .Items}}
   <label class="ro-buff">
-    {{if .Choices}}<span>{{.Label}}</span>
-      <select class="ro-select" data-buff="{{.Key}}">{{$v := .ValueStr}}{{range .Choices}}<option value="{{index . 0}}"{{if eq (index . 0) $v}} selected{{end}}>{{index . 1}}</option>{{end}}</select>
-    {{else if .Max}}<span>{{.Label}}</span>
+    {{if .Choices}}<span>{{t .Label}}</span>
+      <select class="ro-select" data-buff="{{.Key}}">{{$v := .ValueStr}}{{range .Choices}}<option value="{{index . 0}}"{{if eq (index . 0) $v}} selected{{end}}>{{t (index . 1)}}</option>{{end}}</select>
+    {{else if .Max}}<span>{{t .Label}}</span>
       <input class="ro-input ro-num ro-num--sm" type="number" min="0" max="{{.Max}}" value="{{.Value}}" data-buff="{{.Key}}">
-    {{else}}<input type="checkbox" data-buff="{{.Key}}"{{if .Value}} checked{{end}}> <span>{{.Label}}</span>{{end}}
+    {{else}}<input type="checkbox" data-buff="{{.Key}}"{{if .Value}} checked{{end}}> <span>{{t .Label}}</span>{{end}}
   </label>
   {{end}}
 </fieldset>
 {{end}}
-<p class="ro-note">Valores do bROWiki. Os buffs entram nos atributos, no status e no dano.</p>
+<p class="ro-note">{{t "Valores do bROWiki. Os buffs entram nos atributos, no status e no dano."}}</p>
 {{end}}
 
 {{define "build_bonus"}}
 {{if or .Bonuses .Extras}}
 <div class="ro-bonuscols">
   <div>
-    <h4>Atributos</h4>
-    {{range .Bonuses}}<div class="ro-bonus"><span>{{.Label}}</span><b>{{.Value}}</b></div>{{else}}<em>—</em>{{end}}
+    <h4>{{t "Atributos"}}</h4>
+    {{range .Bonuses}}<div class="ro-bonus"><span>{{t .Label}}</span><b>{{.Value}}</b></div>{{else}}<em>—</em>{{end}}
   </div>
   <div>
-    <h4>Dano e resistências</h4>
+    <h4>{{t "Dano e resistências"}}</h4>
     {{range .Extras}}<div class="ro-bonus"><span>{{.Label}}</span><b>{{.Value}}</b></div>{{else}}<em>—</em>{{end}}
   </div>
 </div>
 {{else}}
-<em>Nenhum equipamento com bônus.</em>
+<em>{{t "Nenhum equipamento com bônus."}}</em>
 {{end}}
-{{if .Combos}}<div class="ro-combos"><h4>Combos ativos</h4>{{range .Combos}}<div class="ro-bonus"><span>{{.}}</span></div>{{end}}</div>{{end}}
-{{if .R.SkippedScriptEffects}}<div class="ro-note">{{.R.SkippedScriptEffects}} efeito(s) de equipamento ainda não simulado(s) (procs, habilidades concedidas, efeitos condicionais).</div>{{end}}
+{{if .Combos}}<div class="ro-combos"><h4>{{t "Combos ativos"}}</h4>{{range .Combos}}<div class="ro-bonus"><span>{{.}}</span></div>{{end}}</div>{{end}}
+{{if .R.SkippedScriptEffects}}<div class="ro-note">{{.R.SkippedScriptEffects}} {{t "efeito(s) de equipamento ainda não simulado(s) (procs, habilidades concedidas, efeitos condicionais)."}}</div>{{end}}
 {{end}}
 
 {{define "pick_results"}}
@@ -345,6 +345,6 @@
   <small>#{{.ID}}</small>
 </li>
 {{else}}
-<li class="ro-list__empty">{{if .Q}}Nada encontrado para este slot.{{else}}Nenhum item disponível.{{end}}</li>
+<li class="ro-list__empty">{{if .Q}}{{t "Nada encontrado para este slot."}}{{else}}{{t "Nenhum item disponível."}}{{end}}</li>
 {{end}}
 {{end}}

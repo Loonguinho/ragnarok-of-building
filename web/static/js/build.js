@@ -62,7 +62,7 @@
       if (slotOpen) renderSlotEditor();
       persist();
     } catch (err) {
-      say("Erro ao calcular: " + err.message, true);
+      say(T("Erro ao calcular: ") + err.message, true);
     } finally {
       inflight = null;
       if (pending) { pending = false; recalc(); }
@@ -113,7 +113,7 @@
       build.k = {};
       build.t = [0, 0, 0, 0, 0, 0];
       loadSkills(v);
-      say("Classe alterada. Habilidades resetadas.");
+      say(T("Classe alterada. Habilidades resetadas."));
     } else if (f.dataset.field === "base") {
       build.b = v;
     } else if (f.dataset.field === "joblv") {
@@ -128,23 +128,23 @@
   let saved = window.ROSaved ? ROSaved.get(new URLSearchParams(location.search).get("s") || "") : null;
   function saveBuild(ask) {
     if (!window.ROSaved || !ROSaved.available()) {
-      say("Este navegador não permite salvar (modo anônimo?). Use Copiar link para guardar o build.", true);
+      say(T("Este navegador não permite salvar (modo anônimo?). Use Copiar link para guardar o build."), true);
       return;
     }
     let name = saved ? saved.name : "";
     if (ask || !saved) {
-      name = prompt("Nome do build:", name);
+      name = prompt(T("Nome do build:"), name);
       if (name === null) return;
     }
     const jobName = (document.querySelector("#build_basic .ro-basic__name") || {}).textContent || "";
-    const e = ROSaved.put({ id: saved ? saved.id : "", name: (name.trim() || "Sem nome").slice(0, 40), code,
+    const e = ROSaved.put({ id: saved ? saved.id : "", name: (name.trim() || T("Sem nome")).slice(0, 40), code,
       j: build.j, job: jobName.trim(), b: build.b, jl: build.jl });
-    if (!e) { say("Não foi possível salvar: o armazenamento do navegador está cheio ou bloqueado.", true); return; }
+    if (!e) { say(T("Não foi possível salvar: o armazenamento do navegador está cheio ou bloqueado."), true); return; }
     saved = e;
     const url = new URL(location.href);
     url.searchParams.set("s", e.id);
     history.replaceState(null, "", url);
-    say(`Build "${e.name}" salvo neste navegador.`);
+    say(T('Build "%s" salvo neste navegador.', e.name));
   }
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); saveBuild(false); }
@@ -155,13 +155,13 @@
       const link = location.origin + "/build?b=" + code;
       try {
         await navigator.clipboard.writeText(link);
-        say("Link do build copiado!");
+        say(T("Link do build copiado!"));
       } catch {
-        prompt("Copie o link do build:", link);
+        prompt(T("Copie o link do build:"), link);
       }
     }
     if (e.target.closest("[data-new-build]")) {
-      if (!confirm("Começar um build novo? Salve o atual antes (Ctrl+S) se quiser guardá-lo.")) return;
+      if (!confirm(T("Começar um build novo? Salve o atual antes (Ctrl+S) se quiser guardá-lo."))) return;
       build = { j: build.j, b: build.b, jl: build.jl, s: [1, 1, 1, 1, 1, 1], t: [0, 0, 0, 0, 0, 0], e: {}, k: {} };
       loadSkills(build.j);
       recalc();
@@ -266,11 +266,11 @@
       const id = Number(pick.dataset.pick);
       if (cardIndex >= 0) {
         eachLinked(slotOpen, (eq) => { eq.c = eq.c || [0, 0, 0, 0]; eq.c[cardIndex] = id; });
-        say("Carta aplicada.");
+        say(T("Carta aplicada."));
         cardIndex = -1;
       } else {
         equip(slotOpen, id, (pick.dataset.loc || "").split(","));
-        say("Item equipado.");
+        say(T("Item equipado."));
       }
       recalc();
       search();
@@ -281,7 +281,7 @@
     const rc = e.target.closest("[data-remove-card]");
     if (rc) { eachLinked(slotOpen, (eq) => { if (eq.c) eq.c[Number(rc.dataset.removeCard)] = 0; }); recalc(); return; }
     if (e.target.closest("[data-pick-item]")) { cardIndex = -1; renderSlotEditor(); pickQ.value = ""; search(); pickQ.focus(); return; }
-    if (e.target.closest("[data-unequip]")) { unequip(slotOpen); say("Item removido."); recalc(); }
+    if (e.target.closest("[data-unequip]")) { unequip(slotOpen); say(T("Item removido.")); recalc(); }
   });
 
   document.addEventListener("change", (e) => {
@@ -398,6 +398,6 @@
       sessionStorage.removeItem("ro.import.notes");
       notes.forEach((n, i) => say(n, i > 0));
     } catch {}
-    say("Dica: Alt+A atributos, Alt+Q equipamentos, Alt+S habilidades.");
+    say(T("Dica: Alt+A atributos, Alt+Q equipamentos, Alt+S habilidades."));
   });
 })();

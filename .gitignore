@@ -12,3 +12,4 @@ data/browiki/
 *.db-wal
 *.db-shm
 dist/
+resume.txt

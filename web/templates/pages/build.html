@@ -378,13 +378,13 @@
 {{range .Groups}}
 <div class="ro-optgroup">
   <div class="ro-optgroup__title">{{.Label}} <small>{{t "atual"}}: {{with .Current}}{{.Name}}{{else}}{{t "vazio"}}{{end}}</small></div>
-  {{if not .Options}}<p class="ro-optgroup__none">{{if .Best}}{{t "Já é a melhor opção"}}{{else if .SkillOnly}}{{t "Só encantamentos de habilidade, nenhum para o ataque atual (Alt+D)."}}{{else}}{{t "Nenhuma opção aumenta o dano deste ataque."}}{{end}}</p>{{else}}
+  {{if not .Options}}<p class="ro-optgroup__none">{{if .Best}}{{t "Já é a melhor opção"}}{{else if .SkillOnly}}{{t "Só encantamentos de habilidades que este personagem não aprendeu."}}{{else}}{{t "Nenhuma opção aumenta o dano deste ataque."}}{{end}}</p>{{else}}
   <ul class="ro-list ro-optlist">
   {{range .Options}}
     <li class="ro-optrow" data-tip-item="{{.Item.ID}}">
       <img src="https://static.divine-pride.net/images/items/item/{{.Item.ID}}.png" alt="" width="24" height="24" loading="lazy">
       <span>{{.Item.Name}}</span>
-      <b class="ro-optrow__gain">{{.Gain}}</b>
+      <b class="ro-optrow__gain">{{.Gain}}{{with .Skill}} <small>{{t "em"}} {{.}}</small>{{end}}</b>
       <button class="ro-btn" data-opt-apply="{{.Slot}}" data-opt-index="{{.Index}}" data-opt-card="{{.Item.ID}}" title="{{.Value}}">{{t "Aplicar"}}</button>
     </li>
   {{end}}

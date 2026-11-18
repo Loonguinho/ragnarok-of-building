@@ -32,6 +32,7 @@ type optOption struct {
 	Item     itemView
 	Value    string // expected damage
 	Gain     string // "+18,4%"
+	Skill    string // skill enchants: the skill the gain is measured on
 	Slot     string
 	Index    int
 	Positive bool
@@ -258,6 +259,11 @@ feed:
 			g.Options = append(g.Options, optOption{Item: viewItem(p.pool[k], l), Value: fmtInt(int64(vals[pi][k] + 0.5)),
 				Gain: pct(vals[pi][k]), Slot: g.Slot, Index: p.index, Positive: true})
 		}
+		// Skill enchants that don't touch the chosen attack: measure each on
+		// the learned skill it boosts.
+		if len(g.Options) == 0 && p.enchant {
+			g.Options = s.optSkillEnchants(b, p, l)
+		}
 		if len(g.Options) == 0 {
 			// Keep the position listed, saying why nothing is suggested.
 			g.Best = p.current != 0
@@ -278,6 +284,81 @@ feed:
 		return gainOf(res.Groups[a]) > gainOf(res.Groups[z])
 	})
 	return res
+}
+
+// optSkillCode finds the skills an enchant boosts (bonus2 bSkillAtk,"CODE",n).
+var optSkillCode = regexp.MustCompile(`bSkillAtk\s*,\s*"([A-Z0-9_]+)"`)
+
+// optSkillEnchants ranks a position's skill enchants by the gain each gives
+// to the learned skill it boosts (that skill as the attack, at its learned
+// level), best first. Runs after the parallel pass; there are few of them.
+func (s *Server) optSkillEnchants(b calc.Build, p optPosition, l string) []optOption {
+	c := s.opt.Catalog
+	learned := map[string]int{} // skill code -> ID, learned skills only
+	for id, lv := range b.Skills {
+		if sk := c.Skills[id]; sk != nil && lv > 0 {
+			learned[sk.Code] = id
+		}
+	}
+	type hit struct {
+		opt  optOption
+		gain float64
+	}
+	var hits []hit
+	bases := map[int]float64{}
+	for _, it := range p.pool {
+		if it.ID == p.current {
+			continue
+		}
+		for _, m := range optSkillCode.FindAllStringSubmatch(it.Script, -1) {
+			id, ok := learned[m[1]]
+			if !ok {
+				continue
+			}
+			sb := b
+			sb.Atk = calc.AttackChoice{Skill: id, Level: b.Skills[id]}
+			if _, ok := bases[id]; !ok {
+				bases[id] = s.optExpected(sb)
+			}
+			base := bases[id]
+			sb.Equip = maps.Clone(b.Equip)
+			for _, k := range p.slots {
+				e := sb.Equip[k]
+				e.Cards[p.index] = it.ID
+				sb.Equip[k] = e
+			}
+			v := s.optExpected(sb)
+			if base <= 0 || v <= base*1.0005 {
+				continue
+			}
+			g := v / base
+			hits = append(hits, hit{optOption{Item: viewItem(it, l), Value: fmtInt(int64(v + 0.5)), Gain: pctOf(g, l),
+				Skill: c.Skills[id].Name.Get(l), Slot: p.slots[0], Index: p.index, Positive: true}, g})
+			break
+		}
+	}
+	sort.SliceStable(hits, func(a, z int) bool { return hits[a].gain > hits[z].gain })
+	var out []optOption
+	seen := map[string]bool{}
+	for _, h := range hits {
+		if len(out) >= optTop {
+			break
+		}
+		if fam := optFamily(h.opt.Item.Name); !seen[fam] {
+			seen[fam] = true
+			out = append(out, h.opt)
+		}
+	}
+	return out
+}
+
+// pctOf formats a damage ratio as a gain ("+12,5%").
+func pctOf(ratio float64, l string) string {
+	txt := strconv.FormatFloat((ratio-1)*100, 'f', 1, 64)
+	if l != "en" {
+		txt = strings.Replace(txt, ".", ",", 1)
+	}
+	return "+" + txt + "%"
 }
 
 var optTier = regexp.MustCompile(`\s+(\+?\d+|[IVX]+|(?i:nv|lv)\.?\s*\d+)$`)

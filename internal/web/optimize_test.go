@@ -155,8 +155,16 @@ func TestOptimizeKeepsEnchantPositions(t *testing.T) {
 	if len(g) != 3 || !g["Arma · Encantamento (slot 4)"].SkillOnly {
 		t.Fatalf("basic attack: %+v", g)
 	}
-	// Storm Slash with its enchant in position 4: still listed, as the best.
+	// Basic attack with Storm Slash learned: positions 3 and 4 suggest its
+	// enchant, measured on Storm Slash.
 	b.Skills = map[int]int{stormSlash: 5}
+	g = groups(b)
+	for _, label := range []string{"Arma · Encantamento (slot 3)", "Arma · Encantamento (slot 4)"} {
+		if o := g[label].Options; len(o) == 0 || o[0].Item.ID != slashEnchant || o[0].Skill == "" {
+			t.Errorf("%s with Storm Slash learned: %+v", label, g[label])
+		}
+	}
+	// Storm Slash with its enchant in position 4: still listed, as the best.
 	b.Atk = calc.AttackChoice{Skill: stormSlash, Level: 5}
 	b.Equip[calc.Weapon] = calc.Equip{Item: sword, Cards: [4]int{0, 0, 0, slashEnchant}}
 	g = groups(b)

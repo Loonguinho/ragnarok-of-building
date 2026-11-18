@@ -23,11 +23,12 @@ type itemView struct {
 	Lang  string
 	Loc   string // comma-separated equip locations (for client-side slot rules)
 	Type  string
+	MVP   bool // a card only MVPs drop
 }
 
 func viewItem(it *gamedata.Item, l string) itemView {
 	return itemView{ID: it.ID, Name: it.Name.Get(l), Slots: it.Slots, Desc: it.Desc.Get(l), Lang: l,
-		Loc: strings.Join(it.Locations, ","), Type: it.Type}
+		Loc: strings.Join(it.Locations, ","), Type: it.Type, MVP: it.MVPCard}
 }
 
 // GET /items: the inventory-style search window plus an item info window.

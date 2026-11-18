@@ -301,7 +301,7 @@
     <ul class="ro-list ro-cards">
       {{range $i, $c := .Cards}}
       <li class="ro-cardrow"{{if $c}} data-tip-item="{{$c.ID}}"{{end}}>
-        {{if $c}}<img src="https://static.divine-pride.net/images/items/item/{{$c.ID}}.png" alt="" width="24" height="24"><span>{{$c.Name}}</span>
+        {{if $c}}<img src="https://static.divine-pride.net/images/items/item/{{$c.ID}}.png" alt="" width="24" height="24"><span>{{$c.Name}}{{if $c.MVP}} <em class="ro-mvp">MVP</em>{{end}}</span>
         <button class="ro-btn" data-pick-card="{{$i}}">{{t "Trocar"}}</button><button class="ro-btn" data-remove-card="{{$i}}">×</button>
         {{else}}<i class="ro-eslot__empty"></i><span><em>{{if lt $i $.CardSlots}}Slot {{inc $i}} {{t "vazio"}}{{else}}{{t "Encantamento vazio"}}{{end}}</em></span><button class="ro-btn" data-pick-card="{{$i}}">{{if lt $i $.CardSlots}}{{t "Carta…"}}{{else}}{{t "Encantar…"}}{{end}}</button>{{end}}
       </li>
@@ -383,7 +383,7 @@
   {{range .Options}}
     <li class="ro-optrow" data-tip-item="{{.Item.ID}}">
       <img src="https://static.divine-pride.net/images/items/item/{{.Item.ID}}.png" alt="" width="24" height="24" loading="lazy">
-      <span>{{.Item.Name}}{{with .Skill}}<small class="ro-optrow__skill">{{t "em"}} {{.}}</small>{{end}}</span>
+      <span>{{.Item.Name}}{{if .Item.MVP}} <em class="ro-mvp">MVP</em>{{end}}{{with .Skill}}<small class="ro-optrow__skill">{{t "em"}} {{.}}</small>{{end}}</span>
       <b class="ro-optrow__gain">{{.Gain}}</b>
       <button class="ro-btn" data-opt-apply="{{.Slot}}" data-opt-index="{{.Index}}" data-opt-card="{{.Item.ID}}" title="{{.Value}}">{{t "Aplicar"}}</button>
     </li>
@@ -401,7 +401,7 @@
 {{range .Results}}
 <li class="ro-list__item ro-itemrow" tabindex="0" data-pick="{{.ID}}" data-loc="{{.Loc}}" data-tip-item="{{.ID}}">
   <img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="24" height="24" loading="lazy">
-  <span>{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}</span>
+  <span>{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}{{if .MVP}} <em class="ro-mvp">MVP</em>{{end}}</span>
   <small>#{{.ID}}</small>
 </li>
 {{else}}

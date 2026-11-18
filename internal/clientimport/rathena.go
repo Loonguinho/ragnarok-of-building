@@ -29,6 +29,7 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 		}
 		c.Monsters[id].Names = monsterNames(c, m.Cards)
 	}
+	markMVPCards(c, db)
 	// Monsters rAthena lists without stats: searchable, stats on demand.
 	c.MonsterStubs = map[int]string{}
 	for id, aegis := range db.MobStubs {

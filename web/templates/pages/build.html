@@ -133,6 +133,27 @@
   <tr><th>{{t "Usos para matar"}}</th><td><b>{{.Dmg.HitsToKill}}</b> <small>{{t "(dano médio)"}}</small></td></tr>
   <tr><th>{{t "Elemento do ataque"}}</th><td>{{.ElementName}}</td></tr>
 </table>
+{{if gt (len .Table) 1}}
+<details class="ro-skilltable" open>
+  <summary>{{t "Dano de cada habilidade"}}</summary>
+  <table class="ro-skilltable__t">
+    <thead><tr><th>{{t "Habilidade"}}</th><th>{{t "Nv"}}</th><th>{{t "Média"}}</th><th>{{t "Crítico"}}</th><th>{{t "Esperado"}}</th><th>{{t "Usos"}}</th></tr></thead>
+    <tbody>
+    {{range .Table}}
+      <tr class="{{if .Selected}}is-selected{{end}}" data-atk-pick="{{.ID}}" data-atk-lv="{{.Level}}" tabindex="0" title="{{t "Clique para usar como ataque"}}">
+        <td>{{.Name}}{{if gt .Hits 1}} <small>×{{.Hits}}</small>{{end}}{{if .FromDesc}} <small class="ro-skilltable__desc" title="{{t "% lido da descrição da habilidade"}}">*</small>{{end}}</td>
+        <td>{{if .ID}}{{.Level}}{{else}}—{{end}}</td>
+        <td>{{num .Avg}}</td>
+        <td>{{if .Crit}}{{num .Crit}}{{else}}—{{end}}</td>
+        <td><b>{{num0 .Expected}}</b></td>
+        <td>{{.HitsToKill}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  <small class="ro-note">{{t "Cada habilidade no nível aprendido, com os mesmos estados e elemento do ataque escolhido. * = % lido da descrição."}}</small>
+</details>
+{{end}}
 <details class="ro-steps">
   <summary>{{t "Como foi calculado (golpe médio)"}}</summary>
   <ol>{{range .Dmg.Steps}}<li><span>{{t .Label}}</span><code>{{t .Value}}</code></li>{{end}}</ol>

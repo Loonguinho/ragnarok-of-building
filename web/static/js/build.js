@@ -410,13 +410,21 @@
       recalc();
       return;
     }
+    const pick = e.target.closest("[data-atk-pick]");
+    if (pick) {
+      const id = Number(pick.dataset.atkPick);
+      if (id === ((build.a || {}).s || 0)) return;
+      build.a = { ...(build.a || {}), s: id, l: Number(pick.dataset.atkLv) || 0, r: 0, v: 0, h: 0 };
+      recalc();
+      return;
+    }
     if (e.target.closest("[data-atk-auto]")) {
       build.a = { ...(build.a || {}), r: 0 };
       recalc();
     }
   });
   document.addEventListener("keyup", (e) => {
-    if (e.key === "Enter" && e.target.matches("[data-monster]")) e.target.click();
+    if (e.key === "Enter" && e.target.matches("[data-monster], [data-atk-pick]")) e.target.click();
   });
   // Buffs and consumables.
   document.addEventListener("change", (e) => {

@@ -322,6 +322,18 @@ a { color: #1d4fa8; }
 .ro-dmgtable td { padding: 2px 0; }
 .ro-dmgtable td b { color: #b42318; font-size: 12px; }
 .ro-dmgtable small { color: #888; }
+.ro-skilltable { margin-top: 6px; }
+.ro-skilltable summary { cursor: pointer; font-weight: bold; color: #1d3f7a; }
+.ro-skilltable__t { width: 100%; border-collapse: collapse; margin-top: 3px; background: #fff; border: 1px solid #b7bcc6; }
+.ro-skilltable__t th { text-align: right; font-weight: normal; color: #4a4a6a; padding: 2px 4px; background: linear-gradient(#eef2f9, #dde5f2); white-space: nowrap; }
+.ro-skilltable__t th:first-child, .ro-skilltable__t td:first-child { text-align: left; }
+.ro-skilltable__t td { text-align: right; padding: 2px 4px; border-top: 1px solid #eceef3; white-space: nowrap; }
+.ro-skilltable__t td:first-child { white-space: normal; }
+.ro-skilltable__t tbody tr { cursor: pointer; }
+.ro-skilltable__t tbody tr:hover { background: #f1f5fc; }
+.ro-skilltable__t tr.is-selected { background: #fff4cf; }
+.ro-skilltable__t td b { color: #b42318; }
+.ro-skilltable__desc { color: #b07a00; }
 .ro-steps { margin-top: 6px; }
 .ro-steps summary { cursor: pointer; color: var(--ro-title-text); }
 .ro-steps ol { margin: 4px 0 0; padding-left: 18px; }

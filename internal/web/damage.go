@@ -28,6 +28,9 @@ type damageView struct {
 	Variant     int
 	StackMax    int // > 0 when the skill uses stacks
 	Stack       int
+	// Table: every learned damaging skill against the target (build view
+	// only; the optimizer leaves it empty).
+	Table []skillRow
 }
 
 type stateView struct {

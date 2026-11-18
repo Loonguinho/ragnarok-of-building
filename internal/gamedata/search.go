@@ -105,11 +105,37 @@ func (x *ItemIndex) Search(q string, limit int) []*Item {
 
 func containsAll(s string, terms []string) bool {
 	for _, t := range terms {
-		if !strings.Contains(s, t) {
+		if !strings.Contains(s, t) && !containsSingular(s, t) {
 			return false
 		}
 	}
 	return true
+}
+
+// containsSingular lets a plural search word match a singular name
+// ("capas desconhecidas" finds "Capa Desconhecida", "aneis" finds "anel",
+// "botoes" finds "botao"); words are already lowercased without accents.
+func containsSingular(s, t string) bool {
+	if len(t) < 4 || !strings.HasSuffix(t, "s") {
+		return false
+	}
+	forms := []string{t[:len(t)-1]}
+	switch {
+	case strings.HasSuffix(t, "oes"), strings.HasSuffix(t, "aes"):
+		forms = append(forms, t[:len(t)-3]+"ao")
+	case strings.HasSuffix(t, "eis"):
+		forms = append(forms, t[:len(t)-3]+"el")
+	case strings.HasSuffix(t, "ais"):
+		forms = append(forms, t[:len(t)-3]+"al")
+	case strings.HasSuffix(t, "res"), strings.HasSuffix(t, "zes"), strings.HasSuffix(t, "les"):
+		forms = append(forms, t[:len(t)-2])
+	}
+	for _, f := range forms {
+		if strings.Contains(s, f) {
+			return true
+		}
+	}
+	return false
 }
 
 // Normalize lowercases, strips accents and collapses spaces: "Poção  Vermelha" -> "pocao vermelha".

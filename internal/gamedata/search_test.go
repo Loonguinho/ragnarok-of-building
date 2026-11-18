@@ -1,6 +1,9 @@
 package gamedata
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestNormalize(t *testing.T) {
 	if got := Normalize("  Poção   Vermelha "); got != "pocao vermelha" {
@@ -51,5 +54,22 @@ func TestSearch(t *testing.T) {
 				break
 			}
 		}
+	}
+}
+
+func TestSearchPlural(t *testing.T) {
+	for q, name := range map[string]string{
+		"capas desconhecidas": "capa desconhecida for",
+		"aneis":               "anel do lobo",
+		"botoes":              "botao de rosa",
+		"colares":             "colar do lobo",
+		"bonus":               "bonus de ataque",
+	} {
+		if !containsAll(name, strings.Fields(q)) {
+			t.Errorf("%q should match %q", q, name)
+		}
+	}
+	if containsAll("capa velha", strings.Fields("capas desconhecidas")) {
+		t.Error("plural matched a name missing the other word")
 	}
 }

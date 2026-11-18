@@ -74,8 +74,9 @@ type Item struct {
 	EquipLvMin  int      `json:"elv,omitempty"`
 	EquipLvMax  int      `json:"elvMax,omitempty"`
 	Refineable  bool     `json:"refine,omitempty"`
-	Gradable    bool     `json:"grade,omitempty"`   // takes an enchant grade (D..A)
-	MVPCard     bool     `json:"mvpCard,omitempty"` // a card only MVPs drop
+	Gradable    bool     `json:"grade,omitempty"`     // takes an enchant grade (D..A)
+	MVPCard     bool     `json:"mvpCard,omitempty"`   // a card only MVPs drop
+	DescEquip   bool     `json:"descEquip,omitempty"` // type/slot/ATK/DEF read from the client description (LATAM-only item)
 	Script      string   `json:"script,omitempty"`
 	// For items without an rAthena script: bonuses read from the client
 	// description (clientimport.DescScript) and the lines it skipped.

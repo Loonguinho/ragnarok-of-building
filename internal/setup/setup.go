@@ -145,6 +145,7 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 		progress("Lista de monstros do latam-ro-calc não lida: " + err.Error())
 	}
 	clientimport.MarkMVPCardsByName(c, db)
+	clientimport.DescEquip(c)
 	if _, err := clientimport.ImportRandomOpts(clientDir, c, db.RandomOpts); err != nil {
 		progress("Nomes dos bônus aleatórios não lidos: " + err.Error())
 	}

@@ -176,6 +176,11 @@ func IsClient(dir string) bool {
 
 // FindClient looks for the RO LATAM client in the usual install folders.
 func FindClient() string {
+	// A folder set in RO_CLIENT (.env) wins: e.g. a copy of the client, so
+	// the installed game is never read.
+	if v := os.Getenv("RO_CLIENT"); v != "" && IsClient(v) {
+		return v
+	}
 	var cands []string
 	for _, d := range "CDEFGH" {
 		root := string(d) + `:\`

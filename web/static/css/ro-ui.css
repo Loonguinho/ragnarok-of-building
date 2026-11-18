@@ -218,6 +218,15 @@ a { color: #1d4fa8; }
 .ro-itemrow small { color: #888; }
 .ro-list__empty { padding: 8px; color: #777; }
 .ro-iteminfo { width: 340px; }
+/* Item tooltip: the client's item description box, following the mouse. */
+.ro-tip { position: fixed; z-index: 1000; width: 300px; max-width: calc(100vw - 8px); pointer-events: none;
+  background: #fff; border: 1px solid #8a94a8; border-radius: 3px; box-shadow: 2px 3px 8px rgba(0,0,0,.35);
+  font: 11px/1.4 var(--ro-font); color: #000; }
+.ro-tip__head { display: flex; align-items: center; gap: 6px; padding: 3px 6px; background: linear-gradient(#e9eef8, #cfd8ea); border-bottom: 1px solid #b7bcc6; }
+.ro-tip__head b { flex: 1; }
+.ro-tip__head small { color: #667; }
+.ro-tip__icon img { display: block; image-rendering: pixelated; }
+.ro-tip__desc { padding: 5px 6px; max-height: 60vh; overflow: hidden; }
 .ro-iteminfo__body { display: flex; gap: 8px; align-items: flex-start; }
 .ro-iteminfo__icon { flex: none; width: 56px; height: 56px; display: grid; place-items: center; background: #fff; border: 1px solid #b7bcc6; }
 .ro-iteminfo__icon img { image-rendering: pixelated; }
@@ -264,7 +273,6 @@ a { color: #1d4fa8; }
 .ro-slotedit { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .ro-slotedit__refine { display: flex; gap: 4px; align-items: center; margin-top: 4px; }
 .ro-grade { color: var(--ro-grade, #b5179e); font-weight: bold; }
-.ro-slotedit__desc { max-height: 120px; overflow-y: auto; background: #fff; border: 1px solid #b7bcc6; padding: 4px 6px; user-select: text; }
 .ro-slotedit__actions { display: flex; gap: 4px; justify-content: flex-end; }
 .ro-cards { min-height: 0; }
 .ro-cardrow { display: flex; align-items: center; gap: 4px; padding: 2px; }

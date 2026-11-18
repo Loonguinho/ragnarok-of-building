@@ -1,0 +1,7 @@
+{{define "item_tip"}}
+<div class="ro-tip__head">
+  <span class="ro-tip__icon"><img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="24" height="24"></span>
+  <b>{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}</b> <small>#{{.ID}}</small>
+</div>
+<div class="ro-tip__desc">{{roText .Desc}}</div>
+{{end}}

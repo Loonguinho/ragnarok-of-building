@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"os"
 	"path/filepath"
+	"ragnarok-of-building/internal/config"
 	"testing"
 
 	"ragnarok-of-building/internal/calc"
@@ -144,7 +145,7 @@ func FuzzDecode(f *testing.F) {
 // fixtures of latam-ro-calc (cloned under tmp/, not committed).
 func TestRealReplays(t *testing.T) {
 	var files []string
-	for _, pat := range []string{`C:\Gravity\Ragnarok\Replay\*.rrf`, "../../tmp/latam-ro-calc/src/app/replay/__tests__/fixtures/*.rrf"} {
+	for _, pat := range []string{filepath.Join(config.ClientDir(), "Replay", "*.rrf"), "../../tmp/latam-ro-calc/src/app/replay/__tests__/fixtures/*.rrf"} {
 		m, _ := filepath.Glob(pat)
 		files = append(files, m...)
 	}

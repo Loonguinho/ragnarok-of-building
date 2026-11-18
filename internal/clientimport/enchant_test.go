@@ -2,6 +2,7 @@ package clientimport
 
 import (
 	"path/filepath"
+	"ragnarok-of-building/internal/config"
 	"slices"
 	"testing"
 
@@ -11,7 +12,7 @@ import (
 // TestEnchantListClient reads the real client's enchant list (skipped
 // without the client): every block must parse, Gray Wolf Suits included.
 func TestEnchantListClient(t *testing.T) {
-	a, err := grf.Open(filepath.Join(`C:\Gravity\Ragnarok`, "data.grf"))
+	a, err := grf.Open(filepath.Join(config.ClientDir(), "data.grf"))
 	if err != nil {
 		t.Skip("no client")
 	}

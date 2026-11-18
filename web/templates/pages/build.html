@@ -267,7 +267,7 @@
 {{end}}
 
 {{define "equip_slot"}}
-<button class="ro-eslot{{if .Item}} is-filled{{end}}" data-slot="{{.Key}}" data-loc="{{with .Item}}{{.Loc}}{{end}}" title="{{t .Label}}">
+<button class="ro-eslot{{if .Item}} is-filled{{end}}" data-slot="{{.Key}}" data-loc="{{with .Item}}{{.Loc}}{{end}}"{{with .Item}} data-tip-item="{{.ID}}" aria-label="{{t $.Label}}: {{.Name}}"{{else}} title="{{t .Label}}"{{end}}>
   {{with .Item}}<img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="24" height="24">{{else}}<i class="ro-eslot__empty"></i>{{end}}
   <span>{{with .Item}}{{if $.Grade}}<b class="ro-grade">[{{gradeName $.Grade}}]</b> {{end}}{{if $.Refine}}+{{$.Refine}} {{end}}{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}{{else}}<em>{{t .Label}}</em>{{end}}</span>
 </button>
@@ -278,9 +278,9 @@
   {{if .Item}}
   <div class="ro-slotedit">
     <div class="ro-iteminfo__body">
-      <div class="ro-iteminfo__icon"><img src="https://static.divine-pride.net/images/items/item/{{.Item.ID}}.png" alt="" width="40" height="40"></div>
+      <div class="ro-iteminfo__icon" data-tip-item="{{.Item.ID}}"><img src="https://static.divine-pride.net/images/items/item/{{.Item.ID}}.png" alt="" width="40" height="40"></div>
       <div>
-        <b>{{if .Grade}}<span class="ro-grade">[{{gradeName .Grade}}]</span> {{end}}{{if .Refine}}+{{.Refine}} {{end}}{{.Item.Name}}{{if .Item.Slots}} [{{.Item.Slots}}]{{end}}</b>
+        <b data-tip-item="{{.Item.ID}}">{{if .Grade}}<span class="ro-grade">[{{gradeName .Grade}}]</span> {{end}}{{if .Refine}}+{{.Refine}} {{end}}{{.Item.Name}}{{if .Item.Slots}} [{{.Item.Slots}}]{{end}}</b>
         {{if .Refineable}}
         <label class="ro-slotedit__refine">{{t "Refino"}}
           <select class="ro-select" data-refine>
@@ -300,7 +300,7 @@
     {{if .Cards}}
     <ul class="ro-list ro-cards">
       {{range $i, $c := .Cards}}
-      <li class="ro-cardrow">
+      <li class="ro-cardrow"{{if $c}} data-tip-item="{{$c.ID}}"{{end}}>
         {{if $c}}<img src="https://static.divine-pride.net/images/items/item/{{$c.ID}}.png" alt="" width="24" height="24"><span>{{$c.Name}}</span>
         <button class="ro-btn" data-pick-card="{{$i}}">{{t "Trocar"}}</button><button class="ro-btn" data-remove-card="{{$i}}">×</button>
         {{else}}<i class="ro-eslot__empty"></i><span><em>{{if lt $i $.CardSlots}}Slot {{inc $i}} {{t "vazio"}}{{else}}{{t "Encantamento vazio"}}{{end}}</em></span><button class="ro-btn" data-pick-card="{{$i}}">{{if lt $i $.CardSlots}}{{t "Carta…"}}{{else}}{{t "Encantar…"}}{{end}}</button>{{end}}
@@ -321,7 +321,6 @@
         <button class="ro-btn" data-ropt-add>{{t "Adicionar"}}</button></div>
       {{end}}
     </fieldset>
-    <div class="ro-slotedit__desc">{{roText .Item.Desc}}</div>
     <div class="ro-slotedit__actions">
       <button class="ro-btn" data-pick-item>{{t "Trocar item"}}</button>
       <button class="ro-btn" data-unequip>{{t "Remover"}}</button>
@@ -381,7 +380,7 @@
   <div class="ro-optgroup__title">{{.Label}} <small>{{t "atual"}}: {{with .Current}}{{.Name}}{{else}}{{t "vazio"}}{{end}}</small></div>
   <ul class="ro-list ro-optlist">
   {{range .Options}}
-    <li class="ro-optrow">
+    <li class="ro-optrow" data-tip-item="{{.Item.ID}}">
       <img src="https://static.divine-pride.net/images/items/item/{{.Item.ID}}.png" alt="" width="24" height="24" loading="lazy">
       <span>{{.Item.Name}}</span>
       <b class="ro-optrow__gain">{{.Gain}}</b>
@@ -399,7 +398,7 @@
 
 {{define "pick_results"}}
 {{range .Results}}
-<li class="ro-list__item ro-itemrow" tabindex="0" data-pick="{{.ID}}" data-loc="{{.Loc}}">
+<li class="ro-list__item ro-itemrow" tabindex="0" data-pick="{{.ID}}" data-loc="{{.Loc}}" data-tip-item="{{.ID}}">
   <img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="24" height="24" loading="lazy">
   <span>{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}</span>
   <small>#{{.ID}}</small>

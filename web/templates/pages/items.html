@@ -40,7 +40,7 @@
 
 {{define "item_results"}}
 {{range .Results}}
-<li class="ro-list__item ro-itemrow" tabindex="0"
+<li class="ro-list__item ro-itemrow" tabindex="0" data-tip-item="{{.ID}}"
     hx-get="/items/{{.ID}}?lang={{.Lang}}" hx-target="#item-info" hx-trigger="click">
   <img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="24" height="24" loading="lazy">
   <span>{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}</span>

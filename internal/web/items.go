@@ -81,6 +81,23 @@ func (s *Server) handleItemInfo(w http.ResponseWriter, r *http.Request) {
 	s.fragment(w, r, "items", "item_info", &v)
 }
 
+// GET /items/{id}/tip: the hover tooltip body for an item.
+func (s *Server) handleItemTip(w http.ResponseWriter, r *http.Request) {
+	if s.opt.Catalog == nil {
+		http.Error(w, "catalog not loaded", http.StatusServiceUnavailable)
+		return
+	}
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	it := s.opt.Catalog.Items[id]
+	if err != nil || it == nil {
+		http.NotFound(w, r)
+		return
+	}
+	v := viewItem(it, lang(r))
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	s.fragment(w, r, "items", "item_tip", &v)
+}
+
 // itemTypes are the item database filters (value, label).
 var itemTypes = [][2]string{
 	{"", "Todos"}, {"weapon", "Armas"}, {"armor", "Armaduras e acessórios"}, {"head", "Chapéus"},

@@ -3,6 +3,7 @@ package grf
 import (
 	"os"
 	"path/filepath"
+	"ragnarok-of-building/internal/config"
 	"testing"
 
 	"ragnarok-of-building/internal/lua51"
@@ -18,7 +19,7 @@ func TestNotAGRF(t *testing.T) {
 
 // Runs against the real LATAM client when installed (skipped in CI).
 func TestRealClientSkillTree(t *testing.T) {
-	a, err := Open(`C:\Gravity\Ragnarok\data.grf`)
+	a, err := Open(filepath.Join(config.ClientDir(), "data.grf"))
 	if err != nil {
 		t.Skip("RO LATAM client not installed")
 	}

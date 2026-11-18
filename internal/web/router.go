@@ -121,6 +121,7 @@ func (s *Server) Routes() http.Handler {
 	r.Get("/items", s.handleItems)
 	r.With(searchLimit.limit).Get("/items/search", s.handleItemSearch)
 	r.Get("/items/{id}", s.handleItemInfo)
+	r.Get("/items/{id}/tip", s.handleItemTip)
 	r.Get("/new", s.handleNew)
 	r.Get("/compare", s.handleCompare)
 	r.With(calcLimit.limit).Post("/compare/calc", s.handleCompareCalc)

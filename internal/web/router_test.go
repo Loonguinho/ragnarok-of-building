@@ -73,6 +73,7 @@ func TestRoutes(t *testing.T) {
 		{"/items/search?q=poring&lang=en", "Poring Card"},
 		{"/items/search?q=zzz", "Nenhum item encontrado"},
 		{"/items/4001", `<span style="color:#0000ff">SOR +2</span>`},
+		{"/items/4001/tip", `<span style="color:#0000ff">SOR +2</span>`},
 		{"/items?id=4001", "win-iteminfo"},
 		{"/items/search?type=weapon", "Faca [3]"},
 		{"/items/search?type=card&q=carta", "Carta Fabre"},

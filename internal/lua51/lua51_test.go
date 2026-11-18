@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"math"
 	"os"
+	"path/filepath"
+	"ragnarok-of-building/internal/config"
 	"testing"
 )
 
@@ -86,7 +88,7 @@ func TestMalformedNeverPanics(t *testing.T) {
 
 // Runs against the real client when present (skipped in CI).
 func TestRealIteminfo(t *testing.T) {
-	b, err := os.ReadFile(`C:\Gravity\Ragnarok\System\iteminfo_new.lub`)
+	b, err := os.ReadFile(filepath.Join(config.ClientDir(), "System", "iteminfo_new.lub"))
 	if err != nil {
 		t.Skip("RO LATAM client not installed")
 	}

@@ -18,7 +18,7 @@ Hosts pass the port in `PORT`. Saved builds live in each visitor's browser (loca
 
 ## Running from source
 
-You need the RO LATAM client installed (default `C:\Gravity\Ragnarok`). Then, once:
+You need the RO LATAM client installed (default `C:\Gravity\Ragnarok`; set `RO_CLIENT=<folder>` in `.env` to read a copy of it instead, so the installed game is never touched). Then, once:
 
 ```powershell
 go run ./cmd/fetchrathena   # downloads rAthena's tables (GPL-3.0) to data/rathena (not committed)

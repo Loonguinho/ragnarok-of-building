@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"ragnarok-of-building/internal/gamedata"
+	"ragnarok-of-building/internal/store"
 	assets "ragnarok-of-building/web"
 )
 
@@ -24,6 +25,8 @@ type Options struct {
 	// Dev reads templates and static files from ./web on every request
 	// (edit + refresh, no rebuild).
 	Dev bool
+	// Store keeps accounts and saved builds; nil disables them.
+	Store *store.Store
 }
 
 // Server holds parsed templates and dependencies for handlers.
@@ -98,6 +101,13 @@ func (s *Server) Routes() http.Handler {
 	r.Get("/build/skills", s.handleBuildSkills)
 	r.Get("/build/items", s.handleBuildItems)
 	r.Get("/build/monsters", s.handleBuildMonsters)
+	r.Get("/login", s.handleLoginPage)
+	r.Post("/login", s.handleLogin(false))
+	r.Post("/register", s.handleLogin(true))
+	r.Post("/logout", s.handleLogout)
+	r.Get("/chars", s.handleChars)
+	r.Post("/builds/save", s.handleSaveBuild)
+	r.Post("/builds/{id}/delete", s.handleDeleteBuild)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
 	return r
 }
@@ -124,6 +134,14 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, page string, dat
 	if !ok {
 		http.NotFound(w, r)
 		return
+	}
+	if m, ok := data.(map[string]any); ok {
+		if _, set := m["User"]; !set {
+			if u, ok := s.user(r); ok {
+				m["User"] = u
+			}
+		}
+		m["Accounts"] = s.opt.Store != nil
 	}
 	var buf bytes.Buffer
 	if err := t.ExecuteTemplate(&buf, "layout.html", data); err != nil {

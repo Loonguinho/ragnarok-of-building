@@ -9,3 +9,5 @@ tmp/
 data/rathena/
 __pycache__/
 data/browiki/
+*.db-wal
+*.db-shm

@@ -10,7 +10,7 @@
     const params = new URLSearchParams(location.search);
     let last = null;
     try { last = localStorage.getItem("ro.build.last"); } catch {}
-    if (!params.has("b") && !params.has("new") && last) {
+    if (!params.has("b") && !params.has("new") && !params.has("s") && last) {
       params.set("b", last);
       location.replace("/build?" + params);
       return;
@@ -122,7 +122,29 @@
   });
 
   // ---- basic info buttons ----
+  let saved = boot.saved; // {id, name} once saved to the account
   document.addEventListener("click", async (e) => {
+    if (e.target.closest("[data-save-build]")) {
+      if (!boot.accounts) { say("As contas estão desativadas neste servidor.", true); return; }
+      if (!boot.user) {
+        if (confirm("Entre na sua conta para salvar. Abrir o login?")) {
+          location.href = "/login?next=" + encodeURIComponent("/build?b=" + code);
+        }
+        return;
+      }
+      const name = prompt("Nome do build:", saved ? saved.name : "");
+      if (name === null) return;
+      try {
+        const res = await fetch("/builds/save", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: saved ? saved.id : 0, name, code }) });
+        if (!res.ok) throw new Error((await res.text()).trim() || res.status);
+        saved = { id: (await res.json()).id, name: name.trim() || "Sem nome" };
+        history.replaceState(null, "", "/build?s=" + saved.id);
+        say(`Build "${saved.name}" salvo na conta ${boot.user}.`);
+      } catch (err) {
+        say("Não foi possível salvar: " + err.message, true);
+      }
+    }
     if (e.target.closest("[data-copy-link]")) {
       const link = location.origin + "/build?b=" + code;
       try {

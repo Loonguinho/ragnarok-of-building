@@ -8,6 +8,7 @@ import (
 
 	"ragnarok-of-building/internal/config"
 	"ragnarok-of-building/internal/gamedata"
+	"ragnarok-of-building/internal/store"
 	"ragnarok-of-building/internal/web"
 )
 
@@ -27,7 +28,16 @@ func main() {
 		log.Info("catalog loaded", "items", len(cat.Items), "skills", len(cat.Skills), "jobs", len(cat.Jobs))
 	}
 
-	srv, err := web.New(web.Options{Log: log, Catalog: cat, Dev: dev})
+	dbPath := env("DB", "data/app.db")
+	st, err := store.Open(dbPath)
+	if err != nil {
+		log.Warn("no database; accounts and saved builds are disabled", "path", dbPath, "err", err)
+		st = nil
+	} else {
+		defer st.Close()
+	}
+
+	srv, err := web.New(web.Options{Log: log, Catalog: cat, Dev: dev, Store: st})
 	if err != nil {
 		log.Error("init", "err", err)
 		os.Exit(1)

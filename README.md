@@ -16,7 +16,7 @@ go run ./cmd/import         # client + rAthena -> data/gen/catalog.json.gz (~2 s
 and every time:
 
 ```powershell
-go run ./cmd/server         # http://localhost:8080
+go run ./cmd/server         # http://localhost:8080 (accounts and saved builds: data/app.db, change with DB=...)
 go test ./...
 ```
 
@@ -68,9 +68,9 @@ go run ./cmd/scriptcov                                                 # how muc
 - [x] Phase 1: client data import (items, skills, trees, jobs in PT/ES/EN)
 - [x] Phase 2: build model, stats, HP/SP/ASPD, traits (rAthena renewal formulas)
 - [x] Phase 3: in-game-style skill tree with skill point limits per class step
-- [~] Phase 4: equipment, cards, refine, class restrictions (enchants/combos pending)
-- [x] Phase 5: physical and magic damage vs monsters with LATAM formulas for every class (275 of 308 skill formulas; see the generator report)
-- [~] Phase 6: share links + last build restored (accounts/saved builds pending)
+- [x] Phase 4: equipment, cards, enchants, refine, class restrictions, item combos (rAthena + LATAM-only items read from the client descriptions)
+- [x] Phase 5: physical and magic damage vs monsters with LATAM formulas for every class, checked against bROWiki; buffs and consumables
+- [x] Phase 6: share links, last build restored, accounts and saved builds (SQLite, character select screen)
 - [x] Phase 6b: import a character from a replay (`.rrf`)
 - [ ] Phase 7: compare + optimizer
 - [ ] Phase 8: polish

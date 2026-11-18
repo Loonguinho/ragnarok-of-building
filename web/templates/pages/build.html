@@ -69,7 +69,7 @@
 </section>
 
 <div class="ro-tooltip" id="ro-tooltip" hidden></div>
-<script>window.BUILD = {build: {{.V.Build}}, code: {{.V.Code}}, lang: {{.Lang}}};</script>
+<script>window.BUILD = {build: {{.V.Build}}, code: {{.V.Code}}, lang: {{.Lang}}, accounts: {{.Accounts}}, user: {{if .User}}{{.User.Name}}{{else}}""{{end}}, saved: {{if .Saved}}{id: {{.Saved.ID}}, name: {{.Saved.Name}}}{{else}}null{{end}}};</script>
 <script src="/static/js/skilltree.js" defer></script>
 <script src="/static/js/build.js" defer></script>
 {{end}}
@@ -162,6 +162,7 @@
   <button class="ro-btn" data-toggle="win-buffs" title="Alt+U">Buffs</button>
 </div>
 <div class="ro-basic__menu">
+  <button class="ro-btn" data-save-build title="Salvar na sua conta">Salvar</button>
   <button class="ro-btn" data-copy-link>Copiar link</button>
   <button class="ro-btn" data-new-build>Novo</button>
   <a class="ro-btn" href="/">Sair</a>

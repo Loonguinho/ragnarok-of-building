@@ -42,7 +42,6 @@ Re-run `go run ./cmd/import` after each game patch.
 - `/` is the home screen: builds saved in this browser as character slots, plus the menu
 - `/build` is the **build editor**, with Basic Info (Alt+V), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S), Bonuses (Alt+B), Target/Damage (Alt+D), Buffs (Alt+U) and the Optimizer (Alt+O), which tries every card that fits each slot (and the enchants the client's enchant list gives each item) against the damage window's target and ranks them by expected damage. Ctrl+S saves the build in the browser; **Copiar link** shares it.
 - `/new` starts a build from a replay (`.rrf`) or a blank class
-- `/compare` puts up to 4 builds side by side (saved, current or pasted links) against one monster: stats, status and damage with each build's own skill, the best value of each row highlighted; the URL keeps the comparison
 - `/items` is the item database (PT/ES/EN search, filter by type)
 - `/skills` is a standalone skill tree
 - `/uikit` is the RO UI kit (development)
@@ -90,7 +89,7 @@ go run ./cmd/scriptcov                                                 # how muc
 - [x] Phase 5: physical and magic damage vs monsters with LATAM formulas for every class, checked against bROWiki; buffs and consumables
 - [x] Phase 6: share links, last build restored, saved builds (browser storage, character select home), Docker image for hosting
 - [x] Phase 6b: import a character from a replay (`.rrf`)
-- [~] Phase 7: build comparison and card optimizer done; stat and gear optimizer pending
+- [~] Phase 7: item comparison in the equipment picker (damage change per result, stat changes in the tooltip) and card/enchant optimizer done; stat and gear optimizer pending
 - [ ] Phase 8: polish
 
 The full design doc is in `docs/design.md`.

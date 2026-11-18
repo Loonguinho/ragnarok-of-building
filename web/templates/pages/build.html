@@ -378,7 +378,7 @@
 {{range .Groups}}
 <div class="ro-optgroup">
   <div class="ro-optgroup__title">{{.Label}} <small>{{t "atual"}}: {{with .Current}}{{.Name}}{{else}}{{t "vazio"}}{{end}}</small></div>
-  {{if not .Options}}<p class="ro-optgroup__none">{{if .Best}}{{t "Já é a melhor opção"}}{{else if .SkillOnly}}{{t "Os encantamentos desta posição aumentam habilidades específicas: escolha a habilidade na janela de dano (Alt+D) para compará-los."}}{{else}}{{t "Nenhuma opção aumenta o dano deste ataque."}}{{end}}</p>{{end}}
+  {{if not .Options}}<p class="ro-optgroup__none">{{if .Best}}{{t "Já é a melhor opção"}}{{else if .SkillOnly}}{{t "Só encantamentos de habilidade, nenhum para o ataque atual (Alt+D)."}}{{else}}{{t "Nenhuma opção aumenta o dano deste ataque."}}{{end}}</p>{{else}}
   <ul class="ro-list ro-optlist">
   {{range .Options}}
     <li class="ro-optrow" data-tip-item="{{.Item.ID}}">
@@ -389,6 +389,7 @@
     </li>
   {{end}}
   </ul>
+  {{end}}
 </div>
 {{end}}
 {{with .NoEnch}}<p class="ro-note">{{t "Sem lista de encantamentos no cliente (encantados por NPC), não testados"}}: {{range $i, $s := .}}{{if $i}}, {{end}}{{$s}}{{end}}</p>{{end}}

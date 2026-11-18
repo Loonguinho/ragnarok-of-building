@@ -316,10 +316,8 @@ var dict = map[string][2]string{
 	"atributos": {"stats", "atributos"},
 	"Este monstro não tem atributos no rAthena; configure DP_API_KEY no .env para buscá-los no Divine Pride.": {"This monster has no stats in rAthena; set DP_API_KEY in .env to fetch them from Divine Pride.", "Este monstruo no tiene atributos en rAthena; configura DP_API_KEY en .env para buscarlos en Divine Pride."},
 	"Não foi possível obter os atributos deste monstro no Divine Pride.":                                      {"Could not get this monster's stats from Divine Pride.", "No se pudieron obtener los atributos de este monstruo en Divine Pride."},
-	"Os encantamentos desta posição aumentam habilidades específicas: escolha a habilidade na janela de dano (Alt+D) para compará-los.": {
-		"This position's enchants boost specific skills: pick the skill in the damage window (Alt+D) to compare them.",
-		"Los encantamientos de esta posición aumentan habilidades específicas: elige la habilidad en la ventana de daño (Alt+D) para compararlos."},
-	"Nenhuma opção aumenta o dano deste ataque.": {"No option increases this attack's damage.", "Ninguna opción aumenta el daño de este ataque."},
+	"Só encantamentos de habilidade, nenhum para o ataque atual (Alt+D).":                                     {"Only skill enchants, none for the current attack (Alt+D).", "Solo encantamientos de habilidad, ninguno para el ataque actual (Alt+D)."},
+	"Nenhuma opção aumenta o dano deste ataque.":                                                              {"No option increases this attack's damage.", "Ninguna opción aumenta el daño de este ataque."},
 	"Grau":                         {"Grade", "Grado"},
 	"Bônus aleatórios":             {"Random options", "Opciones aleatorias"},
 	"Bônus aleatório":              {"Random option", "Opción aleatoria"},

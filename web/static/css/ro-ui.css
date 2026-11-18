@@ -435,6 +435,7 @@ body:has(.ro-compare) #ro-chat { display: none; }
 .ro-optwin__go { margin: 6px 0; text-align: right; }
 .ro-optwin__base { margin: 6px 0; }
 .ro-optgroup { margin: 8px 0; }
+.ro-optlist { min-height: 0; }
 .ro-optgroup__title { font-weight: bold; color: #1d3f7a; padding: 2px 4px; background: linear-gradient(#eef2f9, #dde5f2); }
 .ro-optgroup__title small { font-weight: normal; color: #5a6a88; }
 .ro-optrow { display: flex; align-items: center; gap: 6px; padding: 2px 4px; border-bottom: 1px dotted #c4c8d0; }

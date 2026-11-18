@@ -335,7 +335,27 @@ func Load(path string) (*Catalog, error) {
 	if err := json.NewDecoder(zr).Decode(&c); err != nil {
 		return nil, fmt.Errorf("gamedata: %w", err)
 	}
+	c.ApplyLatamLimits()
 	return &c, nil
+}
+
+// LATAM level caps: rAthena gives 4th classes 275/60, the LATAM server
+// stops at base 250 and job 50.
+const (
+	LatamMaxBaseLv   = 250
+	LatamMaxFourthJb = 50
+)
+
+// ApplyLatamLimits caps the classes' max levels to the LATAM server's.
+func (c *Catalog) ApplyLatamLimits() {
+	for _, j := range c.Jobs {
+		if j.MaxBaseLv > LatamMaxBaseLv {
+			j.MaxBaseLv = LatamMaxBaseLv
+		}
+		if j.Fourth && j.MaxJobLv > LatamMaxFourthJb {
+			j.MaxJobLv = LatamMaxFourthJb
+		}
+	}
 }
 
 var (

@@ -109,6 +109,7 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 	clientimport.MergeRathena(c, db)
 	progress("Lendo os bônus das descrições dos itens exclusivos do LATAM…")
 	clientimport.DescBonuses(c)
+	c.ApplyLatamLimits()
 	progress("Salvando o catálogo…")
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		return nil, err

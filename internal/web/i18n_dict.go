@@ -301,8 +301,16 @@ var dict = map[string][2]string{
 	"Nenhum build salvo ainda. Aperte <b>Salvar</b> (ou <b>Ctrl+S</b>) para guardar o atual neste navegador.": {
 		"No saved builds yet. Press <b>Save</b> (or <b>Ctrl+S</b>) to keep the current one in this browser.",
 		"Aún no hay builds guardados. Pulsa <b>Guardar</b> (o <b>Ctrl+S</b>) para guardar el actual en este navegador."},
-	"Importar replay":              {"Import replay", "Importar replay"},
-	"Builds":                       {"Builds", "Builds"},
+	"Importar replay": {"Import replay", "Importar replay"},
+	"Builds":          {"Builds", "Builds"},
+	"Trocar a classe": {"Change class", "Cambiar la clase"},
+	"Escolha a classe. Níveis, atributos e equipamento ficam; as habilidades são resetadas.": {
+		"Pick the class. Levels, stats and equipment stay; skills are reset.",
+		"Elige la clase. Niveles, atributos y equipo se mantienen; las habilidades se reinician."},
+	"Novo build: escolha a classe": {"New build: pick the class", "Nuevo build: elige la clase"},
+	"Um build em branco da classe escolhida, nos níveis máximos dela.": {
+		"A blank build of the chosen class, at its max levels.",
+		"Un build en blanco de la clase elegida, en sus niveles máximos."},
 	"Grau":                         {"Grade", "Grado"},
 	"Bônus aleatórios":             {"Random options", "Opciones aleatorias"},
 	"Bônus aleatório":              {"Random option", "Opción aleatoria"},

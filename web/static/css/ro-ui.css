@@ -409,6 +409,11 @@ body.ro-desktop:has(.ro-newbuild) { overflow: auto; }
   background: linear-gradient(180deg, var(--ro-btn-a), var(--ro-btn-b)); border: 1px solid var(--ro-border); border-radius: 3px;
 }
 .ro-jobcard:hover { filter: brightness(1.06); border-color: #1d4fa8; }
+button.ro-jobcard { font-family: inherit; cursor: pointer; }
+.ro-jobcard.is-current { border-color: #1d4fa8; box-shadow: 0 0 0 2px #9fc0f5 inset; font-weight: bold; }
+.ro-desk .ro-classpick__body { max-height: 60vh; }
+.ro-linkbtn { padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.ro-linkbtn:hover b { text-decoration: underline; }
 @media (max-width: 720px) { .ro-import, .ro-classpick { width: 100%; } }
 
 .ro-dmg__states { margin-top: 3px; padding-top: 3px; border-top: 1px dashed #c4c8d0; }

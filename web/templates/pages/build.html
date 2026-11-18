@@ -23,6 +23,24 @@
 </section>
 {{end}}
 {{with $.V}}
+<!-- Class picker (Alt+J): changes the build's class, or starts a blank one -->
+<section class="ro-window ro-classwin is-hidden" id="win-class" data-hotkey="j">
+  <header class="ro-window__title"><span data-class-title>{{t "Classe"}}</span> <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
+  <div class="ro-window__body ro-classpick__body">
+    <p class="ro-note" data-class-hint>{{t "Escolha a classe. Níveis, atributos e equipamento ficam; as habilidades são resetadas."}}</p>
+    {{$job := .Build.Job}}
+    {{range .Families}}
+    <div class="ro-family">
+      <h4>{{.Name}}</h4>
+      <div class="ro-family__jobs">
+        {{range .Jobs}}<button type="button" class="ro-jobcard{{if eq .ID $job}} is-current{{end}}" data-pick-job="{{.ID}}">{{.Name}}</button>{{end}}
+      </div>
+    </div>
+    {{end}}
+  </div>
+</section>
+{{end}}
+{{with $.V}}
 <!-- Saved builds (Alt+C), like the client's character select -->
 <section class="ro-window ro-savedwin is-hidden" id="win-saved" data-hotkey="c">
   <header class="ro-window__title">{{t "Builds salvos"}} <small id="saved-count"></small> <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
@@ -211,7 +229,7 @@
 {{end}}
 
 {{define "build_basic"}}
-<div class="ro-basic__name"><b>{{.JobName}}</b></div>
+<div class="ro-basic__name"><button class="ro-linkbtn" data-toggle="win-class" title="{{t "Trocar a classe"}} (Alt+J)"><b>{{.JobName}}</b> ▾</button></div>
 <div class="ro-basic__lv">Base Lv. {{.Build.BaseLv}} {{t "· Classe Lv."}} {{.Build.JobLv}}</div>
 <div class="ro-bar ro-bar--hp"><span style="width:100%"></span><em>HP {{.R.HP}} / {{.R.HP}}</em></div>
 <div class="ro-bar ro-bar--sp"><span style="width:100%"></span><em>SP {{.R.SP}} / {{.R.SP}}</em></div>

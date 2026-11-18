@@ -28,7 +28,14 @@ func (s *Server) handleNew(w http.ResponseWriter, r *http.Request) {
 		s.render(w, r, "new", data)
 		return
 	}
-	// Group playable classes by their first class (Espadachim, Mago, ...).
+	data["Families"] = s.classFamilies(l)
+	s.render(w, r, "new", data)
+}
+
+// classFamilies groups the playable classes by their first class
+// (Espadachim, Mago, ...), families by their lowest job ID.
+func (s *Server) classFamilies(l string) []classFamily {
+	c := s.opt.Catalog
 	families := map[string]*classFamily{}
 	var order []string
 	for _, j := range c.Jobs {
@@ -61,8 +68,7 @@ func (s *Server) handleNew(w http.ResponseWriter, r *http.Request) {
 		}
 		return out[i].Jobs[0].ID < out[k].Jobs[0].ID
 	})
-	data["Families"] = out
-	s.render(w, r, "new", data)
+	return out
 }
 
 // POST /build/import (multipart "file"): .rrf replay -> build share code.

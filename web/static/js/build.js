@@ -221,11 +221,55 @@
     }
     if (e.target.closest("[data-new-build]")) {
       if (!confirm(T("Começar um build novo? Salve o atual antes (Ctrl+S) se quiser guardá-lo."))) return;
-      build = { j: build.j, b: build.b, jl: build.jl, s: [1, 1, 1, 1, 1, 1], t: [0, 0, 0, 0, 0, 0], e: {}, k: {} };
-      loadSkills(build.j);
-      recalc();
+      openClassPicker(true);
+    }
+    const pick = e.target.closest("[data-pick-job]");
+    if (pick) {
+      const job = Number(pick.dataset.pickJob);
+      if (classPickerNew) { // a blank build of that class, at its max levels
+        location.href = "/build?new=1&job=" + job;
+        return;
+      }
+      if (job !== build.j) {
+        build.j = job;
+        build.k = {};
+        build.t = [0, 0, 0, 0, 0, 0];
+        loadSkills(job);
+        say(T("Classe alterada. Habilidades resetadas."));
+        recalc();
+      }
+      window.ROWin.toggle(document.getElementById("win-class"));
     }
   });
+
+  // ---- class picker ----
+  // Opened from the class name (change the class) or from Novo (blank build).
+  let classPickerNew = false;
+  function openClassPicker(blank) {
+    classPickerNew = blank;
+    const win = document.getElementById("win-class");
+    if (!win) return;
+    win.querySelector("[data-class-title]").textContent = blank ? T("Novo build: escolha a classe") : T("Classe");
+    win.querySelector("[data-class-hint]").textContent = blank
+      ? T("Um build em branco da classe escolhida, nos níveis máximos dela.")
+      : T("Escolha a classe. Níveis, atributos e equipamento ficam; as habilidades são resetadas.");
+    window.ROWin.show(win);
+  }
+  document.addEventListener("click", (e) => {
+    if (e.target.closest('[data-toggle="win-class"]')) openClassPickerMode(false);
+  }, true);
+  document.addEventListener("keydown", (e) => {
+    if (e.altKey && e.key.toLowerCase() === "j") openClassPickerMode(false);
+  }, true);
+  // Back to "change the class" (texts too) when opened from the name or Alt+J.
+  function openClassPickerMode(blank) {
+    if (classPickerNew === blank) return;
+    classPickerNew = blank;
+    const win = document.getElementById("win-class");
+    if (!win) return;
+    win.querySelector("[data-class-title]").textContent = T("Classe");
+    win.querySelector("[data-class-hint]").textContent = T("Escolha a classe. Níveis, atributos e equipamento ficam; as habilidades são resetadas.");
+  }
 
   // ---- equipment window ----
   let equipTab = "main";

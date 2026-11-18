@@ -34,6 +34,12 @@
   <div class="ro-window__body" id="build_bonus">{{template "build_bonus" .}}</div>
 </section>
 
+<!-- Buffs (Alt+U) -->
+<section class="ro-window ro-buffwin is-hidden" id="win-buffs" data-hotkey="u" style="left:392px;top:16px;width:330px">
+  <header class="ro-window__title">Buffs e Consumíveis <button class="ro-window__close" aria-label="Fechar">×</button></header>
+  <div class="ro-window__body" id="build_buffs">{{template "build_buffs" .}}</div>
+</section>
+
 <!-- Target / Damage (Alt+D) -->
 <section class="ro-window ro-dmgwin" id="win-damage" data-hotkey="d" style="left:828px;top:16px;width:380px">
   <header class="ro-window__title">Alvo / Dano <button class="ro-window__close" aria-label="Fechar">×</button></header>
@@ -153,6 +159,7 @@
   <button class="ro-btn" data-toggle="win-skills" title="Alt+S">Habil</button>
   <button class="ro-btn" data-toggle="win-bonus" title="Alt+B">Bônus</button>
   <button class="ro-btn" data-toggle="win-damage" title="Alt+D">Dano</button>
+  <button class="ro-btn" data-toggle="win-buffs" title="Alt+U">Buffs</button>
 </div>
 <div class="ro-basic__menu">
   <button class="ro-btn" data-copy-link>Copiar link</button>
@@ -290,6 +297,24 @@
   <div class="ro-slotedit"><em>{{.Label}} vazio. Escolha um item abaixo.</em></div>
   {{end}}
 </template>
+{{end}}
+
+{{define "build_buffs"}}
+{{range .Buffs}}
+<fieldset class="ro-buffs">
+  <legend>{{.Name}}</legend>
+  {{range .Items}}
+  <label class="ro-buff">
+    {{if .Choices}}<span>{{.Label}}</span>
+      <select class="ro-select" data-buff="{{.Key}}">{{$v := .ValueStr}}{{range .Choices}}<option value="{{index . 0}}"{{if eq (index . 0) $v}} selected{{end}}>{{index . 1}}</option>{{end}}</select>
+    {{else if .Max}}<span>{{.Label}}</span>
+      <input class="ro-input ro-num ro-num--sm" type="number" min="0" max="{{.Max}}" value="{{.Value}}" data-buff="{{.Key}}">
+    {{else}}<input type="checkbox" data-buff="{{.Key}}"{{if .Value}} checked{{end}}> <span>{{.Label}}</span>{{end}}
+  </label>
+  {{end}}
+</fieldset>
+{{end}}
+<p class="ro-note">Valores do bROWiki. Os buffs entram nos atributos, no status e no dano.</p>
 {{end}}
 
 {{define "build_bonus"}}

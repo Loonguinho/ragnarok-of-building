@@ -86,6 +86,7 @@ type buildView struct {
 	Bonuses  []bonusLine
 	Extras   []bonusLine
 	Combos   []string // active item combos ("A + B")
+	Buffs    []buffGroup
 	HPPct    int
 	SPPct    int
 	Notes    []string // items removed by normalization (shown in the chat)
@@ -180,6 +181,7 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 		}
 		v.Combos = append(v.Combos, strings.Join(names, " + "))
 	}
+	v.Buffs = buffGroups(b)
 	v.HPPct, v.SPPct = 100, 100
 	v.D = s.damageView(b, r, l)
 	return v
@@ -223,7 +225,7 @@ func (s *Server) handleBuildCalc(w http.ResponseWriter, r *http.Request) {
 	v := s.buildView(b, lang(r))
 	out := map[string]any{"build": v.Build, "code": v.Code, "notes": v.Notes, "html": map[string]string{},
 		"skillGroups": s.opt.Catalog.SkillBudgets(v.Build.Job, v.Build.JobLv)}
-	for _, name := range []string{"build_status", "build_basic", "build_equip", "build_bonus", "build_damage"} {
+	for _, name := range []string{"build_status", "build_basic", "build_equip", "build_bonus", "build_damage", "build_buffs"} {
 		html, err := s.fragmentString("build", name, v)
 		if err != nil {
 			s.opt.Log.Error("build fragment", "name", name, "err", err)

@@ -298,6 +298,16 @@
   document.addEventListener("keyup", (e) => {
     if (e.key === "Enter" && e.target.matches("[data-monster]")) e.target.click();
   });
+  // Buffs and consumables.
+  document.addEventListener("change", (e) => {
+    const f = e.target.closest("[data-buff]");
+    if (!f) return;
+    const bf = { ...(build.bf || {}) };
+    const v = f.type === "checkbox" ? (f.checked ? 1 : 0) : Math.max(0, Number(f.value) || 0);
+    if (v) bf[f.dataset.buff] = v; else delete bf[f.dataset.buff];
+    build.bf = bf;
+    recalc();
+  });
   // Class states for LATAM formulas (selectors and on/off toggles).
   document.addEventListener("change", (e) => {
     const f = e.target.closest("[data-atk-state]");

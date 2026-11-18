@@ -341,3 +341,11 @@ body.ro-desktop:has(.ro-newbuild) { overflow: auto; }
 
 .ro-dmg__states { margin-top: 3px; padding-top: 3px; border-top: 1px dashed #c4c8d0; }
 .ro-latam { color: #1d7a2f; }
+
+/* Buffs window */
+.ro-buffs { border: 1px solid #c4c8d0; border-radius: 3px; margin: 0 0 6px; padding: 2px 6px 4px; }
+.ro-buffs legend { font-weight: bold; padding: 0 3px; color: #4a5a78; }
+.ro-buff { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 1px 0; }
+.ro-buff:has(input[type=checkbox]) { justify-content: flex-start; }
+.ro-buff .ro-select { max-width: 170px; }
+.ro-combos { margin-top: 6px; }

@@ -78,6 +78,7 @@ type Build struct {
 	Skills map[int]int      `json:"k,omitempty"`
 	Target int              `json:"m,omitempty"` // monster ID for the damage window
 	Atk    AttackChoice     `json:"a,omitempty"`
+	Buffs  map[string]int   `json:"bf,omitempty"` // BuffDef.Key -> level/value
 }
 
 // AttackChoice is what the damage window uses against the target.
@@ -163,6 +164,7 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 	}
 	b.BaseLv = clamp(b.BaseLv, 1, maxBase)
 	b.JobLv = clamp(b.JobLv, 1, maxJob)
+	normalizeBuffs(b)
 	ms := maxStat(j)
 	for i := range b.Stats {
 		b.Stats[i] = clamp(b.Stats[i], 1, ms)
@@ -495,6 +497,11 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		}
 	}
 	r.Combos = applyCombos(c, &b, param, equipIDs, bonus, extra, &r.SkippedScriptEffects)
+	var baseJob [6]int
+	for i := range baseJob {
+		baseJob[i] = b.Stats[i] + jb[i]
+	}
+	applyBuffs(&b, baseJob, bonus, extra)
 	LatamPassives(b, c, r.WeaponType, bonus) // class passives (e.g. War Book Mastery)
 	r.Bonuses = bonus
 	r.Extra = extra

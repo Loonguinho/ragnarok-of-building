@@ -144,7 +144,9 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, page string, dat
 		return
 	}
 	if m, ok := data.(map[string]any); ok {
-		m["ClickSound"] = s.soundURL("click.wav")
+		if page == "home" { // only the home screen's menu clicks (the editor stays quiet)
+			m["ClickSound"] = s.soundURL("click.wav")
+		}
 	}
 	var buf bytes.Buffer
 	if err := t.ExecuteTemplate(&buf, "layout.html", data); err != nil {

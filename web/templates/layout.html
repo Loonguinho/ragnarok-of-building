@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{t .Title}}</title>
-  <link rel="stylesheet" href="/static/css/ro-ui.css">
+  <link rel="stylesheet" href="{{asset "css/ro-ui.css"}}">
   <link rel="icon" type="image/png" href="/static/img/icon.png">
   <script>window.I18N = {{i18nJSON}}; window.T = (s, ...a) => { let r = (window.I18N && window.I18N[s]) || s; for (const v of a) r = r.replace("%s", v); return r; };</script>
   <meta name="htmx-config" content='{"allowEval":false}'>
-  <script src="/static/js/htmx.min.js" defer></script>
-  <script src="/static/js/rowindow.js" defer></script>
-  <script src="/static/js/saved.js" defer></script>
+  <script src="{{asset "js/htmx.min.js"}}" defer></script>
+  <script src="{{asset "js/rowindow.js"}}" defer></script>
+  <script src="{{asset "js/saved.js"}}" defer></script>
 </head>
 <body class="ro-desktop"{{if .ClickSound}} data-click-sound="/sounds/click.wav"{{end}}>
   {{template "content" .}}

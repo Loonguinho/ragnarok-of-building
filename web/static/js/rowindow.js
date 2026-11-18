@@ -108,42 +108,30 @@ document.addEventListener("keyup", (e) => {
 });
 
 // Classic RO menu click on buttons. The sound comes from the player's own
-// client (the server only has it after the import); Web Audio plays it
-// without delay and lets quick clicks overlap. Muted with the toggle on the
-// home screen (remembered in this browser).
+// client (the server only has it after the import). A plain <audio> copy
+// per click plays on the click itself (the gesture browsers require) and
+// lets quick clicks overlap. Muted with the toggle on the home screen
+// (remembered in this browser).
 (() => {
   const src = document.body && document.body.dataset.clickSound;
   if (!src) return;
   const KEY = "ro.sound";
   const isOn = () => { try { return localStorage.getItem(KEY) !== "off"; } catch { return true; } };
   const CLICKABLE = ".ro-btn, .ro-window__close, .ro-homemenu__item, .ro-charslot, .ro-jobcard, .ro-eslot, [data-equip-tab], [data-tab], .ro-list__item";
-  let ctx = null, buf = null, loading = null;
-  function load() {
-    if (loading) return loading;
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return Promise.resolve();
-    ctx = new AC();
-    loading = fetch(src).then((r) => r.arrayBuffer()).then((b) => ctx.decodeAudioData(b)).then((d) => { buf = d; }).catch(() => {});
-    return loading;
-  }
+  const base = new Audio(src);
+  base.preload = "auto";
+  window.ROClick = { played: 0, failed: "" }; // for tests and troubleshooting
   function play() {
     if (!isOn()) return;
-    load().then(() => {
-      if (!buf) return;
-      if (ctx.state === "suspended") ctx.resume();
-      const node = ctx.createBufferSource();
-      const gain = ctx.createGain();
-      gain.gain.value = 0.6;
-      node.buffer = buf;
-      node.connect(gain).connect(ctx.destination);
-      node.start();
-    });
+    const a = base.cloneNode();
+    a.volume = 0.6;
+    const p = a.play();
+    if (p) p.then(() => { window.ROClick.played++; }, (err) => { window.ROClick.failed = String(err); });
   }
-  document.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0) return;
+  document.addEventListener("click", (e) => {
     const el = e.target.closest(CLICKABLE);
     if (el && !el.disabled && !el.matches("[data-sound-toggle]")) play();
-  });
+  }, true);
   // Toggle (home screen).
   const sync = () => document.querySelectorAll("[data-sound-toggle]").forEach((b) => {
     b.setAttribute("aria-pressed", String(isOn()));

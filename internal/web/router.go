@@ -71,7 +71,7 @@ func (s *Server) parse() (map[string]*template.Template, error) {
 	for _, ul := range uiLangs {
 		for _, p := range pageFiles {
 			files := append([]string{"templates/layout.html", p}, partials...)
-			t, err := template.New("layout.html").Funcs(funcs).Funcs(langFuncs(ul.Code)).ParseFS(s.fsys, files...)
+			t, err := template.New("layout.html").Funcs(funcs).Funcs(langFuncs(ul.Code)).Funcs(template.FuncMap{"asset": s.assetURL}).ParseFS(s.fsys, files...)
 			if err != nil {
 				return nil, fmt.Errorf("parse %s: %w", p, err)
 			}

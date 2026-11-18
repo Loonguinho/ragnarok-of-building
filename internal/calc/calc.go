@@ -129,9 +129,10 @@ type Result struct {
 	OtherEquipATK    int // armor ATK, bAtk, shadow weapon
 	WeaponLv         int
 	WeaponRefine     int
-	WeaponWeight     int     // tenths
-	ShieldWeight     int     // tenths; 0 without a shield
-	Combos           [][]int // item sets whose combo bonus is active
+	WeaponWeight     int           // tenths
+	ShieldWeight     int           // tenths; 0 without a shield
+	Combos           [][]int       // item sets whose combo bonus is active
+	ComboEffects     []ComboEffect // what each active combo adds (same order)
 	ShieldRefine     int
 	Ranged           bool
 	CritTenths       int    // CRIT in 1/10 % (rAthena cri), for crit chance
@@ -530,7 +531,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			r.OtherEquipATK += it.Attack
 		}
 	}
-	r.Combos = applyCombos(c, &b, param, equipIDs, bonus, extra, &r.SkippedScriptEffects)
+	r.Combos, r.ComboEffects = applyCombos(c, &b, param, equipIDs, bonus, extra, &r.SkippedScriptEffects)
 	var baseJob [6]int
 	for i := range baseJob {
 		baseJob[i] = b.Stats[i] + jb[i]

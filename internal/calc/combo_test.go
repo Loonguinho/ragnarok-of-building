@@ -25,13 +25,25 @@ func TestItemCombos(t *testing.T) {
 	}}
 	bonus, extra := map[string]int{}, map[string]int{}
 	skipped := 0
-	got := applyCombos(c, &b, nil, map[int]bool{}, bonus, extra, &skipped)
+	got, _ := applyCombos(c, &b, nil, map[int]bool{}, bonus, extra, &skipped)
 	if len(got) != 1 || bonus["bMaxHP"] != 100 || bonus["bStr"] != 0 {
 		t.Fatalf("one ring: combos %v, bonus %v", got, bonus)
 	}
 	b.Equip[AccLeft] = Equip{Item: 2601}
 	bonus = map[string]int{}
-	if got = applyCombos(c, &b, nil, map[int]bool{}, bonus, extra, &skipped); len(got) != 2 || bonus["bStr"] != 5 {
+	got, eff := applyCombos(c, &b, nil, map[int]bool{}, bonus, extra, &skipped)
+	if len(got) != 2 || bonus["bStr"] != 5 {
 		t.Fatalf("two rings: combos %v, bonus %v", got, bonus)
+	}
+	// What each combo adds, on its own.
+	if len(eff) != 2 {
+		t.Fatalf("effects: %+v", eff)
+	}
+	sum := map[string]int{}
+	for _, e := range eff {
+		addAll(sum, e.Bonus)
+	}
+	if sum["bStr"] != 5 || sum["bMaxHP"] != 100 {
+		t.Errorf("effects add up to %v", sum)
 	}
 }

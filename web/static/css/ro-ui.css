@@ -235,6 +235,10 @@ a { color: #1d4fa8; }
 .ro-swap__none { margin: 2px 0; color: #667; font-style: italic; }
 .is-up { color: #1d7a2a; }
 .is-down { color: #b42318; }
+.ro-combo { margin: 4px 0 6px; padding-bottom: 4px; border-bottom: 1px dotted #c4c8d0; }
+.ro-combo__name { font-weight: bold; color: #1d3f7a; margin-bottom: 1px; }
+.ro-combo__line { padding-left: 10px; }
+.ro-combo__skip { padding-left: 10px; color: #667; font-style: italic; font-size: 10px; }
 .ro-gain { margin-left: auto; font-size: 11px; color: #667; }
 .ro-gain.is-up { color: #1d7a2a; }
 .ro-gain.is-down { color: #b42318; }

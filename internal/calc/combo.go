@@ -33,11 +33,11 @@ func multiHead(it *gamedata.Item) bool {
 // applyCombos adds the scripts of every item combo (rAthena item_combos.yml)
 // whose items are all equipped, cards included. An item listed twice needs
 // two copies (e.g. a pair of rings); an item worn in several slots (upper +
-// middle headgear) counts once. Returns the active sets.
+// middle headgear) counts once. Returns the active sets and what each adds.
 func applyCombos(c *gamedata.Catalog, b *Build, param map[string]int, equipIDs map[int]bool,
-	bonus, extra map[string]int, skipped *int) [][]int {
+	bonus, extra map[string]int, skipped *int) ([][]int, []ComboEffect) {
 	if len(c.Combos) == 0 {
-		return nil
+		return nil, nil
 	}
 	have := map[int]int{}
 	counted := map[int]bool{}
@@ -66,6 +66,7 @@ func applyCombos(c *gamedata.Catalog, b *Build, param map[string]int, equipIDs m
 	slices.Sort(cand)
 	cand = slices.Compact(cand)
 	var active [][]int
+	var effects []ComboEffect
 	for _, i := range cand {
 		cb := c.Combos[i]
 		need := map[int]int{}
@@ -87,6 +88,16 @@ func applyCombos(c *gamedata.Catalog, b *Build, param map[string]int, equipIDs m
 		addAll(extra, res.Extra)
 		*skipped += res.Skipped
 		active = append(active, cb.Items)
+		effects = append(effects, ComboEffect{Items: cb.Items, Bonus: res.Bonus, Extra: res.Extra, Skipped: res.Skipped})
 	}
-	return active
+	return active, effects
+}
+
+// ComboEffect is what one active item combo adds: status bonuses (bStr,
+// bAtkRate...), damage modifiers (bonus2+), and how many of its effects
+// the evaluator could not apply.
+type ComboEffect struct {
+	Items        []int
+	Bonus, Extra map[string]int
+	Skipped      int
 }

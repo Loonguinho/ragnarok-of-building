@@ -387,7 +387,13 @@
 {{else}}
 <em>{{t "Nenhum equipamento com bônus."}}</em>
 {{end}}
-{{if .Combos}}<div class="ro-combos"><h4>{{t "Combos ativos"}}</h4>{{range .Combos}}<div class="ro-bonus"><span>{{.}}</span></div>{{end}}</div>{{end}}
+{{if .Combos}}<div class="ro-combos"><h4>{{t "Combos ativos"}}</h4>
+{{range .Combos}}<div class="ro-combo">
+  <div class="ro-combo__name">{{.Name}}</div>
+  {{range .Lines}}<div class="ro-bonus ro-combo__line"><span>{{t .Label}}</span><b>{{.Value}}</b></div>{{end}}
+  {{if .Skipped}}<div class="ro-combo__skip">{{.Skipped}} {{t "efeito(s) ainda não simulado(s) (procs, habilidades concedidas)"}}</div>{{else if not .Lines}}<div class="ro-combo__skip">{{t "sem bônus de atributos"}}</div>{{end}}
+</div>{{end}}
+</div>{{end}}
 {{if .R.SkippedScriptEffects}}<div class="ro-note">{{.R.SkippedScriptEffects}} {{t "efeito(s) de equipamento ainda não simulado(s) (procs, habilidades concedidas, efeitos condicionais)."}}</div>{{end}}
 {{end}}
 

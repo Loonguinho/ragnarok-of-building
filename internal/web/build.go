@@ -85,7 +85,7 @@ type buildView struct {
 	Shadow   []slotView
 	Bonuses  []bonusLine
 	Extras   []bonusLine
-	Combos   []string // active item combos ("A + B")
+	Combos   []comboView // active item combos and what they add
 	Buffs    []buffGroup
 	HPPct    int
 	SPPct    int
@@ -112,6 +112,25 @@ type optLine struct {
 	ID, Value int
 	Label     string
 	Min, Max  int // the value range this position rolls (0, 0: unknown)
+}
+
+// comboView is an active item combo: its items and what it adds.
+type comboView struct {
+	Name    string
+	Lines   []bonusLine
+	Skipped int // effects not simulated (procs, granted skills...)
+}
+
+// sortedKeys lists the non-zero entries of a bonus map by key.
+func sortedKeys(m map[string]int) []string {
+	keys := make([]string, 0, len(m))
+	for k, v := range m {
+		if v != 0 {
+			keys = append(keys, k)
+		}
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 type bonusLine struct {
@@ -207,14 +226,21 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 	for _, k := range keys {
 		v.Extras = append(v.Extras, bonusLine{Label: extraLabel(k, c, l), Value: signed(r.Extra[k], k)})
 	}
-	for _, set := range r.Combos {
-		names := make([]string, 0, len(set))
-		for _, id := range set {
+	for _, ce := range r.ComboEffects {
+		names := make([]string, 0, len(ce.Items))
+		for _, id := range ce.Items {
 			if it := c.Items[id]; it != nil {
 				names = append(names, it.Name.Get(l))
 			}
 		}
-		v.Combos = append(v.Combos, strings.Join(names, " + "))
+		cv := comboView{Name: strings.Join(names, " + "), Skipped: ce.Skipped}
+		for _, k := range sortedKeys(ce.Bonus) {
+			cv.Lines = append(cv.Lines, bonusLine{Label: bonusLabel(k), Value: signed(ce.Bonus[k], k)})
+		}
+		for _, k := range sortedKeys(ce.Extra) {
+			cv.Lines = append(cv.Lines, bonusLine{Label: extraLabel(k, c, l), Value: signed(ce.Extra[k], k)})
+		}
+		v.Combos = append(v.Combos, cv)
 	}
 	v.Buffs = buffGroups(b)
 	v.HPPct, v.SPPct = 100, 100
@@ -467,7 +493,7 @@ var bonusLabels = map[string]string{
 	"bHit": "Precisão", "bHitRate": "Precisão", "bFlee": "Esquiva", "bFleeRate": "Esquiva", "bFlee2": "Esquiva perfeita",
 	"bCritical": "Crítico", "bCriticalRate": "Crítico", "bDef": "DEF", "bDefRate": "DEF", "bDef2": "DEF suave",
 	"bMdef": "DEFM", "bMdefRate": "DEFM", "bMdef2": "DEFM suave",
-	"bAspd": "ASPD", "bAspdRate": "ASPD", "bLongAtkRate": "Dano à distância", "bShortAtkRate": "Dano corpo a corpo", "bCritAtkRate": "Dano crítico",
+	"bAspd": "ASPD", "bAspdRate": "ASPD", "bLongAtkRate": "Dano à distância", "bShortAtkRate": "Dano corpo a corpo", "bPerfectHitAddRate": "Precisão perfeita", "bCritAtkRate": "Dano crítico",
 	"bPAtk": "P.ATQ", "bSMatk": "S.ATQM", "bRes": "RES", "bMRes": "MRES", "bHPlus": "H.PLUS", "bCRate": "C.RATE",
 	"bVariableCastrate": "Conjuração variável", "bFixedCastrate": "Conjuração fixa", "bFixedCast": "Conjuração fixa (ms)",
 	"bDelayrate": "Pós-conjuração", "bHPrecovRate": "Recuperação de HP", "bSPrecovRate": "Recuperação de SP",
@@ -534,6 +560,8 @@ func extraLabel(k string, c *gamedata.Catalog, l string) string {
 		return T("Dano físico vs ") + name(sizeNames)
 	case "bMagicAddSize":
 		return T("Dano mágico vs ") + name(sizeNames)
+	case "bSubSize":
+		return T("Resistência a tamanho ") + name(sizeNames)
 	case "bAddEff", "bAddEff2", "bMagicAddEff":
 		return T("Chance de ") + name(effNames)
 	case "bAddEffWhenHit":

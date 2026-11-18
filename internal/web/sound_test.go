@@ -34,7 +34,7 @@ func TestClickSound(t *testing.T) {
 			t.Errorf("%s: %d, want 404", bad, rec.Code)
 		}
 	}
-	if rec := get(with, "/"); !strings.Contains(rec.Body.String(), `data-click-sound="/sounds/click.wav"`) || !strings.Contains(rec.Body.String(), "data-sound-toggle") {
+	if rec := get(with, "/"); !strings.Contains(rec.Body.String(), `data-click-sound="/sounds/click.wav?v=`) || !strings.Contains(rec.Body.String(), "data-sound-toggle") {
 		t.Error("home doesn't announce the click sound and its toggle")
 	}
 	if rec := get(Options{}, "/"); strings.Contains(rec.Body.String(), "data-click-sound") || strings.Contains(rec.Body.String(), "data-sound-toggle") {

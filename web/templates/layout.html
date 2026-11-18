@@ -12,7 +12,7 @@
   <script src="{{asset "js/rowindow.js"}}" defer></script>
   <script src="{{asset "js/saved.js"}}" defer></script>
 </head>
-<body class="ro-desktop"{{if .ClickSound}} data-click-sound="/sounds/click.wav"{{end}}>
+<body class="ro-desktop"{{with .ClickSound}} data-click-sound="{{.}}"{{end}}>
   {{template "content" .}}
   {{template "chatlog" .}}
 </body>

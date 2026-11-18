@@ -5,6 +5,7 @@ package setup
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"net/http"
@@ -176,10 +177,68 @@ func ExtractSounds(clientDir, dir string) (int, error) {
 		if err != nil {
 			continue // a client without the file: the site just stays silent
 		}
-		if err := os.WriteFile(filepath.Join(dir, name), b, 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, name), padWAV(b), 0o644); err != nil {
 			return n, err
 		}
 		n++
 	}
 	return n, nil
+}
+
+// padWAV appends 300 ms of silence (after a 20 ms fade) to a 16-bit PCM
+// WAV. Browsers drop the last few milliseconds of short sounds when the
+// playback ends; with the padding only silence gets dropped. Anything that
+// isn't plain 16-bit PCM is returned unchanged.
+func padWAV(b []byte) []byte {
+	if len(b) < 12 || string(b[0:4]) != "RIFF" || string(b[8:12]) != "WAVE" {
+		return b
+	}
+	var channels, bits uint16
+	var rate uint32
+	var data []byte
+	for i := 12; i+8 <= len(b); {
+		id, size := string(b[i:i+4]), int(binary.LittleEndian.Uint32(b[i+4:i+8]))
+		body := b[i+8 : min(len(b), i+8+size)]
+		switch id {
+		case "fmt ":
+			if len(body) < 16 || binary.LittleEndian.Uint16(body[0:2]) != 1 {
+				return b // not PCM
+			}
+			channels, rate, bits = binary.LittleEndian.Uint16(body[2:4]), binary.LittleEndian.Uint32(body[4:8]), binary.LittleEndian.Uint16(body[14:16])
+		case "data":
+			data = body
+		}
+		i += 8 + size + size%2
+	}
+	if bits != 16 || channels == 0 || rate == 0 || len(data) < 4 {
+		return b
+	}
+	frame := int(channels) * 2
+	pcm := append([]byte(nil), data[:len(data)/frame*frame]...)
+	// Fade the last 20 ms to zero so the end doesn't click.
+	fade := min(len(pcm)/frame, int(rate)/50)
+	for f := 0; f < fade; f++ {
+		gain := float64(fade-f) / float64(fade)
+		at := len(pcm) - (fade-f)*frame
+		for c := 0; c < int(channels); c++ {
+			o := at + c*2
+			v := int16(binary.LittleEndian.Uint16(pcm[o:]))
+			binary.LittleEndian.PutUint16(pcm[o:], uint16(int16(float64(v)*gain)))
+		}
+	}
+	pcm = append(pcm, make([]byte, int(rate)*3/10*frame)...) // 300 ms of silence
+	out := make([]byte, 44, 44+len(pcm))
+	copy(out[0:], "RIFF")
+	binary.LittleEndian.PutUint32(out[4:], uint32(36+len(pcm)))
+	copy(out[8:], "WAVEfmt ")
+	binary.LittleEndian.PutUint32(out[16:], 16)
+	binary.LittleEndian.PutUint16(out[20:], 1)
+	binary.LittleEndian.PutUint16(out[22:], channels)
+	binary.LittleEndian.PutUint32(out[24:], rate)
+	binary.LittleEndian.PutUint32(out[28:], rate*uint32(frame))
+	binary.LittleEndian.PutUint16(out[32:], uint16(frame))
+	binary.LittleEndian.PutUint16(out[34:], 16)
+	copy(out[36:], "data")
+	binary.LittleEndian.PutUint32(out[40:], uint32(len(pcm)))
+	return append(out, pcm...)
 }

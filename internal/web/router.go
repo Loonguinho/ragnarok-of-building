@@ -144,7 +144,7 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, page string, dat
 		return
 	}
 	if m, ok := data.(map[string]any); ok {
-		m["ClickSound"] = s.hasSound("click.wav")
+		m["ClickSound"] = s.soundURL("click.wav")
 	}
 	var buf bytes.Buffer
 	if err := t.ExecuteTemplate(&buf, "layout.html", data); err != nil {

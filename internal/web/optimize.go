@@ -49,6 +49,10 @@ type optGroup struct {
 	// SkillOnly says the pool is skill enchants (pick that skill to see them).
 	Best      bool
 	SkillOnly bool
+	// SkillHeld: the position holds an enchant for this learned skill; a
+	// swap to another skill's enchant can't be judged without knowing the
+	// main skill, so none is suggested.
+	SkillHeld string
 }
 
 type optResult struct {
@@ -262,7 +266,13 @@ feed:
 		// Skill enchants that don't touch the chosen attack: measure each on
 		// the learned skill it boosts.
 		if len(g.Options) == 0 && p.enchant {
-			g.Options = s.optSkillEnchants(b, p, l)
+			if heldID, held := s.optHeldSkill(b, p.current, l); heldID != 0 {
+				if heldID != b.Atk.Skill { // for the attack itself it is simply the best
+					g.SkillHeld = held
+				}
+			} else {
+				g.Options = s.optSkillEnchants(b, p, l)
+			}
 		}
 		if len(g.Options) == 0 {
 			// Keep the position listed, saying why nothing is suggested.
@@ -288,6 +298,23 @@ feed:
 
 // optSkillCode finds the skills an enchant boosts (bonus2 bSkillAtk,"CODE",n).
 var optSkillCode = regexp.MustCompile(`bSkillAtk\s*,\s*"([A-Z0-9_]+)"`)
+
+// optHeldSkill is the learned skill (ID, name) the enchant id boosts; 0 if none.
+func (s *Server) optHeldSkill(b calc.Build, id int, l string) (int, string) {
+	c := s.opt.Catalog
+	it := c.Items[id]
+	if it == nil {
+		return 0, ""
+	}
+	for _, m := range optSkillCode.FindAllStringSubmatch(it.Script, -1) {
+		for sid, lv := range b.Skills {
+			if sk := c.Skills[sid]; sk != nil && lv > 0 && sk.Code == m[1] {
+				return sid, sk.Name.Get(l)
+			}
+		}
+	}
+	return 0, ""
+}
 
 // optSkillEnchants ranks a position's skill enchants by the gain each gives
 // to the learned skill it boosts (that skill as the attack, at its learned

@@ -164,11 +164,17 @@ func TestOptimizeKeepsEnchantPositions(t *testing.T) {
 			t.Errorf("%s with Storm Slash learned: %+v", label, g[label])
 		}
 	}
+	// Its enchant in position 4 under a basic attack: no swap to another
+	// skill's enchant is suggested there.
+	b.Equip[calc.Weapon] = calc.Equip{Item: sword, Cards: [4]int{0, 0, 0, slashEnchant}}
+	if p4 := groups(b)["Arma · Encantamento (slot 4)"]; len(p4.Options) != 0 || p4.SkillHeld == "" {
+		t.Errorf("held skill enchant: %+v", p4)
+	}
 	// Storm Slash with its enchant in position 4: still listed, as the best.
 	b.Atk = calc.AttackChoice{Skill: stormSlash, Level: 5}
 	b.Equip[calc.Weapon] = calc.Equip{Item: sword, Cards: [4]int{0, 0, 0, slashEnchant}}
 	g = groups(b)
-	if p4 := g["Arma · Encantamento (slot 4)"]; len(g) != 3 || !p4.Best || len(p4.Options) != 0 {
+	if p4 := g["Arma · Encantamento (slot 4)"]; len(g) != 3 || !p4.Best || p4.SkillHeld != "" || len(p4.Options) != 0 {
 		t.Fatalf("enchanted position: %+v", g)
 	}
 	if p3 := g["Arma · Encantamento (slot 3)"]; len(p3.Options) == 0 || p3.Options[0].Item.ID != slashEnchant {

@@ -110,27 +110,47 @@ document.addEventListener("keyup", (e) => {
 // Classic RO menu click on buttons. The sound comes from the player's own
 // client (the server only has it after the import). A plain <audio> copy
 // per click plays on the click itself (the gesture browsers require) and
-// lets quick clicks overlap. Muted with the toggle on the home screen
-// (remembered in this browser).
+// lets quick clicks overlap. Links that leave the page wait a moment so the
+// click is heard before the page changes, like the game's menus. Muted with
+// the toggle on the home screen (remembered in this browser).
 (() => {
   const src = document.body && document.body.dataset.clickSound;
   if (!src) return;
   const KEY = "ro.sound";
   const isOn = () => { try { return localStorage.getItem(KEY) !== "off"; } catch { return true; } };
-  const CLICKABLE = ".ro-btn, .ro-window__close, .ro-homemenu__item, .ro-charslot, .ro-jobcard, .ro-eslot, [data-equip-tab], [data-tab], .ro-list__item";
+  const CLICKABLE = ".ro-btn, .ro-window__close, .ro-homemenu__item, .ro-charslot, .ro-jobcard, .ro-eslot, [data-equip-tab], [data-tab], .ro-list__item, .ro-plus";
   const base = new Audio(src);
   base.preload = "auto";
-  window.ROClick = { played: 0, failed: "" }; // for tests and troubleshooting
+  // For troubleshooting in the console: ROClick
+  window.ROClick = { clicks: 0, played: 0, muted: !isOn(), failed: "", last: "" };
   function play() {
+    window.ROClick.muted = !isOn();
     if (!isOn()) return;
     const a = base.cloneNode();
     a.volume = 0.6;
     const p = a.play();
     if (p) p.then(() => { window.ROClick.played++; }, (err) => { window.ROClick.failed = String(err); });
   }
+  // A plain left click on a link to another page of the site.
+  function leavingLink(el, e) {
+    const a = el.closest("a[href]");
+    if (!a || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || a.target) return null;
+    const href = a.getAttribute("href");
+    if (!href || href.startsWith("#") || a.hasAttribute("download")) return null;
+    const url = new URL(a.href, location.href);
+    return url.origin === location.origin ? url : null;
+  }
   document.addEventListener("click", (e) => {
     const el = e.target.closest(CLICKABLE);
-    if (el && !el.disabled && !el.matches("[data-sound-toggle]")) play();
+    if (!el || el.disabled || el.matches("[data-sound-toggle]")) return;
+    window.ROClick.clicks++;
+    window.ROClick.last = (el.textContent || el.className).trim().slice(0, 40);
+    play();
+    const url = isOn() && !e.defaultPrevented ? leavingLink(el, e) : null;
+    if (url) {
+      e.preventDefault();
+      setTimeout(() => { location.href = url.href; }, 150);
+    }
   }, true);
   // Toggle (home screen).
   const sync = () => document.querySelectorAll("[data-sound-toggle]").forEach((b) => {

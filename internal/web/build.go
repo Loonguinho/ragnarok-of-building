@@ -98,8 +98,9 @@ type slotView struct {
 	Item             *itemView
 	Refine           int
 	Grade            int
-	Opts             []optLine // random options
-	MaxOpts          int
+	Opts             []optLine   // random options
+	MaxOpts          int         // random options the item takes (0: none known)
+	OptsAny          bool        // only the count is known: any option goes
 	Cards            []*itemView // len = item slots
 	Refineable       bool
 	Gradable         bool
@@ -110,6 +111,7 @@ type slotView struct {
 type optLine struct {
 	ID, Value int
 	Label     string
+	Min, Max  int // the value range this position rolls (0, 0: unknown)
 }
 
 type bonusLine struct {
@@ -146,10 +148,19 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 				iv := viewItem(it, l)
 				sv.Item, sv.Refine, sv.Refineable = &iv, e.Refine, it.Refineable
 				sv.Grade, sv.Gradable = e.Grade, it.Gradable
-				sv.MaxOpts = calc.MaxRandomOpts
+				// Only the random options this item can get, and how many.
+				spec := c.ItemOpts[it.ID]
+				sv.MaxOpts = spec.Slots()
+				sv.OptsAny = spec != nil && spec.Any > 0
 				for _, o := range e.Opts {
 					if ro := c.RandomOpts[o[0]]; ro != nil {
-						sv.Opts = append(sv.Opts, optLine{ID: o[0], Value: o[1], Label: ro.Label(l, o[1])})
+						line := optLine{ID: o[0], Value: o[1], Label: ro.Label(l, o[1])}
+						for _, r := range spec.At(len(sv.Opts)) {
+							if r.ID == o[0] {
+								line.Min, line.Max = r.Min, r.Max
+							}
+						}
+						sv.Opts = append(sv.Opts, line)
 					}
 				}
 				// Show the card slots plus any enchant positions in use.

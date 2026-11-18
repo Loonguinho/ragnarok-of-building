@@ -98,7 +98,11 @@ type DB struct {
 	GradeBonus map[string]map[int][5]int
 	// RandomOpts: random option scripts by option ID.
 	RandomOpts map[int]*RandomOpt
-	Mobs       map[int]*Mob
+	// OptGroups: random option groups by name; ItemOptGroups: the groups
+	// an item can get (drops, reforms, Laphine upgrades).
+	OptGroups     map[string]*OptGroup
+	ItemOptGroups map[int][]string
+	Mobs          map[int]*Mob
 	// MobStubs are monsters mob_db.yml lists only as a commented ID and
 	// AegisName, without stats (ID -> AegisName).
 	MobStubs map[int]string
@@ -110,6 +114,8 @@ type DB struct {
 	Combos []Combo
 	// Aegis maps AegisName to item ID (equipment and etc items).
 	Aegis map[string]int
+
+	optDrops [][2]string // (item AegisName, RandomOptionGroup) from monster drops
 }
 
 // Combo is one item set (IDs; an ID twice means two copies) and its script.
@@ -261,6 +267,9 @@ func Load(dir string) (*DB, error) {
 				m.Cards = append(m.Cards, id)
 			}
 		}
+	}
+	if err := db.loadOptGroups(re, aegis, db.optDrops); err != nil {
+		return nil, err
 	}
 	if err := db.loadCombos(filepath.Join(re, "item_combos.yml"), aegis); err != nil {
 		return nil, err

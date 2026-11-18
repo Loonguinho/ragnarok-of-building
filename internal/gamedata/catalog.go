@@ -175,7 +175,17 @@ var tierSets = map[string][]string{
 // CanEquip mirrors rAthena's renewal pc_isItemClass + job check. Jobs without
 // imported restrictions (no EquipGroup) can equip anything.
 func (j *Job) CanEquip(it *Item) bool {
-	if j == nil || it == nil || j.EquipGroup == "" {
+	if j == nil || it == nil {
+		return true
+	}
+	// Weapons without a job list (LATAM-only, read from the description):
+	// the class must have an ASPD for that weapon type.
+	if it.Type == "Weapon" && len(it.EquipJobs) == 0 && it.SubType != "" && len(j.BaseASPD) > 0 {
+		if _, ok := j.BaseASPD[it.SubType]; !ok {
+			return false
+		}
+	}
+	if j.EquipGroup == "" {
 		return true
 	}
 	if len(it.EquipJobs) > 0 && !slices.Contains(it.EquipJobs, "All") && !slices.Contains(it.EquipJobs, j.EquipGroup) {
@@ -212,6 +222,9 @@ type Catalog struct {
 	GradeBonus map[string]map[int][5]int `json:"gradeBonus,omitempty"`
 	// RandomOpts are the random options an item can roll, by option ID.
 	RandomOpts map[int]*RandomOpt `json:"randomOpts,omitempty"`
+	// ItemOpts: which random options each item can get (items missing here
+	// have no known random options).
+	ItemOpts map[int]*ItemOpts `json:"itemOpts,omitempty"`
 	// Monsters and damage tables (rAthena renewal).
 	Monsters map[int]*Monster `json:"monsters,omitempty"`
 	// AttrFix[defElementLevel][atkElement][defElement] = damage %.

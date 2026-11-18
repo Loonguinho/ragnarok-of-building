@@ -38,6 +38,9 @@ var RathenaFiles = []string{
 	"db/re/attr_fix.yml",
 	"db/re/enchantgrade.yml",
 	"db/re/item_randomopt_db.yml",
+	"db/re/item_randomopt_group.yml",
+	"db/re/item_reform.yml",
+	"db/re/laphine_upgrade.yml",
 	"db/re/item_combos.yml",
 	"db/re/item_db_usable.yml",
 	"src/common/mmo.hpp", // e_job enum: job name -> ID
@@ -52,18 +55,32 @@ func LatamCalcMonsters(rathenaDir string) string {
 	return filepath.Join(filepath.Dir(rathenaDir), "latam-ro-calc", "monster.json")
 }
 
-// FetchLatamCalc downloads latam-ro-calc's monster list to dst unless it is
-// already there for the pinned commit.
+// latamCalcFiles are the latam-ro-calc files the importer reads (local name,
+// path in the repository).
+var latamCalcFiles = [][2]string{
+	{"monster.json", "src/assets/demo/data/monster.json"},
+	{"extra-option-table.ts", "src/app/constants/extra-option-table.ts"},
+	{"item.json", "src/assets/demo/data/item.json"}, // AegisNames of the LATAM-only items
+}
+
+// FetchLatamCalc downloads latam-ro-calc's files next to dst (the monster
+// list) unless they are already there for the pinned commit.
 func FetchLatamCalc(ctx context.Context, dst string, progress Progress) error {
-	stamp := filepath.Join(filepath.Dir(dst), "COMMIT")
+	dir := filepath.Dir(dst)
+	stamp := filepath.Join(dir, "COMMIT")
 	have, _ := os.ReadFile(stamp)
-	if _, err := os.Stat(dst); err == nil && strings.TrimSpace(string(have)) == LatamCalcCommit {
-		return nil
-	}
-	progress("Baixando a lista de monstros do latam-ro-calc…")
-	url := "https://raw.githubusercontent.com/adsonpleal/latam-ro-calc/" + LatamCalcCommit + "/src/assets/demo/data/monster.json"
-	if err := download(ctx, &http.Client{Timeout: 3 * time.Minute}, url, dst); err != nil {
-		return fmt.Errorf("latam-ro-calc: %w", err)
+	same := strings.TrimSpace(string(have)) == LatamCalcCommit
+	client := &http.Client{Timeout: 3 * time.Minute}
+	for _, f := range latamCalcFiles {
+		local := filepath.Join(dir, f[0])
+		if _, err := os.Stat(local); err == nil && same {
+			continue
+		}
+		progress("Baixando " + f[0] + " do latam-ro-calc…")
+		url := "https://raw.githubusercontent.com/adsonpleal/latam-ro-calc/" + LatamCalcCommit + "/" + f[1]
+		if err := download(ctx, client, url, local); err != nil {
+			return fmt.Errorf("latam-ro-calc %s: %w", f[0], err)
+		}
 	}
 	return os.WriteFile(stamp, []byte(LatamCalcCommit+"\n"), 0o644)
 }
@@ -148,6 +165,11 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 	clientimport.DescEquip(c)
 	if _, err := clientimport.ImportRandomOpts(clientDir, c, db.RandomOpts); err != nil {
 		progress("Nomes dos bônus aleatórios não lidos: " + err.Error())
+	}
+	clientimport.ItemOptsFromRathena(c, db)
+	aegis := clientimport.LatamAegis(filepath.Join(filepath.Dir(mobs), "item.json"), db.Aegis)
+	if _, err := clientimport.ItemOptCounts(c, filepath.Join(filepath.Dir(mobs), "extra-option-table.ts"), aegis); err != nil {
+		progress("Tabela de bônus aleatórios do latam-ro-calc não lida: " + err.Error())
 	}
 	progress("Lendo a lista de encantamentos do cliente…")
 	if _, err := clientimport.ImportEnchants(clientDir, c, db.Aegis); err != nil {

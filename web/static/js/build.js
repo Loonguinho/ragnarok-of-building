@@ -217,18 +217,33 @@
     pickMode.textContent = cardIndex >= 0 ? "Escolha uma carta (slot " + (cardIndex + 1) + ")" : "Escolha um item para " + tpl.dataset.label;
   }
 
-  // Random option picker: the list is fetched once per language.
-  let roptList = null;
+  // Random option picker: the options the item's next position can roll,
+  // fetched once per item and position.
+  const roptLists = new Map();
   async function fillRandomOpts() {
     const sel = slotBody.querySelector("[data-ropt-new]");
     if (!sel) return;
-    if (roptList === null) {
-      roptList = "";
-      const res = await fetch("/build/randomopts?lang=" + lang);
-      roptList = res.ok ? await res.text() : "";
+    const key = sel.dataset.item + "/" + sel.dataset.pos;
+    if (!roptLists.has(key)) {
+      roptLists.set(key, fetch("/build/randomopts?" + new URLSearchParams({ lang, item: sel.dataset.item, pos: sel.dataset.pos }))
+        .then((r) => (r.ok ? r.text() : "")).catch(() => ""));
     }
-    sel.insertAdjacentHTML("beforeend", roptList);
+    const html = await roptLists.get(key);
+    if (sel.isConnected) sel.insertAdjacentHTML("beforeend", html);
   }
+  // Picking an option sets the value box to its range (best value first).
+  document.addEventListener("change", (e) => {
+    const sel = e.target.closest("[data-ropt-new]");
+    if (!sel) return;
+    const o = sel.selectedOptions[0];
+    const val = slotBody.querySelector("[data-ropt-newval]");
+    if (!o || !val) return;
+    if (o.dataset.max) {
+      val.min = o.dataset.min; val.max = o.dataset.max; val.value = o.dataset.max;
+    } else {
+      val.min = -32768; val.max = 32767;
+    }
+  });
 
   let searchTimer = null;
   function search() {

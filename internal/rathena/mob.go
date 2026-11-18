@@ -63,7 +63,8 @@ type mobEntry struct {
 	DamageTaken     *int            `yaml:"DamageTaken"`
 	Modes           map[string]bool `yaml:"Modes"`
 	Drops           []struct {
-		Item string `yaml:"Item"`
+		Item              string `yaml:"Item"`
+		RandomOptionGroup string `yaml:"RandomOptionGroup"`
 	} `yaml:"Drops"`
 }
 
@@ -98,6 +99,9 @@ func (db *DB) loadMobs(re string) error {
 		m.MVP = e.Modes["Mvp"]
 		for _, d := range e.Drops {
 			m.DropAegis = append(m.DropAegis, d.Item)
+			if d.RandomOptionGroup != "" {
+				db.optDrops = append(db.optDrops, [2]string{d.Item, d.RandomOptionGroup})
+			}
 		}
 		db.Mobs[m.ID] = m
 	}

@@ -329,6 +329,7 @@ var dict = map[string][2]string{
 	"Cada habilidade no nível aprendido, com os mesmos estados e elemento do ataque escolhido. * = % lido da descrição.": {
 		"Each skill at its learned level, with the chosen attack's states and element. * = % read from the description.",
 		"Cada habilidad en el nivel aprendido, con los mismos estados y elemento del ataque elegido. * = % leído de la descripción."},
+	"quais o item aceita não está nos dados": {"which ones the item takes is not in the data", "cuáles acepta el objeto no está en los datos"},
 	"Grau":                         {"Grade", "Grado"},
 	"Bônus aleatórios":             {"Random options", "Opciones aleatorias"},
 	"Bônus aleatório":              {"Random option", "Opción aleatoria"},

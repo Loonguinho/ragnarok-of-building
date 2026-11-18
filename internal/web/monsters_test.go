@@ -66,3 +66,41 @@ func TestStubName(t *testing.T) {
 		}
 	}
 }
+
+// Random options: only items that can get them, only the options each
+// position rolls, with their value range.
+func TestItemRandomOptions(t *testing.T) {
+	c := testCatalog()
+	c.RandomOpts = map[int]*gamedata.RandomOpt{
+		1:  {ID: 1, Name: gamedata.Text{"pt": "HP máx. +%d"}, Script: "bonus bMaxHP,getrandomoptinfo(ROA_VALUE);"},
+		17: {ID: 17, Name: gamedata.Text{"pt": "ATQ +%d"}, Script: "bonus bAtk,getrandomoptinfo(ROA_VALUE);"},
+	}
+	c.Items[2301] = &gamedata.Item{ID: 2301, Name: gamedata.Text{"pt": "Túnica"}, Type: "Armor", Locations: []string{"Armor"}, Defense: 10}
+	c.ItemOpts = map[int]*gamedata.ItemOpts{2301: {Positions: [][]gamedata.OptRange{{{ID: 1, Min: 100, Max: 1000}}}}}
+	s, err := New(Options{Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Catalog: c, NoRateLimit: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := s.Routes()
+	_, body := get(t, h, "/build/randomopts?lang=pt&item=2301&pos=0")
+	if !strings.Contains(body, `data-min="100" data-max="1000"`) || !strings.Contains(body, "HP máx. +N (100–1000)") || strings.Contains(body, "ATQ") {
+		t.Errorf("position 0 of 2301: %s", body)
+	}
+	if _, body := get(t, h, "/build/randomopts?lang=pt&item=1201&pos=0"); !strings.Contains(body, "ATQ +N") {
+		t.Errorf("unknown item lists every option: %s", body)
+	}
+	v := s.buildView(calc.Build{Job: 0, BaseLv: 3, JobLv: 1, Stats: [6]int{1, 1, 1, 1, 1, 1},
+		Equip: map[string]calc.Equip{calc.Armor: {Item: 2301}, calc.Weapon: {Item: 1201}}}, "pt")
+	for _, sv := range v.Slots {
+		switch sv.Key {
+		case calc.Armor:
+			if sv.MaxOpts != 1 {
+				t.Errorf("armor takes 1 option, got %d", sv.MaxOpts)
+			}
+		case calc.Weapon:
+			if sv.MaxOpts != 0 {
+				t.Errorf("weapon takes none, got %d", sv.MaxOpts)
+			}
+		}
+	}
+}

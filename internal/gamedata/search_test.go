@@ -73,3 +73,12 @@ func TestSearchPlural(t *testing.T) {
 		t.Error("plural matched a name missing the other word")
 	}
 }
+
+func TestCanEquipWeaponTypeWithoutJobList(t *testing.T) {
+	knight := &Job{EquipGroup: "Knight", BaseASPD: map[string]int{"2hSword": 55, "Dagger": 50}}
+	violin := &Item{Type: "Weapon", SubType: "Musical"}
+	sword := &Item{Type: "Weapon", SubType: "2hSword"}
+	if knight.CanEquip(violin) || !knight.CanEquip(sword) {
+		t.Errorf("violin %v, sword %v", knight.CanEquip(violin), knight.CanEquip(sword))
+	}
+}

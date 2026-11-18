@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -74,6 +75,10 @@ type Item struct {
 	EquipLvMax  int      `json:"elvMax,omitempty"`
 	Refineable  bool     `json:"refine,omitempty"`
 	Script      string   `json:"script,omitempty"`
+	// For items without an rAthena script: bonuses read from the client
+	// description (clientimport.DescScript) and the lines it skipped.
+	DescScript  string `json:"dscript,omitempty"`
+	DescSkipped int    `json:"dskip,omitempty"`
 	// Who can equip it (rAthena Jobs/Classes); empty means everyone.
 	EquipJobs    []string `json:"jobs,omitempty"`
 	EquipClasses []string `json:"classes,omitempty"`
@@ -208,6 +213,35 @@ type Catalog struct {
 	SizeFix map[string]map[string]int `json:"sizeFix,omitempty"`
 	Skills  map[int]*Skill            `json:"skills"`
 	Jobs    map[int]*Job              `json:"jobs"`
+	// Item combos (rAthena item_combos.yml): the script applies when every
+	// listed item (an ID twice = two copies) is equipped, cards included.
+	Combos []Combo `json:"combos,omitempty"`
+
+	comboOnce sync.Once
+	comboIdx  map[int][]int // item ID -> indexes into Combos
+}
+
+// Combo is an item set and the script it unlocks.
+type Combo struct {
+	Items  []int  `json:"i"`
+	Script string `json:"s"`
+}
+
+// CombosWith returns the indexes of the combos that include item id.
+func (c *Catalog) CombosWith(id int) []int {
+	c.comboOnce.Do(func() {
+		c.comboIdx = map[int][]int{}
+		for i, cb := range c.Combos {
+			seen := map[int]bool{}
+			for _, it := range cb.Items {
+				if !seen[it] {
+					c.comboIdx[it] = append(c.comboIdx[it], i)
+					seen[it] = true
+				}
+			}
+		}
+	})
+	return c.comboIdx[id]
 }
 
 // SkillGroup is one class step's skill tabs and its skill point budget.

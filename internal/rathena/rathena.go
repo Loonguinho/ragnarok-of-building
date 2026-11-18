@@ -97,6 +97,14 @@ type DB struct {
 	AttrFix map[int]map[string]map[string]int
 	// SizeFix[weaponType][Small|Medium|Large] = damage %.
 	SizeFix map[string]map[string]int
+	// Combos: item sets whose script applies when all are equipped.
+	Combos []Combo
+}
+
+// Combo is one item set (IDs; an ID twice means two copies) and its script.
+type Combo struct {
+	Items  []int
+	Script string
 }
 
 // Load reads the files under dir (data/rathena).
@@ -213,6 +221,7 @@ func Load(dir string) (*DB, error) {
 		return nil, err
 	}
 
+	aegis := map[string]int{}
 	for _, f := range []string{"item_db_equip.yml", "item_db_etc.yml"} {
 		var doc struct {
 			Body []itemEntry `yaml:"Body"`
@@ -221,13 +230,52 @@ func Load(dir string) (*DB, error) {
 			return nil, err
 		}
 		for _, e := range doc.Body {
+			aegis[e.AegisName] = e.ID
 			if f == "item_db_etc.yml" && e.Type != "Card" {
 				continue // only cards matter from the etc table
 			}
 			db.Items[e.ID] = e.item()
 		}
 	}
+	if err := db.loadCombos(filepath.Join(re, "item_combos.yml"), aegis); err != nil {
+		return nil, err
+	}
 	return db, nil
+}
+
+// loadCombos reads item_combos.yml (optional: older downloads lack it).
+func (db *DB) loadCombos(path string, aegis map[string]int) error {
+	if _, err := os.Stat(path); err != nil {
+		return nil
+	}
+	var doc struct {
+		Body []struct {
+			Combos []struct {
+				Combo []string `yaml:"Combo"`
+			} `yaml:"Combos"`
+			Script string `yaml:"Script"`
+		} `yaml:"Body"`
+	}
+	if err := readYAML(path, &doc); err != nil {
+		return err
+	}
+	for _, e := range doc.Body {
+		for _, set := range e.Combos {
+			ids := make([]int, 0, len(set.Combo))
+			for _, name := range set.Combo {
+				id, ok := aegis[name]
+				if !ok {
+					ids = nil // an item this database doesn't have
+					break
+				}
+				ids = append(ids, id)
+			}
+			if len(ids) > 1 {
+				db.Combos = append(db.Combos, Combo{Items: ids, Script: e.Script})
+			}
+		}
+	}
+	return nil
 }
 
 func readYAML(path string, v any) error {
@@ -320,6 +368,7 @@ func (e *jobEntry) apply(j *Job) {
 
 type itemEntry struct {
 	ID            int             `yaml:"Id"`
+	AegisName     string          `yaml:"AegisName"`
 	Name          string          `yaml:"Name"`
 	Type          string          `yaml:"Type"`
 	SubType       string          `yaml:"SubType"`

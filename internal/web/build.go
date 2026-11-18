@@ -85,6 +85,7 @@ type buildView struct {
 	Shadow   []slotView
 	Bonuses  []bonusLine
 	Extras   []bonusLine
+	Combos   []string // active item combos ("A + B")
 	HPPct    int
 	SPPct    int
 	Notes    []string // items removed by normalization (shown in the chat)
@@ -169,6 +170,15 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 	sort.Strings(keys)
 	for _, k := range keys {
 		v.Extras = append(v.Extras, bonusLine{Label: extraLabel(k, c, l), Value: signed(r.Extra[k], k)})
+	}
+	for _, set := range r.Combos {
+		names := make([]string, 0, len(set))
+		for _, id := range set {
+			if it := c.Items[id]; it != nil {
+				names = append(names, it.Name.Get(l))
+			}
+		}
+		v.Combos = append(v.Combos, strings.Join(names, " + "))
 	}
 	v.HPPct, v.SPPct = 100, 100
 	v.D = s.damageView(b, r, l)

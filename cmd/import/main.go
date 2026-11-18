@@ -32,6 +32,8 @@ func main() {
 		jobs, items := clientimport.MergeRathena(c, db)
 		fmt.Printf("rAthena: %d jobs with stat tables, %d items with equipment data\n", jobs, items)
 	}
+	scripts, combos := clientimport.DescBonuses(c)
+	fmt.Printf("descriptions: %d items without rAthena script read from the client text, %d combos\n", scripts, combos)
 	if err := c.Save(*out); err != nil {
 		fmt.Fprintln(os.Stderr, "save:", err)
 		os.Exit(1)

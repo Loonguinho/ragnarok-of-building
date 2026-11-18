@@ -307,7 +307,8 @@
 {{else}}
 <em>Nenhum equipamento com bônus.</em>
 {{end}}
-{{if .R.SkippedScriptEffects}}<div class="ro-note">{{.R.SkippedScriptEffects}} efeito(s) de equipamento ainda não simulado(s) (procs, combos, habilidades concedidas).</div>{{end}}
+{{if .Combos}}<div class="ro-combos"><h4>Combos ativos</h4>{{range .Combos}}<div class="ro-bonus"><span>{{.}}</span></div>{{end}}</div>{{end}}
+{{if .R.SkippedScriptEffects}}<div class="ro-note">{{.R.SkippedScriptEffects}} efeito(s) de equipamento ainda não simulado(s) (procs, habilidades concedidas, efeitos condicionais).</div>{{end}}
 {{end}}
 
 {{define "pick_results"}}

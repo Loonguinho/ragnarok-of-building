@@ -552,7 +552,7 @@ var known = map[string]bool{
 	"bCritical": true, "bCriticalRate": true, "bDef": true, "bDefRate": true, "bDef2": true, "bDef2Rate": true,
 	"bMdef": true, "bMdefRate": true, "bMdef2": true, "bMdef2Rate": true,
 	"bAspd": true, "bAspdRate": true, "bLongAtkRate": true, "bShortAtkRate": true, "bCritAtkRate": true,
-	"bNonCritAtkRate": true, "bPerfectHitRate": true,
+	"bNonCritAtkRate": true, "bPerfectHitRate": true, "bPerfectHitAddRate": true, "bHealPower": true, "bHealPower2": true,
 	"bPAtk": true, "bSMatk": true, "bRes": true, "bMRes": true, "bHPlus": true, "bCRate": true,
 	"bVariableCastrate": true, "bFixedCastrate": true, "bFixedCast": true, "bDelayrate": true,
 	"bHPrecovRate": true, "bSPrecovRate": true, "bUseSPrate": true, "bSpeedRate": true, "bSpeedAddRate": true,

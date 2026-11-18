@@ -123,8 +123,9 @@ type Result struct {
 	OtherEquipATK    int // armor ATK, bAtk, shadow weapon
 	WeaponLv         int
 	WeaponRefine     int
-	WeaponWeight     int // tenths
-	ShieldWeight     int // tenths; 0 without a shield
+	WeaponWeight     int     // tenths
+	ShieldWeight     int     // tenths; 0 without a shield
+	Combos           [][]int // item sets whose combo bonus is active
 	ShieldRefine     int
 	Ranged           bool
 	CritTenths       int    // CRIT in 1/10 % (rAthena cri), for crit chance
@@ -452,18 +453,18 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			shield = true
 			r.ShieldWeight, r.ShieldRefine = it.Weight, e.Refine
 		}
-		if seen[e.Item] && len(it.Locations) > 1 {
+		if seen[e.Item] && multiHead(it) {
 			continue
 		}
 		seen[e.Item] = true
 		ctx := script.Context{Refine: e.Refine, BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs}
-		res := script.Eval(it.Script, ctx)
+		res := script.Eval(itemScript(it, &r.SkippedScriptEffects), ctx)
 		addAll(bonus, res.Bonus)
 		addAll(extra, res.Extra)
 		r.SkippedScriptEffects += res.Skipped
 		for _, cd := range e.Cards {
 			if ci := c.Items[cd]; cd > 0 && ci != nil {
-				cr := script.Eval(ci.Script, script.Context{BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs})
+				cr := script.Eval(itemScript(ci, &r.SkippedScriptEffects), script.Context{BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs})
 				addAll(bonus, cr.Bonus)
 				addAll(extra, cr.Extra)
 				r.SkippedScriptEffects += cr.Skipped
@@ -493,6 +494,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			r.OtherEquipATK += it.Attack
 		}
 	}
+	r.Combos = applyCombos(c, &b, param, equipIDs, bonus, extra, &r.SkippedScriptEffects)
 	LatamPassives(b, c, r.WeaponType, bonus) // class passives (e.g. War Book Mastery)
 	r.Bonuses = bonus
 	r.Extra = extra

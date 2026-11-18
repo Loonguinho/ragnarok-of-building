@@ -82,6 +82,18 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 			it.Slots = ri.Slots
 		}
 	}
+	for _, cb := range db.Combos {
+		ok := true
+		for _, id := range cb.Items {
+			if c.Items[id] == nil {
+				ok = false // an item the LATAM client doesn't have
+				break
+			}
+		}
+		if ok {
+			c.Combos = append(c.Combos, gamedata.Combo{Items: cb.Items, Script: cb.Script})
+		}
+	}
 	return jobs, items
 }
 

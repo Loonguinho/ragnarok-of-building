@@ -312,7 +312,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		d.Notes = append(d.Notes, fmt.Sprintf("O elemento %s não causa dano em %s %d.", ele, m.Element, m.ElementLv))
 	}
 	if r.SkippedScriptEffects > 0 {
-		d.Notes = append(d.Notes, "Efeitos de equipamento não simulados (procs, combos) não entram no dano.")
+		d.Notes = append(d.Notes, "Efeitos de equipamento não simulados (procs, efeitos condicionais) não entram no dano.")
 	}
 	return d
 }

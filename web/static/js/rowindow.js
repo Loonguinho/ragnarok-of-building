@@ -108,42 +108,69 @@ document.addEventListener("keyup", (e) => {
 });
 
 // Classic RO menu click on buttons. The sound comes from the player's own
-// client (the server only has it after the import). A plain <audio> copy
-// per click plays on the click itself (the gesture browsers require) and
-// lets quick clicks overlap. Links that leave the page wait a moment so the
-// click is heard before the page changes, like the game's menus. Muted with
-// the toggle on the home screen (remembered in this browser).
+// client (the server only has it after the import).
+//
+// It plays through one Web Audio context that stays open for the whole
+// page, like a game does: playing each click as its own <audio> made the
+// system open and close an output stream per click, and some devices
+// (Bluetooth headsets, power-saving sound cards) lost the end of the sound
+// when the stream closed. Links that leave the page wait half a second so
+// the click is heard. Muted with the toggle on the home screen.
 (() => {
   const src = document.body && document.body.dataset.clickSound;
   if (!src) return;
   const KEY = "ro.sound";
+  const VOLUME = 0.6;
   const isOn = () => { try { return localStorage.getItem(KEY) !== "off"; } catch { return true; } };
   const CLICKABLE = ".ro-btn, .ro-window__close, .ro-homemenu__item, .ro-charslot, .ro-jobcard, .ro-eslot, [data-equip-tab], [data-tab], .ro-list__item, .ro-plus";
-  const base = new Audio(src);
-  base.preload = "auto";
   // For troubleshooting in the console: ROClick
-  window.ROClick = { clicks: 0, played: 0, ended: 0, muted: !isOn(), failed: "", last: "" };
-  const VOLUME = 0.6;
-  function play() {
-    window.ROClick.muted = !isOn();
-    if (!isOn()) return null;
-    const a = base.cloneNode();
-    a.volume = VOLUME;
-    a.addEventListener("ended", () => { window.ROClick.ended++; });
-    const p = a.play();
-    if (p) p.then(() => { window.ROClick.played++; }, (err) => { window.ROClick.failed = String(err); });
-    return a;
+  const info = window.ROClick = { clicks: 0, played: 0, ended: 0, muted: !isOn(), failed: "", last: "", engine: "" };
+
+  const raw = fetch(src).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null);
+  let ctx = null, buf = null, decoding = null;
+  // Browsers only let audio start from a user gesture: open (or wake) the
+  // context inside the event handler itself.
+  function wake() {
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ctx = new AC();
+    }
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
   }
-  // Fade a playing click out (instead of the page change cutting it dead).
-  function fadeOut(a, ms, done) {
-    if (!a) { done(); return; }
-    const steps = 6;
-    let i = 0;
-    const t = setInterval(() => {
-      i++;
-      a.volume = Math.max(0, VOLUME * (1 - i / steps));
-      if (i >= steps) { clearInterval(t); done(); }
-    }, ms / steps);
+  function buffer() {
+    if (buf) return Promise.resolve(buf);
+    if (!decoding) decoding = raw.then((b) => (b ? ctx.decodeAudioData(b.slice(0)) : null)).then((d) => (buf = d));
+    return decoding;
+  }
+  let lastGain = null;
+  function play() {
+    info.muted = !isOn();
+    if (!isOn()) return false;
+    const c = wake();
+    if (!c) { // no Web Audio: plain element
+      info.engine = "audio";
+      const a = new Audio(src);
+      a.volume = VOLUME;
+      a.addEventListener("ended", () => { info.ended++; });
+      a.play().then(() => { info.played++; }, (err) => { info.failed = String(err); });
+      return true;
+    }
+    info.engine = "webaudio";
+    buffer().then((b) => {
+      if (!b) { info.failed = "sound not loaded"; return; }
+      const node = c.createBufferSource();
+      const gain = c.createGain();
+      gain.gain.value = VOLUME;
+      node.buffer = b;
+      node.connect(gain).connect(c.destination);
+      node.onended = () => { info.ended++; };
+      node.start();
+      lastGain = gain;
+      info.played++;
+    }).catch((err) => { info.failed = String(err); });
+    return true;
   }
   // A plain left click on a link to another page of the site.
   function leavingLink(el, e) {
@@ -154,17 +181,22 @@ document.addEventListener("keyup", (e) => {
     const url = new URL(a.href, location.href);
     return url.origin === location.origin ? url : null;
   }
+  // Wake the context on the first press, so the first click isn't late.
+  document.addEventListener("pointerdown", () => { if (isOn()) wake(); }, { capture: true, once: true });
   document.addEventListener("click", (e) => {
     const el = e.target.closest(CLICKABLE);
     if (!el || el.disabled || el.matches("[data-sound-toggle]")) return;
-    window.ROClick.clicks++;
-    window.ROClick.last = (el.textContent || el.className).trim().slice(0, 40);
-    const a = play();
-    const url = a && !e.defaultPrevented ? leavingLink(el, e) : null;
+    info.clicks++;
+    info.last = (el.textContent || el.className).trim().slice(0, 40);
+    const played = play();
+    const url = played && !e.defaultPrevented ? leavingLink(el, e) : null;
     if (url) {
       // Let the click sound for half a second (fading out at the end), then go.
       e.preventDefault();
-      setTimeout(() => fadeOut(a, 100, () => { location.href = url.href; }), 400);
+      setTimeout(() => {
+        if (lastGain && ctx) lastGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.1);
+        setTimeout(() => { location.href = url.href; }, 100);
+      }, 400);
     }
   }, true);
   // Toggle (home screen).

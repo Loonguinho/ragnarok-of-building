@@ -1,0 +1,78 @@
+# Simulador × bROWiki
+
+Iguais: 200 · diferença conferida: 17 · diferentes: 0 · sem fórmula no simulador: 3 · sem dados no wiki: 40
+
+## Diferentes (wiki, simulador) por nível
+
+
+## Diferença conferida (o simulador mantém o seu valor)
+
+- **Flamen** (CD_FRAMEN): erro na tabela do wiki (contradiz a fórmula da própria página): Nv4-5 da coluna Normal repetem a coluna Bônus
+- **Aura Draconiana** (DK_DRAGONIC_AURA): tabela do wiki anterior ao cliente de 28/10/2026; vale o rebalanceamento medido pelo latam-ro-calc (tabela de 06/2026)
+- **Retaliação** (GC_COUNTERSLASH): a tabela lista o dano base sem o ÷120 da fórmula; a fórmula bate
+- **Rajada Certeira** (GS_RAPIDSHOWER): erro na tabela do wiki (contradiz a fórmula da própria página) (Nv9)
+- **Lâminas Devastadoras** (HN_MEGA_SONIC_BLOW): erro na tabela do wiki (contradiz a fórmula da própria página) (Nv6)
+- **Turbilhão de Kunais** (KO_HAPPOKUNAI): tabela do wiki anterior ao cliente de 28/10/2026; vale o rebalanceamento medido pelo latam-ro-calc (tabela de 2024)
+- **Toque do Oblívio** (LG_BANISHINGPOINT): tabela do wiki anterior ao cliente de 28/10/2026; vale o rebalanceamento medido pelo latam-ro-calc (tabela de 06/2026)
+- **Luz da Criação** (LG_RAYOFGENESIS): tabela do wiki anterior ao cliente de 28/10/2026; vale o rebalanceamento medido pelo latam-ro-calc (tabela de 06/2026)
+- **Arremesso de Machado** (NC_AXEBOOMERANG): depende do peso do machado (a comparação roda sem arma); a fórmula bate
+- **Eclipse Lunar** (SJ_NEWMOONKICK): tabela do wiki anterior ao cliente de 28/10/2026; vale o rebalanceamento medido pelo latam-ro-calc (tabela de 2022)
+- **Espa** (SP_SPA): erro na tabela do wiki (contradiz a fórmula da própria página) (Nv7)
+- **Eswhoo** (SP_SWHOO): tabela do wiki anterior ao cliente de 28/10/2026; vale o rebalanceamento medido pelo latam-ro-calc (tabela de 2024)
+- **Punho do Dragão** (SR_DRAGONCOMBO): erro na tabela do wiki (contradiz a fórmula da própria página) (Nv4-6)
+- **Mahou da Escuridão** (SS_ANTENPOU): erro na tabela do wiki (contradiz a fórmula da própria página) (Nv3)
+- **Corrente Elétrica** (WL_CHAINLIGHTNING): tabela do wiki anterior ao cliente de 28/10/2026; vale o rebalanceamento medido pelo latam-ro-calc (tabela de 2019); o simulador soma o bônus das correntes
+- **Zero Absoluto** (WL_FROSTMISTY): a 1ª coluna não é o ATQM; a fórmula por cristal bate
+- **Chamas de Hela** (WL_HELLINFERNO): erro na tabela do wiki (contradiz a fórmula da própria página) (Nv5)
+
+## Sem fórmula no simulador
+
+- **Tornado de Carrinho** (GN_CART_TORNADO): Nv1: 200, Nv2: 400, Nv3: 600, Nv4: 800, Nv5: 1000, Nv6: 1200, Nv7: 1400, Nv8: 1600, Nv9: 1800, Nv10: 2000
+  - `Dano = {Dano base + [Peso atual do Carrinho ÷ (150 - FOR base)] + (Nv. de Aprimorar Carrinho × 50)}%`
+- **Cortar em Espiral** (HN_SPIRAL_PIERCE_MAX): Nv1: 900, Nv2: 1250, Nv3: 1600, Nv4: 1950, Nv5: 2300, Nv6: 2650, Nv7: 3000, Nv8: 3350, Nv9: 3700, Nv10: 4050
+  - `Dano = {[Dano base + (Nv. Físico Autodidata × Fator)] × Tamanho + (POD × 3)} × (Nv. de base ÷ 100)`
+- **Ruína** (SR_FALLENEMPIRE): Nv1: 400, Nv2: 700, Nv3: 1000, Nv4: 1300, Nv5: 1600, Nv6: 1900, Nv7: 2200, Nv8: 2500, Nv9: 2800, Nv10: 3100
+  - `ATQ = [Dano base × (Nv. de base ÷ 100)] + (FOR × 100)]%`
+
+## Sem dados comparáveis no wiki
+
+- ABC_FROM_THE_ABYSS: Invocação do Abismo: tabela sem % por nível
+- AG_ALL_BLOOM: Florescer: tabela sem % por nível
+- AG_VIOLENT_QUAKE: Pilares de Pedra: tabela sem % por nível
+- AL_HOLYLIGHT: Luz Divina: tabela sem % por nível
+- CD_PNEUMATICUS_PROCELLA: sem página
+- DK_SERVANTWEAPON: Espada Alada: tabela sem % por nível
+- IQ_THIRD_FLAME_BOMB: Fogueira Espiritual: tabela sem % por nível
+- KO_BAKURETSU: Kunai Explosiva: tabela sem % por nível
+- MG_COLDBOLT: Lanças de Gelo: tabela sem % por nível
+- MG_FIREBOLT: Lanças de Fogo: tabela sem % por nível
+- MG_LIGHTNINGBOLT: Relâmpago: tabela sem % por nível
+- MO_EXTREMITYFIST: Punho Supremo de Asura: tabela sem % por nível
+- NJ_HUUJIN: Lâmina de Vento: tabela sem % por nível
+- NJ_HYOUSENSOU: Lança Congelante: tabela sem % por nível
+- NJ_KOUENKA: Pétalas Flamejantes: tabela sem % por nível
+- NW_THE_VIGILANTE_AT_NIGHT: Vigília Noturna: tabela sem % por nível
+- PR_MAGNUS: Magnus Exorcismus: tabela sem % por nível
+- RK_DRAGONBREATH: Sopro do Dragão: tabela sem % por nível
+- RK_DRAGONBREATH_WATER: Bafo do Dragão: tabela sem % por nível
+- SC_FEINTBOMB: Cópia Explosiva: tabela sem % por nível
+- SJ_FALLINGSTAR: Chuva Estelar: tabela sem % por nível
+- SOA_CIRCLE_OF_DIRECTIONS_AND_ELEMENTALS: sem página
+- SOA_EXORCISM_OF_MALICIOUS_SOUL: sem página
+- SOA_TALISMAN_OF_BLACK_TORTOISE: sem página
+- SOA_TALISMAN_OF_BLUE_DRAGON: sem página
+- SOA_TALISMAN_OF_FOUR_BEARING_GOD: sem página
+- SOA_TALISMAN_OF_RED_PHOENIX: sem página
+- SOA_TALISMAN_OF_SOUL_STEALING: sem página
+- SO_DIAMONDDUST: Pó de Diamante: tabela sem % por nível
+- SO_EARTHGRAVE: Castigo de Nerthus: tabela sem % por nível
+- SO_VARETYR_SPEAR: Lanças dos Aesir: tabela sem % por nível
+- SR_FLASHCOMBO: Combo Rápido: tabela sem % por nível
+- SS_ANKOKURYUUAKUMU: Mahou do Pesadelo: tabela sem % por nível
+- SS_HITOUAKUMU: Kunai do Pesadelo: tabela sem % por nível
+- SS_KAGEAKUMU: Pesadelo das Trevas: tabela sem % por nível
+- SU_SV_STEMSPEAR: Lança Gateira: tabela sem % por nível
+- TF_HIDING: Esconderijo: tabela sem % por nível
+- TR_SOUNDBLEND: Arranjo Musical: tabela sem % por nível
+- WH_CRESCIVE_BOLT: Tiro Crescente: tabela sem % por nível
+- WZ_METEOR: Chuva de Meteoros: tabela sem % por nível

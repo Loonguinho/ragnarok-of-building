@@ -87,7 +87,7 @@
     <select class="ro-select" data-atk="ele">{{range .Elements}}<option value="{{index . 0}}"{{if eq (index . 0) $.D.Atk.Element}} selected{{end}}>{{index . 1}}</option>{{end}}</select>
   </label>
 </div>
-{{if or .States .StackMax}}
+{{if or .States .StackMax .Variants}}
 <div class="ro-dmg__atk ro-dmg__states">
   {{range $st := .States}}
     {{if $st.Choices}}<label>{{$st.Label}}
@@ -95,10 +95,11 @@
     </label>
     {{else}}<label><input type="checkbox" data-atk-state="{{$st.Key}}"{{if $st.Value}} checked{{end}}> {{$st.Label}}</label>{{end}}
   {{end}}
+  {{if .Variants}}{{$cur := .Variant}}<label>Dano <select class="ro-select" data-atk="variant">{{range $i, $n := .Variants}}<option value="{{$i}}"{{if eq $i $cur}} selected{{end}}>{{$n}}</option>{{end}}</select></label>{{end}}
   {{if .StackMax}}<label>Acúmulos <input class="ro-input ro-num ro-num--sm" type="number" min="1" max="{{.StackMax}}" value="{{.Stack}}" data-atk="stack"></label>{{end}}
 </div>
 {{end}}
-<div class="ro-dmg__src">% {{if eq .RatioSource "fórmula LATAM"}}<b class="ro-latam">fórmula LATAM</b> (nível base, POW, maestrias e estados){{else if eq .RatioSource "descrição"}}lido da descrição da habilidade{{else if eq .RatioSource "não encontrado"}}<b class="is-bad">não está na descrição: digite o % da habilidade</b>{{else if eq .RatioSource "manual"}}informado manualmente <button class="ro-btn ro-btn--sm" data-atk-auto>Usar automático</button>{{else}}de ataque básico{{end}}{{if gt .Hits 1}} · {{.Hits}} golpes{{end}}</div>
+<div class="ro-dmg__src">% {{if eq .RatioSource "fórmula LATAM"}}<b class="ro-latam">fórmula LATAM</b> (nível base, POW, maestrias e estados){{else if eq .RatioSource "fórmula bROWiki"}}<b class="ro-latam">fórmula LATAM</b> (corrigida pelo bROWiki){{else if eq .RatioSource "descrição"}}lido da descrição da habilidade{{else if eq .RatioSource "não encontrado"}}<b class="is-bad">não está na descrição: digite o % da habilidade</b>{{else if eq .RatioSource "manual"}}informado manualmente <button class="ro-btn ro-btn--sm" data-atk-auto>Usar automático</button>{{else}}de ataque básico{{end}}{{if gt .Hits 1}} · {{.Hits}} golpes{{end}}</div>
 {{if .Target}}
 <div class="ro-target">
   <div class="ro-target__head">

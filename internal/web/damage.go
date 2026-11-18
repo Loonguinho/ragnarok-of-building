@@ -24,6 +24,8 @@ type damageView struct {
 	Hits        int
 	ElementName string
 	States      []stateView
+	Variants    []string // labels when the skill has several damage lines
+	Variant     int
 	StackMax    int // > 0 when the skill uses stacks
 	Stack       int
 }
@@ -84,6 +86,13 @@ func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
 	var formula *calc.SkillFormula
 	if sk != nil {
 		formula = calc.FormulaFor(c, b.Job, sk.Code)
+		if vs := formula.Variants(); len(vs) > 1 {
+			for _, f := range vs {
+				v.Variants = append(v.Variants, f.Variant)
+			}
+			v.Variant = min(max(b.Atk.Variant, 0), len(vs)-1)
+			formula = formula.Pick(v.Variant)
+		}
 	}
 	in := calc.FormulaInput{
 		Lv: b.Atk.Level, BaseLv: b.BaseLv, Stats: r.FinalStats(), Traits: r.FinalTraits(),
@@ -91,6 +100,7 @@ func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
 		WeaponWt: r.WeaponWeight, MaxHP: r.HP, MaxSP: r.SP, States: b.Atk.States, Stack: b.Atk.Stack,
 		JobLv: b.JobLv, HIT: r.HIT, FLEE: r.FLEE, CRIT: r.CRIT, ASPD: r.ASPD,
 		WeaponRefine: r.WeaponRefine, WeaponATK: r.WeaponATK,
+		ShieldWt: r.ShieldWeight, ShieldRefine: r.ShieldRefine,
 	}
 	atk := calc.Attack{Hits: b.Atk.Hits, Element: b.Atk.Element}
 	if sk != nil {
@@ -104,6 +114,9 @@ func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
 	case formula != nil:
 		atk.Formula, atk.Input = formula, in
 		v.Ratio, v.RatioSource = int(formula.Ratio(in)), "fórmula LATAM"
+		if formula.Source != "" {
+			v.RatioSource = "fórmula " + formula.Source
+		}
 		if formula.Hits != nil {
 			v.Hits = max(1, formula.Hits(in))
 		}

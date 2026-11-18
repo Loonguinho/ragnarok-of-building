@@ -90,6 +90,8 @@ type AttackChoice struct {
 	// Class states for LATAM formulas (e.g. Celestial Space) and stacks.
 	States map[string]int `json:"st,omitempty"`
 	Stack  int            `json:"sk,omitempty"`
+	// Variant of skills with several damage lines (0 = first).
+	Variant int `json:"v,omitempty"`
 }
 
 // Elements an attack can be forced to (endows, elemental skills).
@@ -122,6 +124,8 @@ type Result struct {
 	WeaponLv         int
 	WeaponRefine     int
 	WeaponWeight     int // tenths
+	ShieldWeight     int // tenths; 0 without a shield
+	ShieldRefine     int
 	Ranged           bool
 	CritTenths       int    // CRIT in 1/10 % (rAthena cri), for crit chance
 	st, tr           [6]int // final stats/traits (for the damage formula)
@@ -446,6 +450,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		}
 		if slot == Shield && it.Type == "Armor" {
 			shield = true
+			r.ShieldWeight, r.ShieldRefine = it.Weight, e.Refine
 		}
 		if seen[e.Item] && len(it.Locations) > 1 {
 			continue

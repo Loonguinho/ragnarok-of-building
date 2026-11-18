@@ -65,6 +65,7 @@ func init() {
 		Code:       "ABC_FRENZY_SHOT",
 		Name:       "Frenzy Shot",
 		Rebalanced: true,
+		Variant:    "1 hit",
 		Ratio: func(in FormulaInput) float64 {
 			return (((0 + (float64(in.Lv) * 400)) + (in.T(CON) * 5)) * float64(in.BaseLv) / 100)
 		},
@@ -93,6 +94,7 @@ func init() {
 		Code:       "ABC_ABYSS_SQUARE",
 		Name:       "Abyss Square",
 		Rebalanced: true,
+		Variant:    "อยู่นอกพื้นที่สกิล",
 		Ratio: func(in FormulaInput) float64 {
 			return (((float64(in.Lv) * (570 + (float64(in.LearnName("Magic Sword Mastery")) * 20))) + (in.T(SPL) * 5)) * float64(in.BaseLv) / 100)
 		},
@@ -163,8 +165,9 @@ func init() {
 		Element: "Holy",
 	})
 	regJob("JT_ARCHBISHOP", &SkillFormula{
-		Code: "AB_ADORAMUS",
-		Name: "Adoramus",
+		Code:    "AB_ADORAMUS",
+		Name:    "Adoramus",
+		Variant: "In Ancilla",
 		Ratio: func(in FormulaInput) float64 {
 			v_skillLevel := float64(float64(in.Lv))
 			_ = v_skillLevel
@@ -176,8 +179,9 @@ func init() {
 		Element: "Neutral",
 	})
 	regJob("JT_ARCHBISHOP_H", &SkillFormula{
-		Code: "AB_ADORAMUS",
-		Name: "Adoramus",
+		Code:    "AB_ADORAMUS",
+		Name:    "Adoramus",
+		Variant: "In Ancilla",
 		Ratio: func(in FormulaInput) float64 {
 			v_skillLevel := float64(float64(in.Lv))
 			_ = v_skillLevel
@@ -920,8 +924,9 @@ func init() {
 		},
 	})
 	regJob("JT_HYPER_NOVICE", &SkillFormula{
-		Code: "HN_METEOR_STORM_BUSTER",
-		Name: "Meteor Storm Buster",
+		Code:    "HN_METEOR_STORM_BUSTER",
+		Name:    "Meteor Storm Buster",
+		Variant: "Queda",
 		Ratio: func(in FormulaInput) float64 {
 			v_skillLevel := float64(float64(in.Lv))
 			_ = v_skillLevel
@@ -934,8 +939,9 @@ func init() {
 		Partial: "damageRepeat",
 	})
 	regJob("JT_HYPER_NOVICE", &SkillFormula{
-		Code: "HN_METEOR_STORM_BUSTER",
-		Name: "Meteor Storm Buster",
+		Code:    "HN_METEOR_STORM_BUSTER",
+		Name:    "Meteor Storm Buster",
+		Variant: "Explosão",
 		Ratio: func(in FormulaInput) float64 {
 			v_skillLevel := float64(float64(in.Lv))
 			_ = v_skillLevel
@@ -984,8 +990,9 @@ func init() {
 		Element: "Earth",
 	})
 	regJob("JT_HYPER_NOVICE", &SkillFormula{
-		Code: "HN_JACK_FROST_NOVA",
-		Name: "Jack Frost Nova",
+		Code:    "HN_JACK_FROST_NOVA",
+		Name:    "Jack Frost Nova",
+		Variant: "Explosão",
 		Ratio: func(in FormulaInput) float64 {
 			v_skillLevel := float64(float64(in.Lv))
 			_ = v_skillLevel
@@ -998,8 +1005,9 @@ func init() {
 		Hits:    constHits(4),
 	})
 	regJob("JT_HYPER_NOVICE", &SkillFormula{
-		Code: "HN_JACK_FROST_NOVA",
-		Name: "Jack Frost Nova",
+		Code:    "HN_JACK_FROST_NOVA",
+		Name:    "Jack Frost Nova",
+		Variant: "Inicial",
 		Ratio: func(in FormulaInput) float64 {
 			v_skillLevel := float64(float64(in.Lv))
 			_ = v_skillLevel
@@ -1014,6 +1022,7 @@ func init() {
 		Code:       "HN_GROUND_GRAVITATION",
 		Name:       "Ground Gravitation",
 		Rebalanced: true,
+		Variant:    "Contínuo",
 		Ratio: func(in FormulaInput) float64 {
 			return genRebalance_hyper(in, ((800 + (float64(in.Lv) * (700 + (float64(in.LearnName("Self Study Sorcery")) * 4)))) + (in.T(SPL) * 2)), true, 1.5, 1, 0)
 		},
@@ -1025,6 +1034,7 @@ func init() {
 		Code:       "HN_GROUND_GRAVITATION",
 		Name:       "Ground Gravitation",
 		Rebalanced: true,
+		Variant:    "Inicial",
 		Ratio: func(in FormulaInput) float64 {
 			return genRebalance_hyper(in, ((800 + (float64(in.Lv) * (700 + (float64(in.LearnName("Self Study Sorcery")) * 4)))) + (in.T(SPL) * 2)), true, 1.5, 1, 0)
 		},
@@ -1036,6 +1046,7 @@ func init() {
 		Code:       "IG_OVERSLASH",
 		Name:       "Overslash",
 		Rebalanced: true,
+		Variant:    "1 hit",
 		Ratio: func(in FormulaInput) float64 {
 			return (((float64(in.Lv) * (120 + (float64(in.LearnName("Spear & Sword Mastery")) * 10))) + (in.T(POW) * 5)) * float64(in.BaseLv) / 100)
 		},
@@ -1539,8 +1550,9 @@ func init() {
 		Hits:    constHits(12),
 	})
 	regJob("JT_NINJA", &SkillFormula{
-		Code: "NJ_HYOUSENSOU",
-		Name: "Freezing Spear",
+		Code:    "NJ_HYOUSENSOU",
+		Name:    "Freezing Spear",
+		Variant: "em Evasão Aquática",
 		Ratio: func(in FormulaInput) float64 {
 			v_skillLevel := float64(float64(in.Lv))
 			_ = v_skillLevel
@@ -2776,6 +2788,7 @@ func init() {
 		Code:       "SKE_TWINKLING_GALAXY",
 		Name:       "Twinkling Galaxy",
 		Rebalanced: true,
+		Variant:    "1 estrela",
 		Ratio: func(in FormulaInput) float64 {
 			return genRebalance_celestial(in, 200, 400, 3, 3)
 		},
@@ -2787,6 +2800,7 @@ func init() {
 		Code:       "SKE_STAR_BURST",
 		Name:       "Star Burst",
 		Rebalanced: true,
+		Variant:    "1 estrela",
 		Ratio: func(in FormulaInput) float64 {
 			return genRebalance_celestial(in, 500, 400, 5, 3)
 		},
@@ -2798,6 +2812,7 @@ func init() {
 		Code:       "SKE_STAR_CANNON",
 		Name:       "Star Cannon",
 		Rebalanced: true,
+		Variant:    "1 estrela",
 		Ratio: func(in FormulaInput) float64 {
 			return genRebalance_celestial(in, 200, 500, 5, 5)
 		},
@@ -3717,8 +3732,9 @@ func init() {
 		Partial: "finalDmgFormula, currentHpFn, currentSpFn",
 	})
 	regJob("JT_SURA", &SkillFormula{
-		Code: "SR_GATEOFHELL",
-		Name: "Hell Gate",
+		Code:    "SR_GATEOFHELL",
+		Name:    "Hell Gate",
+		Variant: "após Ruína",
 		Ratio: func(in FormulaInput) float64 {
 			v_skillLevel := float64(float64(in.Lv))
 			_ = v_skillLevel
@@ -3729,8 +3745,9 @@ func init() {
 		Partial: "finalDmgFormula, currentHpFn, currentSpFn",
 	})
 	regJob("JT_SURA_H", &SkillFormula{
-		Code: "SR_GATEOFHELL",
-		Name: "Hell Gate",
+		Code:    "SR_GATEOFHELL",
+		Name:    "Hell Gate",
+		Variant: "após Ruína",
 		Ratio: func(in FormulaInput) float64 {
 			v_skillLevel := float64(float64(in.Lv))
 			_ = v_skillLevel
@@ -3926,8 +3943,9 @@ func init() {
 		Element: "Fire",
 	})
 	regJob("JT_WARLOCK", &SkillFormula{
-		Code: "WL_JACKFROST",
-		Name: "Jack Frost",
+		Code:    "WL_JACKFROST",
+		Name:    "Jack Frost",
+		Variant: "Normal",
 		Ratio: func(in FormulaInput) float64 {
 			v_skillLevel := float64(float64(in.Lv))
 			_ = v_skillLevel
@@ -3939,8 +3957,9 @@ func init() {
 		Element: "Water",
 	})
 	regJob("JT_WARLOCK_H", &SkillFormula{
-		Code: "WL_JACKFROST",
-		Name: "Jack Frost",
+		Code:    "WL_JACKFROST",
+		Name:    "Jack Frost",
+		Variant: "Normal",
 		Ratio: func(in FormulaInput) float64 {
 			v_skillLevel := float64(float64(in.Lv))
 			_ = v_skillLevel
@@ -3952,8 +3971,9 @@ func init() {
 		Element: "Water",
 	})
 	regJob("JT_WARLOCK", &SkillFormula{
-		Code: "WL_JACKFROST",
-		Name: "Jack Frost",
+		Code:    "WL_JACKFROST",
+		Name:    "Jack Frost",
+		Variant: "Calafrio",
 		Ratio: func(in FormulaInput) float64 {
 			v_skillLevel := float64(float64(in.Lv))
 			_ = v_skillLevel
@@ -3965,8 +3985,9 @@ func init() {
 		Element: "Water",
 	})
 	regJob("JT_WARLOCK_H", &SkillFormula{
-		Code: "WL_JACKFROST",
-		Name: "Jack Frost",
+		Code:    "WL_JACKFROST",
+		Name:    "Jack Frost",
+		Variant: "Calafrio",
 		Ratio: func(in FormulaInput) float64 {
 			v_skillLevel := float64(float64(in.Lv))
 			_ = v_skillLevel

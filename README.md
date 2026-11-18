@@ -45,6 +45,14 @@ python -I tools/latamgen/latamgen.py      # writes internal/calc/latam_gen.go + 
 go test ./internal/calc
 ```
 
+### Checking formulas against bROWiki
+
+```powershell
+python -I tools/browiki/fetch.py                                   # fetches missing pages only
+$env:DUMP_RATIOS="tmp/ours.json"; go test -run TestDumpRatios ./internal/calc
+python -I tools/browiki/compare.py tmp/ours.json                   # writes tools/browiki/COMPARE.md
+```
+
 ### Data tools
 
 ```powershell
@@ -72,6 +80,7 @@ The full design doc is in `docs/design.md`.
 ## Credits
 
 - **[latam-ro-calc](https://github.com/adsonpleal/latam-ro-calc)** by Adson Leal (MIT): the LATAM skill formulas (all classes, including the 2022 rebalance LATAM uses since the 28/10/2026 client) are translated to Go by `tools/latamgen` into `internal/calc/latam_gen.go`; the physical/magic pipeline adjustments in `damage.go`/`magic.go` follow its measurements against real LATAM recordings. Coverage: `tools/latamgen/REPORT.md`.
+- **[bROWiki](https://browiki.org)**: skill pages are read through its MediaWiki API (1 request/second, cached in `data/browiki/`, not committed) to check every formula against the per-level tables of the current LATAM server. Where a table was rewritten for the 28/10/2026 client and disagrees, or a skill has no latam-ro-calc formula, `internal/calc/latam_wiki.go` follows the wiki. Report: `tools/browiki/COMPARE.md`.
 - **[rrfparser](https://github.com/adsonpleal/rrfparser)** by Adson Leal (MIT): format reference for the `.rrf` replay reader in `internal/replay` (independent Go implementation).
 - **[rAthena](https://github.com/rathena/rathena)** (GPL-3.0): job tables, items, monsters and renewal formulas. Its data files are downloaded locally by `cmd/fetchrathena` and not redistributed.
 - Game names, descriptions and skill trees are read from the user's own RO LATAM client. Ragnarok Online is © Gravity Co., Ltd.

@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"fmt"
 	"math"
 	"regexp"
 	"strconv"
@@ -34,6 +35,8 @@ type FormulaInput struct {
 	WeaponLv     int
 	WeaponWt     int // weapon weight (rAthena, tenths)
 	WeaponRefine int
+	ShieldWt     int // shield weight (tenths); 0 without a shield
+	ShieldRefine int
 	WeaponATK    int
 	MaxHP        int
 	MaxSP        int
@@ -190,6 +193,9 @@ type SkillFormula struct {
 	Stack         [2]int                  // min,max stacks when the skill uses them
 	Partial       string                  // parts of the skill not simulated
 	Rebalanced    bool                    // formula from the 2022 rebalance (LATAM "current")
+	Variant       string                  // label of this variant ("Calafrio", "Explosão"...)
+	Alts          []*SkillFormula         // further variants of the same skill
+	Source        string                  // "" = latam-ro-calc; "bROWiki" when corrected from it
 }
 
 var (
@@ -208,7 +214,33 @@ func regJob(job string, f *SkillFormula) {
 	if latamByJob[job] == nil {
 		latamByJob[job] = map[string]*SkillFormula{}
 	}
+	if first := latamByJob[job][f.Code]; first != nil {
+		if first.Variant == "" {
+			first.Variant = "Normal"
+		}
+		if f.Variant == "" {
+			f.Variant = fmt.Sprintf("Variante %d", len(first.Alts)+2)
+		}
+		first.Alts = append(first.Alts, f)
+		return
+	}
 	latamByJob[job][f.Code] = f
+}
+
+// Variants lists a formula and its alternatives (nil-safe).
+func (f *SkillFormula) Variants() []*SkillFormula {
+	if f == nil {
+		return nil
+	}
+	return append([]*SkillFormula{f}, f.Alts...)
+}
+
+// Pick returns variant i (0 = the first), or the first when out of range.
+func (f *SkillFormula) Pick(i int) *SkillFormula {
+	if f == nil || i <= 0 || i > len(f.Alts) {
+		return f
+	}
+	return f.Alts[i-1]
 }
 
 func regStates(job string, opts []StateOption) { latamStates[job] = append(latamStates[job], opts...) }
@@ -371,4 +403,12 @@ func containsF(arr []float64, v float64) bool { // [..].includes(v)
 		}
 	}
 	return false
+}
+
+// MonStat returns the target's base stat (STR..LUK index), 0 without a target.
+func (in FormulaInput) MonStat(i int) float64 {
+	if in.Monster == nil || i < 0 || i >= len(in.Monster.Stats) {
+		return 0
+	}
+	return float64(in.Monster.Stats[i])
 }

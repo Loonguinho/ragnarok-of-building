@@ -246,6 +246,16 @@ def build_literal(code, name, f, fctx=None, rctx=None):
             raise Unsupported('linear() form')
     if dsl:
         parts.append('Rebalanced: true')
+    # Several entries for one skill (Normal/Calafrio, Queda/Explosão, Combo):
+    # the variant label tells them apart.
+    variant = (f.get('labelSuffix') or '').strip('\'"` ')
+    if not variant:
+        label = (f.get('label') or '').strip('\'"` ')
+        m = re.search(r'\(([^)]+)\)\s*$', label)
+        if m:
+            variant = m.group(1)
+    if variant:
+        parts.append(f'Variant: {go_str(variant)}')
     ratio, ctx = fn_body(formula, file=ctx_for('formula'))
     collect(ctx, notes)
     parts.append(f'Ratio: {ratio}')

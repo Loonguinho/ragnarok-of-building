@@ -314,12 +314,13 @@
     const a = { ...(build.a || {}) };
     const v = f.value;
     switch (f.dataset.atk) {
-      case "skill": a.s = Number(v); a.l = (build.k || {})[v] || 0; a.r = 0; break; // max learned level, ratio from description
+      case "skill": a.s = Number(v); a.l = (build.k || {})[v] || 0; a.r = 0; a.v = 0; break; // max learned level, ratio from description
       case "lv": a.l = Number(v); a.r = 0; break;
       case "ratio": a.r = Number(v); break;
       case "hits": a.h = Number(v); break;
       case "ele": a.e = v; break;
       case "stack": a.sk = Number(v); break;
+      case "variant": a.v = Number(v); break;
     }
     build.a = a;
     recalc();

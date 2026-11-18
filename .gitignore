@@ -13,3 +13,4 @@ data/browiki/
 *.db-shm
 dist/
 resume.txt
+data/latam-ro-calc/

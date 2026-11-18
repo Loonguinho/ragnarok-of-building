@@ -149,16 +149,20 @@ func Decode(buf []byte) (s *Snapshot, err error) {
 		return nil, errors.New("replay: no character snapshot in this file")
 	}
 
+	worn := false // the worn-gear chunk (4601) was there
 	for _, c := range items {
 		switch c.id {
-		case 4601:
+		case 4601: // worn gear
+			worn = true
+			s.Equipped = append(s.Equipped, readItems(c.data)...)
+		case 4603: // worn costumes and shadow gear (costume slots are not simulated)
 			s.Equipped = append(s.Equipped, readItems(c.data)...)
 		case 4510:
 			s.Inventory = append(s.Inventory, readItems(c.data)...)
 		}
 	}
 	// Some recordings keep worn gear only as flagged inventory records.
-	if len(s.Equipped) == 0 {
+	if !worn {
 		for _, it := range s.Inventory {
 			if it.Equipped != 0 {
 				s.Equipped = append(s.Equipped, it)

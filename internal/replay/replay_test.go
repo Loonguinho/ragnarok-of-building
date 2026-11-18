@@ -70,7 +70,21 @@ func buildRRF(t *testing.T) []byte {
 	tlv(999, make([]byte, 221-len(rec)-6)) // pad to the record size
 	// The record-size probe reads a plausible item id at offset 104 (inside the padding).
 	binary.LittleEndian.PutUint32(rec[nameIDOffset:], 1201)
-	items := genericBody([]int{4601}, map[int][]byte{4601: rec})
+	// A worn shadow armor +7, in the costume/shadow chunk (4603).
+	var shadow []byte
+	tlvS := func(tag int, v []byte) {
+		shadow = append(shadow, le16(tag)...)
+		shadow = append(shadow, le32(len(v))...)
+		shadow = append(shadow, v...)
+	}
+	tlvS(tagPos, le16(3))
+	tlvS(tagWear, le32(0x10000))
+	tlvS(tagQty, le16(1))
+	tlvS(tagNameID, le32(24000))
+	tlvS(tagRefine, []byte{7})
+	tlvS(999, make([]byte, 221-len(shadow)-6))
+	binary.LittleEndian.PutUint32(shadow[nameIDOffset:], 24000)
+	items := genericBody([]int{4601, 4603}, map[int][]byte{4601: rec, 4603: shadow})
 
 	// 0x010f with two 37-byte skill records: Bash 10, Bowling Bash 7.
 	sk := make([]byte, 4+2*37)
@@ -106,7 +120,10 @@ func TestDecodeSynthetic(t *testing.T) {
 	if s.Job != 4252 || s.BaseLv != 250 || s.JobLv != 50 || s.Stats != [6]int{120, 90, 100, 1, 80, 40} {
 		t.Errorf("session = %+v", s)
 	}
-	if len(s.Equipped) != 1 || s.Equipped[0].ItemID != 1201 || s.Equipped[0].Refine != 9 ||
+	if len(s.Equipped) != 2 || s.Equipped[1].ItemID != 24000 || s.Equipped[1].Equipped != 0x10000 || s.Equipped[1].Refine != 7 {
+		t.Errorf("shadow armor from chunk 4603: %+v", s.Equipped)
+	}
+	if len(s.Equipped) < 1 || s.Equipped[0].ItemID != 1201 || s.Equipped[0].Refine != 9 ||
 		s.Equipped[0].Cards != [4]int{4001, 4002, 0, 0} || s.Equipped[0].Equipped != 0x2 || s.Equipped[0].Grade != 2 ||
 		len(s.Equipped[0].Opts) != 2 || s.Equipped[0].Opts[0] != [2]int{17, 50} || s.Equipped[0].Opts[1] != [2]int{3, -2} {
 		t.Errorf("equipped = %+v", s.Equipped)
@@ -115,8 +132,12 @@ func TestDecodeSynthetic(t *testing.T) {
 		t.Errorf("skills = %v", s.Skills)
 	}
 
-	c := &gamedata.Catalog{Jobs: map[int]*gamedata.Job{4252: {ID: 4252}}, Items: map[int]*gamedata.Item{1201: {ID: 1201}}}
+	c := &gamedata.Catalog{Jobs: map[int]*gamedata.Job{4252: {ID: 4252}}, Items: map[int]*gamedata.Item{1201: {ID: 1201},
+		24000: {ID: 24000, Type: "ShadowGear", Locations: []string{"Shadow_Armor"}}}}
 	b, _ := ToBuild(s, c)
+	if e := b.Equip[calc.ShArmor]; e.Item != 24000 || e.Refine != 7 {
+		t.Errorf("build shadow armor = %+v", e)
+	}
 	if e := b.Equip[calc.Weapon]; e.Item != 1201 || e.Refine != 9 || e.Cards[1] != 4002 || e.Grade != 2 || len(e.Opts) != 2 {
 		t.Errorf("build weapon = %+v", b.Equip)
 	}

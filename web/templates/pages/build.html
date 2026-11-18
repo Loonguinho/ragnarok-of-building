@@ -6,7 +6,7 @@
     {{t "Os dados do jogo ainda não foram importados."}}<br><br>
     {{th "Rode <b>go run ./cmd/fetchrathena</b> e depois <b>go run ./cmd/import</b>, e reinicie o servidor."}}
   </div>
-  <footer class="ro-window__footer"><a class="ro-btn" href="/">{{t "Fechar"}}</a></footer>
+  <footer class="ro-window__footer"><a class="ro-btn" href="/build">{{t "Fechar"}}</a></footer>
 </section>
 {{else}}
 
@@ -16,8 +16,25 @@
 {{with $.V}}
 <!-- Basic Info (Alt+V) -->
 <section class="ro-window ro-basic" id="win-basic" data-hotkey="v">
-  <header class="ro-window__title">{{t "Informações Básicas"}}</header>
+  <header class="ro-window__title">{{t "Informações Básicas"}}
+    <nav class="ro-titlelang" aria-label="{{t "Idioma"}}">{{range uiLangs}}<a href="?lang={{.Code}}" hreflang="{{.HTML}}" lang="{{.HTML}}" title="{{.Label}}"{{if eq .Code lang}} class="is-active" aria-current="true"{{end}}>{{.Code | upper}}</a>{{end}}</nav>
+  </header>
   <div class="ro-window__body" id="build_basic">{{template "build_basic" .}}</div>
+</section>
+{{end}}
+{{with $.V}}
+<!-- Saved builds (Alt+C), like the client's character select -->
+<section class="ro-window ro-savedwin is-hidden" id="win-saved" data-hotkey="c">
+  <header class="ro-window__title">{{t "Builds salvos"}} <small id="saved-count"></small> <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
+  <div class="ro-window__body">
+    <ul class="ro-list ro-savedlist" id="saved-list" aria-label="{{t "Builds salvos"}}"></ul>
+    <p class="ro-note" id="saved-empty">{{th "Nenhum build salvo ainda. Aperte <b>Salvar</b> (ou <b>Ctrl+S</b>) para guardar o atual neste navegador."}}</p>
+    <form class="ro-savedwin__link" data-open-link>
+      <input class="ro-input" type="text" name="link" placeholder="{{t "Cole o link de um build compartilhado"}}" aria-label="{{t "Abrir link"}}">
+      <button class="ro-btn" type="submit">{{t "Abrir"}}</button>
+    </form>
+  </div>
+  <footer class="ro-window__footer"><a href="/new">{{t "Importar replay"}}</a> · <a href="/items">{{t "Banco de Itens"}}</a> · <a href="/skills">{{t "Árvore de Habilidades"}}</a></footer>
 </section>
 {{end}}
 {{with $.V}}
@@ -214,7 +231,7 @@
   <button class="ro-btn" data-save-build title="{{t "Salvar neste navegador (Ctrl+S)"}}">{{t "Salvar"}}</button>
   <button class="ro-btn" data-copy-link title="{{t "Copiar o link para compartilhar"}}">{{t "Copiar link"}}</button>
   <button class="ro-btn" data-new-build>{{t "Novo"}}</button>
-  <a class="ro-btn" href="/">{{t "Início"}}</a>
+  <button class="ro-btn" data-toggle="win-saved" title="Alt+C">{{t "Builds"}}</button>
 </div>
 {{end}}
 

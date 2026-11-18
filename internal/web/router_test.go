@@ -58,7 +58,6 @@ func TestRoutes(t *testing.T) {
 	}
 	h := s.Routes()
 	cases := []struct{ path, want string }{
-		{"/", "Personagens"},
 		{"/uikit", "Atributos"},
 		{"/healthz", "ok"},
 		{"/static/css/ro-ui.css", "ro-window"},
@@ -87,6 +86,18 @@ func TestRoutes(t *testing.T) {
 		if !strings.Contains(body, c.want) {
 			t.Errorf("%s: body missing %q", c.path, c.want)
 		}
+	}
+}
+
+func TestRootOpensTheEditor(t *testing.T) {
+	s, err := New(Options{Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Catalog: testCatalog(), NoRateLimit: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	s.Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/?lang=en", nil))
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/build?lang=en" {
+		t.Errorf("/: %d -> %q", rec.Code, rec.Header().Get("Location"))
 	}
 }
 

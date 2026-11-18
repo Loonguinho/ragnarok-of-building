@@ -1,6 +1,6 @@
 # Ragnarok of Building
 
-A build simulator for **Ragnarok Online LATAM**, with a UI modeled on the game client: draggable windows, Alt hotkeys, a character-select home screen and NPC dialogs.
+A build simulator for **Ragnarok Online LATAM**, with a UI modeled on the game client: one screen of client-style windows in fixed columns, Alt hotkeys and NPC dialogs.
 
 Stack: Go (chi) · HTMX + Go templates · data from the LATAM client itself (+ Divine Pride for item bonuses) · PT-BR / ES / EN.
 
@@ -34,12 +34,11 @@ go test ./...
 
 Re-run `go run ./cmd/import` after each game patch.
 
-**Languages.** The home screen has a Português / English / Español picker (remembered in a cookie; first visits follow the browser's language). Game data (items, skills, classes, monsters) comes in each language from the client; the interface texts are in `internal/web/i18n_dict.go`, keyed by the Portuguese text. Mark new texts with `{{t "…"}}` in templates or `T("…")` in scripts: `go test ./internal/web` fails while one lacks its EN/ES version.
+**Languages.** The Basic Info window's title bar has a PT / EN / ES picker (remembered in a cookie; first visits follow the browser's language). Game data (items, skills, classes, monsters) comes in each language from the client; the interface texts are in `internal/web/i18n_dict.go`, keyed by the Portuguese text. Mark new texts with `{{t "…"}}` in templates or `T("…")` in scripts: `go test ./internal/web` fails while one lacks its EN/ES version.
 
-**Sound.** Buttons play the classic RO menu click. `go run ./cmd/import` copies it from your own client (`data\wav\버튼소리.wav` -> `data/gen/sounds/click.wav`, not committed); without it the site stays silent. The home screen has a toggle to mute it.
 
 **Pages**
-- `/` is the home screen: builds saved in this browser as character slots, plus the menu
+- `/` opens the build editor (`/build`); its **Builds** window (Alt+C) lists the builds saved in this browser, opens shared links and links the replay import, item database and skill tree pages
 - `/build` is the **build editor**, with Basic Info (Alt+V), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S), Bonuses (Alt+B), Target/Damage (Alt+D), Buffs (Alt+U) and the Optimizer (Alt+O), which tries every card that fits each slot (and the enchants the client's enchant list gives each item) against the damage window's target and ranks them by expected damage. Ctrl+S saves the build in the browser; **Copiar link** shares it.
 - `/new` starts a build from a replay (`.rrf`) or a blank class
 - `/items` is the item database (PT/ES/EN search, filter by type)
@@ -87,7 +86,7 @@ go run ./cmd/scriptcov                                                 # how muc
 - [x] Phase 3: in-game-style skill tree with skill point limits per class step
 - [x] Phase 4: equipment, cards, enchants, refine, enchant grades (D–A: refine bonus and the items' own grade bonuses), random options (the client's option texts + rAthena scripts, also read from replays), class restrictions, item combos (rAthena + LATAM-only items read from the client descriptions)
 - [x] Phase 5: physical and magic damage vs monsters with LATAM formulas for every class, checked against bROWiki; buffs and consumables
-- [x] Phase 6: share links, last build restored, saved builds (browser storage, character select home), Docker image for hosting
+- [x] Phase 6: share links, last build restored, saved builds (browser storage, Builds window), Docker image for hosting
 - [x] Phase 6b: import a character from a replay (`.rrf`)
 - [~] Phase 7: item comparison in the equipment picker (damage change per result, stat changes in the tooltip) and card/enchant optimizer done; stat and gear optimizer pending
 - [ ] Phase 8: polish

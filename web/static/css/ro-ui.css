@@ -49,6 +49,18 @@ a { color: #1d4fa8; }
 }
 .ro-window--fixed { position: relative; }
 .ro-window.is-hidden { display: none; }
+/* Language links in the Basic Info title bar. */
+.ro-titlelang { position: absolute; right: 6px; top: 2px; display: flex; gap: 4px; }
+.ro-titlelang a { color: var(--ro-title-text); opacity: .55; text-decoration: none; font-size: 10px; font-weight: bold; }
+.ro-titlelang a.is-active, .ro-titlelang a:hover { opacity: 1; text-decoration: underline; }
+/* Saved builds window. */
+.ro-savedlist { min-height: 0; max-height: 260px; overflow-y: auto; }
+.ro-savedrow { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.ro-savedrow span { flex: 1; min-width: 0; display: grid; }
+.ro-savedrow b, .ro-savedrow small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ro-savedrow small { color: #5a6a88; }
+.ro-savedrow.is-current { background: #fff4cf; }
+.ro-savedwin__link { display: flex; gap: 4px; margin-top: 6px; }
 /* Build editor: windows in fixed columns (no dragging, no overlap). */
 body.ro-desktop:has(.ro-desk) { overflow: auto; }
 .ro-desk { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; padding: 16px 16px 140px; }
@@ -62,7 +74,8 @@ body.ro-desktop:has(.ro-desk) { overflow: auto; }
   .ro-desk { padding: 0 0 130px; }
   .ro-desk__col { width: 100%; }
 }
-body:has(.ro-desk) .ro-chat { left: 16px; width: min(360px, calc(100vw - 32px)); }
+/* In the editor the chat log is the last block of the first column. */
+.ro-desk .ro-chat { position: static; width: auto; max-height: 130px; }
 .ro-window.is-focused { z-index: 10; }
 .ro-window__title {
   position: relative;
@@ -179,8 +192,6 @@ body:has(.ro-desk) .ro-chat { left: 16px; width: min(360px, calc(100vw - 32px));
 
 /* ---------- home / login ---------- */
 .ro-center { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 16px; }
-.ro-logo { margin: 0; font: bold 34px/1 Georgia, serif; color: #fff7d8; text-shadow: 0 2px 0 #7a5a1a, 0 4px 10px rgba(0,0,0,.5); letter-spacing: 1px; }
-.ro-logo span { display: block; font-size: 16px; text-align: right; color: #ffe9a8; }
 
 /* ---------- mobile: stack windows ---------- */
 @media (max-width: 720px) {
@@ -412,20 +423,13 @@ body.ro-desktop:has(.ro-newbuild) { overflow: auto; }
 .ro-combos { margin-top: 6px; }
 
 /* Home: saved builds (character select) + menu */
-.ro-home { display: flex; flex-direction: column; align-items: center; padding: 32px 16px; gap: 18px; }
 .ro-home__cols { display: grid; grid-template-columns: minmax(0, 620px) 280px; gap: 16px; align-items: start; width: min(920px, 100%); }
 .ro-charsel__body { display: grid; grid-template-columns: 1fr 190px; gap: 10px; min-height: 180px; }
 .ro-charsel__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; align-content: start; max-height: 56vh; overflow: auto; padding: 2px; }
-.ro-charslot { display: grid; gap: 2px; text-align: left; padding: 8px; min-height: 74px; border: 1px solid #b9c2d3;
   border-radius: 3px; background: linear-gradient(#fff, #e9eef7); cursor: pointer; font: inherit; color: inherit; text-decoration: none; }
-.ro-charslot b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ro-charslot span, .ro-charslot small { color: #4a5a78; }
-.ro-charslot.is-selected { border-color: #1d4fa8; box-shadow: 0 0 0 2px #9fc0f5 inset; background: linear-gradient(#fff, #dbe7fb); }
-.ro-charslot--empty { place-content: center; text-align: center; color: #6b7a96; border-style: dashed; }
 .ro-charsel__info dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; margin: 0; }
 .ro-charsel__info dt { color: #4a5a78; }
 .ro-charsel__info dd { margin: 0; font-weight: bold; overflow-wrap: anywhere; }
-.ro-charsel .ro-window__footer form { display: inline; }
 .ro-homemenu__list { display: grid; gap: 4px; }
 .ro-homemenu__item { display: grid; padding: 6px 8px; border: 1px solid transparent; border-radius: 3px; color: inherit; text-decoration: none; }
 .ro-homemenu__item span { font-size: 11px; color: #5a6a88; }
@@ -444,11 +448,7 @@ body.ro-desktop:has(.ro-newbuild) { overflow: auto; }
 .ro-setup__status.is-bad { color: #b8282f; }
 
 /* Language picker on the home screen */
-.ro-langpick { display: flex; gap: 4px; justify-content: center; margin-top: -8px; }
-.ro-langpick .ro-btn { min-width: 84px; text-align: center; text-decoration: none; }
-.ro-langpick .ro-btn.is-active { border-color: #1d4fa8; box-shadow: 0 0 0 2px #9fc0f5 inset; font-weight: bold; }
-.ro-soundtoggle { min-width: 70px; margin-left: 8px; }
-.ro-btn.is-pressed, .ro-homemenu__item.is-pressed, .ro-charslot.is-pressed {
+.ro-btn.is-pressed {
   filter: brightness(0.92); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .25);
 }
 

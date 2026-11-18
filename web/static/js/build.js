@@ -145,9 +145,68 @@
     url.searchParams.set("s", e.id);
     history.replaceState(null, "", url);
     say(T('Build "%s" salvo neste navegador.', e.name));
+    renderSaved();
   }
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); saveBuild(false); }
+  });
+
+  // The chat log joins the first column, under the windows (never on top).
+  const chatLog = document.getElementById("ro-chat"), firstCol = document.querySelector(".ro-desk__col--1");
+  if (chatLog && firstCol) firstCol.append(chatLog);
+
+  // Saved builds window: open (click/Enter) or delete each one.
+  const savedList = document.getElementById("saved-list");
+  function renderSaved() {
+    if (!savedList || !window.ROSaved) return;
+    const list = ROSaved.list();
+    const fmt = (t) => new Date(t).toLocaleString(document.documentElement.lang || "pt-BR", { dateStyle: "short", timeStyle: "short" });
+    savedList.replaceChildren(...list.map((e) => {
+      const li = document.createElement("li");
+      li.className = "ro-list__item ro-savedrow" + (saved && saved.id === e.id ? " is-current" : "");
+      li.tabIndex = 0;
+      li.dataset.openSaved = e.id;
+      const name = document.createElement("b"); name.textContent = e.name;
+      const info = document.createElement("small");
+      info.textContent = `${e.job || "?"} · ${T("Nv.")} ${e.b || "?"}/${e.jl || "?"} · ${fmt(e.t)}`;
+      const del = document.createElement("button");
+      del.className = "ro-btn"; del.type = "button"; del.dataset.deleteSaved = e.id; del.textContent = "×";
+      del.title = T("Excluir");
+      const text = document.createElement("span"); text.append(name, info);
+      li.append(text, del);
+      return li;
+    }));
+    const count = document.getElementById("saved-count");
+    if (count) count.textContent = list.length ? `(${list.length})` : "";
+    const empty = document.getElementById("saved-empty");
+    if (empty) empty.hidden = list.length > 0;
+    savedList.hidden = list.length === 0;
+  }
+  renderSaved();
+  document.addEventListener("click", (e) => {
+    const del = e.target.closest("[data-delete-saved]");
+    if (del) {
+      const it = ROSaved.get(del.dataset.deleteSaved);
+      if (it && confirm(T('Excluir o build "%s"?', it.name))) { ROSaved.remove(it.id); renderSaved(); }
+      return;
+    }
+    const row = e.target.closest("[data-open-saved]");
+    if (row) {
+      const it = ROSaved.get(row.dataset.openSaved);
+      if (it) location.href = "/build?b=" + encodeURIComponent(it.code) + "&s=" + encodeURIComponent(it.id);
+    }
+  });
+  document.addEventListener("keyup", (e) => {
+    if (e.key === "Enter" && e.target.matches("[data-open-saved]")) e.target.click();
+  });
+  document.addEventListener("submit", (e) => {
+    const f = e.target.closest("[data-open-link]");
+    if (!f) return;
+    e.preventDefault();
+    const v = (f.elements.link.value || "").trim();
+    if (!v) return;
+    const m = v.match(/[?&]b=([A-Za-z0-9_-]+)/);
+    location.href = "/build?b=" + (m ? m[1] : v.replace(/[^A-Za-z0-9_-]/g, ""));
   });
   document.addEventListener("click", async (e) => {
     if (e.target.closest("[data-save-build]")) saveBuild(true);

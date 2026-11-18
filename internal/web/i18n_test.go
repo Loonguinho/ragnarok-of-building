@@ -71,18 +71,18 @@ func TestTrFormats(t *testing.T) {
 	}
 }
 
-func TestHomeInEnglish(t *testing.T) {
+func TestEditorInEnglish(t *testing.T) {
 	s, err := New(Options{Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Catalog: testCatalog()})
 	if err != nil {
 		t.Fatal(err)
 	}
 	h := s.Routes()
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/?lang=en", nil))
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/build?lang=en", nil))
 	body := rec.Body.String()
-	for _, want := range []string{`<html lang="en">`, "Characters", "New build", "Item Database", `aria-current="true">English`} {
+	for _, want := range []string{`<html lang="en">`, "Saved builds", "Item Database", `aria-current="true">EN`} {
 		if !strings.Contains(body, want) {
-			t.Errorf("English home lacks %q", want)
+			t.Errorf("English editor lacks %q", want)
 		}
 	}
 	var c *http.Cookie
@@ -95,20 +95,20 @@ func TestHomeInEnglish(t *testing.T) {
 		t.Fatal("?lang=en not remembered in a cookie")
 	}
 	// The cookie keeps the language on the next page, which beats the browser's.
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/build", nil)
 	req.AddCookie(c)
 	req.Header.Set("Accept-Language", "es-AR")
 	rec = httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
-	if !strings.Contains(rec.Body.String(), "Characters") {
+	if !strings.Contains(rec.Body.String(), "Saved builds") {
 		t.Error("language cookie ignored")
 	}
 	// No choice yet: the browser's language.
-	req = httptest.NewRequest(http.MethodGet, "/", nil)
+	req = httptest.NewRequest(http.MethodGet, "/build", nil)
 	req.Header.Set("Accept-Language", "es-AR,es;q=0.9")
 	rec = httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
-	if !strings.Contains(rec.Body.String(), "Personajes") {
+	if !strings.Contains(rec.Body.String(), "Builds guardados") {
 		t.Error("Accept-Language not used on first visit")
 	}
 }

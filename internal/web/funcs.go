@@ -13,6 +13,7 @@ var funcs = template.FuncMap{
 	"roText": roText,
 	"dec":    func(n int) int { return n - 1 },
 	"inc":    func(n int) int { return n + 1 },
+	"upper":  strings.ToUpper,
 	// gradeName: enchant grade 1..4 -> D, C, B, A.
 	"gradeName": func(g int) string {
 		if g < 1 || g > 4 {

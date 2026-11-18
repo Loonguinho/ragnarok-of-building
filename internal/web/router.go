@@ -115,7 +115,14 @@ func (s *Server) Routes() http.Handler {
 		r.Handle("/static/*", staticCache(fileServer))
 	}
 
-	r.Get("/", s.handleHome)
+	// No home screen: everything is in the build editor.
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		to := "/build"
+		if r.URL.RawQuery != "" {
+			to += "?" + r.URL.RawQuery
+		}
+		http.Redirect(w, r, to, http.StatusFound)
+	})
 	r.Get("/uikit", s.simple("uikit", "RO UI Kit"))
 	r.Get("/skills", s.handleSkills)
 	r.Get("/items", s.handleItems)
@@ -159,11 +166,6 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, page string, dat
 	if !ok {
 		http.NotFound(w, r)
 		return
-	}
-	if m, ok := data.(map[string]any); ok {
-		if page == "home" { // only the home screen's menu clicks (the editor stays quiet)
-			m["ClickSound"] = s.soundURL("click.wav")
-		}
 	}
 	var buf bytes.Buffer
 	if err := t.ExecuteTemplate(&buf, "layout.html", data); err != nil {

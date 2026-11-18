@@ -9,7 +9,13 @@
   const save = (state) => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
   const state = load();
 
-  function focus(win) { win.style.zIndex = ++z; }
+  // Windows laid out in the build editor's fixed columns stay put.
+  const fixed = (win) => !!win.closest(".ro-desk");
+  const offScreen = (win) => {
+    const r = win.getBoundingClientRect();
+    return r.bottom < 40 || r.top > window.innerHeight - 40;
+  };
+  function focus(win) { if (!fixed(win)) win.style.zIndex = ++z; }
   const isTop = (win) => Number(win.style.zIndex || 0) === z;
 
   function persist(win) {
@@ -23,7 +29,9 @@
   function toggle(win) {
     if (win.classList.contains("is-hidden")) {
       show(win);
-    } else if (!isTop(win)) {
+    } else if (fixed(win) && offScreen(win)) {
+      win.scrollIntoView({ block: "nearest", behavior: "smooth" }); // open but scrolled away: go to it
+    } else if (!fixed(win) && !isTop(win)) {
       focus(win);
     } else {
       win.classList.add("is-hidden");
@@ -35,13 +43,14 @@
     win.classList.remove("is-hidden");
     focus(win);
     persist(win);
+    if (fixed(win)) win.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 
   function init(win) {
     const s = win.id && state[win.id];
     if (s) {
-      if (s.left) win.style.left = s.left;
-      if (s.top) win.style.top = s.top;
+      if (s.left && !fixed(win)) win.style.left = s.left;
+      if (s.top && !fixed(win)) win.style.top = s.top;
       if (s.hidden) win.classList.add("is-hidden");
     }
     win.addEventListener("mousedown", () => focus(win));
@@ -54,7 +63,7 @@
     });
 
     const bar = win.querySelector(".ro-window__title");
-    if (!bar || win.classList.contains("ro-window--fixed")) return;
+    if (!bar || win.classList.contains("ro-window--fixed") || fixed(win)) return;
     bar.addEventListener("pointerdown", (e) => {
       if (isMobile() || e.target.closest("button")) return;
       const dx = e.clientX - win.offsetLeft, dy = e.clientY - win.offsetTop;

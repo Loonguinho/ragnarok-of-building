@@ -49,6 +49,20 @@ a { color: #1d4fa8; }
 }
 .ro-window--fixed { position: relative; }
 .ro-window.is-hidden { display: none; }
+/* Build editor: windows in fixed columns (no dragging, no overlap). */
+body.ro-desktop:has(.ro-desk) { overflow: auto; }
+.ro-desk { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; padding: 16px 16px 140px; }
+.ro-desk__col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ro-desk__col--1 { width: 360px; }
+.ro-desk__col--2 { width: 420px; }
+.ro-desk__col--3 { width: 560px; }
+.ro-desk .ro-window { position: relative; left: auto; top: auto; width: auto; z-index: auto; }
+.ro-desk .ro-window__title { cursor: default; }
+@media (max-width: 720px) {
+  .ro-desk { padding: 0 0 130px; }
+  .ro-desk__col { width: 100%; }
+}
+body:has(.ro-desk) .ro-chat { left: 16px; width: min(360px, calc(100vw - 32px)); }
 .ro-window.is-focused { z-index: 10; }
 .ro-window__title {
   position: relative;
@@ -273,7 +287,7 @@ a { color: #1d4fa8; }
 .ro-basic__lv { color: #555; margin-bottom: 3px; }
 .ro-bar--ap > span { background: linear-gradient(180deg, #ffb37f, #e0702f); }
 
-.ro-equip--real { grid-template-columns: 1fr 80px 1fr; }
+.ro-equip--real { grid-template-columns: minmax(0, 1fr) 80px minmax(0, 1fr); }
 .ro-equip--real .ro-equip__sprite { display: grid; place-items: end center; padding-bottom: 8px; color: #777; font-size: 10px; }
 .ro-eslot {
   display: flex; align-items: center; gap: 4px; width: 100%; height: 30px; padding: 2px 4px;
@@ -282,7 +296,9 @@ a { color: #1d4fa8; }
 }
 .ro-eslot:hover { border-color: var(--ro-border); background: #f3f7ff; }
 .ro-eslot img { flex: none; image-rendering: pixelated; }
-.ro-eslot span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ro-eslot { min-width: 0; }
+/* Item names wrap to two lines instead of running out of the window. */
+.ro-eslot span { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; text-align: left; word-break: break-word; }
 .ro-eslot em { color: #9aa; font-style: normal; }
 .ro-eslot__empty { flex: none; display: inline-block; width: 24px; height: 24px; background: #eef0f4; border: 1px dashed #c4c8d0; border-radius: 2px; }
 

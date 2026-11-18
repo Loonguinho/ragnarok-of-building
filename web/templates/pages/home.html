@@ -3,6 +3,7 @@
   <h1 class="ro-logo">Ragnarok <span>of Building</span></h1>
   <nav class="ro-langpick" aria-label="{{t "Idioma"}}">
     {{range uiLangs}}<a class="ro-btn{{if eq .Code lang}} is-active{{end}}" href="/?lang={{.Code}}" hreflang="{{.HTML}}" lang="{{.HTML}}"{{if eq .Code lang}} aria-current="true"{{end}}>{{.Label}}</a>{{end}}
+    {{if .ClickSound}}<button type="button" class="ro-btn ro-soundtoggle" data-sound-toggle aria-pressed="true" title="{{t "Som dos botões"}}"><span data-on>🔊 {{t "Som"}}</span><span data-off hidden>🔇 {{t "Som"}}</span></button>{{end}}
   </nav>
 
   {{if not .Ready}}

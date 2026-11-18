@@ -6,6 +6,8 @@ package web
 // here.
 var dict = map[string][2]string{
 	// ---- language / home ----
+	"Som":                       {"Sound", "Sonido"},
+	"Som dos botões":            {"Button sounds", "Sonido de los botones"},
 	"Idioma":                    {"Language", "Idioma"},
 	"Personagens":               {"Characters", "Personajes"},
 	"Builds salvos":             {"Saved builds", "Builds guardados"},

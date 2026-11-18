@@ -2,7 +2,8 @@
 #
 # The game catalog is generated locally from your own RO LATAM client
 # (go run ./cmd/fetchrathena && go run ./cmd/import) and copied into the
-# image: it is not in the git repository.
+# image together with the interface sounds read from the same client
+# (data/gen/sounds): neither is in the git repository.
 #
 #   docker build -t ragnarok-of-building .
 #   docker run -p 8080:8080 ragnarok-of-building
@@ -17,7 +18,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /out/server ./cmd/serve
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
 COPY --from=build /out/server /app/server
-COPY data/gen/catalog.json.gz /app/data/gen/catalog.json.gz
+COPY data/gen/ /app/data/gen/
 ENV PORT=8080
 EXPOSE 8080
 USER nonroot

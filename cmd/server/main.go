@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -32,7 +33,8 @@ func main() {
 		log.Info("catalog loaded", "items", len(cat.Items), "skills", len(cat.Skills), "jobs", len(cat.Jobs))
 	}
 
-	srv, err := web.New(web.Options{Log: log, Catalog: cat, Dev: dev})
+	sounds := env("SOUNDS", filepath.Join(filepath.Dir(catalogPath), "sounds"))
+	srv, err := web.New(web.Options{Log: log, Catalog: cat, Dev: dev, SoundDir: sounds})
 	if err != nil {
 		log.Error("init", "err", err)
 		os.Exit(1)

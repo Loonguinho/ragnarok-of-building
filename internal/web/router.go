@@ -26,6 +26,9 @@ type Options struct {
 	Dev bool
 	// NoRateLimit turns off the per-IP request limits (tests).
 	NoRateLimit bool
+	// SoundDir holds the interface sounds extracted from the client
+	// (data/gen/sounds); empty or missing means a silent interface.
+	SoundDir string
 }
 
 // Server holds parsed templates and dependencies for handlers.
@@ -112,6 +115,7 @@ func (s *Server) Routes() http.Handler {
 	r.Get("/build/skills", s.handleBuildSkills)
 	r.With(searchLimit.limit).Get("/build/items", s.handleBuildItems)
 	r.With(searchLimit.limit).Get("/build/monsters", s.handleBuildMonsters)
+	r.Get("/sounds/{name}", s.handleSound)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
 	return r
 }
@@ -138,6 +142,9 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, page string, dat
 	if !ok {
 		http.NotFound(w, r)
 		return
+	}
+	if m, ok := data.(map[string]any); ok {
+		m["ClickSound"] = s.hasSound("click.wav")
 	}
 	var buf bytes.Buffer
 	if err := t.ExecuteTemplate(&buf, "layout.html", data); err != nil {

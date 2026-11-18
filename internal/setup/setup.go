@@ -15,6 +15,7 @@ import (
 
 	"ragnarok-of-building/internal/clientimport"
 	"ragnarok-of-building/internal/gamedata"
+	"ragnarok-of-building/internal/grf"
 	"ragnarok-of-building/internal/rathena"
 )
 
@@ -110,6 +111,10 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 	progress("Lendo os bônus das descrições dos itens exclusivos do LATAM…")
 	clientimport.DescBonuses(c)
 	c.ApplyLatamLimits()
+	progress("Copiando os sons da interface…")
+	if _, err := ExtractSounds(clientDir, filepath.Join(filepath.Dir(out), "sounds")); err != nil {
+		progress("Sons da interface não encontrados: " + err.Error())
+	}
 	progress("Salvando o catálogo…")
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		return nil, err
@@ -146,4 +151,35 @@ func FindClient() string {
 		}
 	}
 	return ""
+}
+
+// UISounds are the client sounds the interface plays, by the name the site
+// serves them under. They are read from the player's own client, never
+// committed or redistributed with the code.
+var UISounds = map[string]string{
+	"click.wav": `data\wav\버튼소리.wav`, // the classic menu button click
+}
+
+// ExtractSounds copies the UI sounds from the client's data.grf into dir.
+func ExtractSounds(clientDir, dir string) (int, error) {
+	a, err := grf.Open(filepath.Join(clientDir, "data.grf"))
+	if err != nil {
+		return 0, err
+	}
+	defer a.Close()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return 0, err
+	}
+	n := 0
+	for name, path := range UISounds {
+		b, err := a.Read(path)
+		if err != nil {
+			continue // a client without the file: the site just stays silent
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), b, 0o644); err != nil {
+			return n, err
+		}
+		n++
+	}
+	return n, nil
 }

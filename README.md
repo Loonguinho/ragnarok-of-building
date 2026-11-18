@@ -36,6 +36,8 @@ Re-run `go run ./cmd/import` after each game patch.
 
 **Languages.** The home screen has a Português / English / Español picker (remembered in a cookie; first visits follow the browser's language). Game data (items, skills, classes, monsters) comes in each language from the client; the interface texts are in `internal/web/i18n_dict.go`, keyed by the Portuguese text. Mark new texts with `{{t "…"}}` in templates or `T("…")` in scripts: `go test ./internal/web` fails while one lacks its EN/ES version.
 
+**Sound.** Buttons play the classic RO menu click. `go run ./cmd/import` copies it from your own client (`data\wav\버튼소리.wav` -> `data/gen/sounds/click.wav`, not committed); without it the site stays silent. The home screen has a toggle to mute it.
+
 **Pages**
 - `/` is the home screen: builds saved in this browser as character slots, plus the menu
 - `/build` is the **build editor**, with Basic Info (Alt+V), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S), Bonuses (Alt+B), Target/Damage (Alt+D) and Buffs (Alt+U). Ctrl+S saves the build in the browser; **Copiar link** shares it.

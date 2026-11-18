@@ -43,6 +43,11 @@ type optGroup struct {
 	Enchant     bool
 	Current     *itemView
 	Options     []optOption
+	// With no options: Best = the current card/enchant already gives the
+	// most; otherwise nothing in the pool adds damage to this attack, and
+	// SkillOnly says the pool is skill enchants (pick that skill to see them).
+	Best      bool
+	SkillOnly bool
 }
 
 type optResult struct {
@@ -52,7 +57,6 @@ type optResult struct {
 	Target   string
 	Attack   string
 	Groups   []optGroup
-	Same     []string // positions where the current card is already the best
 	NoEnch   []string // enchanted items the client's enchant list doesn't cover
 	Tested   int
 	Partial  bool // stopped by the time limit
@@ -255,8 +259,17 @@ feed:
 				Gain: pct(vals[pi][k]), Slot: g.Slot, Index: p.index, Positive: true})
 		}
 		if len(g.Options) == 0 {
-			res.Same = append(res.Same, label)
-			continue
+			// Keep the position listed, saying why nothing is suggested.
+			g.Best = p.current != 0
+			if !g.Best && p.enchant {
+				g.SkillOnly = true
+				for _, it := range p.pool {
+					if !strings.Contains(it.Script, "bSkillAtk") {
+						g.SkillOnly = false
+						break
+					}
+				}
+			}
 		}
 		res.Groups = append(res.Groups, g)
 	}

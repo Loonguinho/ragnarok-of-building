@@ -275,6 +275,7 @@ a { color: #1d4fa8; }
 .ro-grade { color: var(--ro-grade, #b5179e); font-weight: bold; }
 .ro-slotedit__actions { display: flex; gap: 4px; justify-content: flex-end; }
 .ro-cards { min-height: 0; }
+.ro-optgroup__none { margin: 2px 4px; color: #667; font-style: italic; }
 .ro-cardrow { display: flex; align-items: center; gap: 4px; padding: 2px; }
 .ro-ropts { min-width: 0; margin: 0; padding: 2px 6px 4px; border: 1px solid var(--ro-border, #9aa8c0); }
 .ro-ropts legend { font-weight: bold; padding: 0 4px; }

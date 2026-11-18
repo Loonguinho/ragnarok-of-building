@@ -113,7 +113,58 @@ func TestOptimizeRealCatalog(t *testing.T) {
 		t.Errorf("unexpected result: %+v", res)
 	}
 	for _, g := range res.Groups {
-		t.Logf("%s: %s %s", g.Label, g.Options[0].Item.Name, g.Options[0].Gain)
+		if len(g.Options) > 0 {
+			t.Logf("%s: %s %s", g.Label, g.Options[0].Item.Name, g.Options[0].Gain)
+		}
+	}
+}
+
+// Every enchant position stays listed: with the best enchant in it, as
+// "already the best"; with only skill enchants that don't fit the attack,
+// with that explanation. (A Vil Invernal weapon takes 3 enchants.)
+func TestOptimizeKeepsEnchantPositions(t *testing.T) {
+	const path = "../../data/gen/catalog.json.gz"
+	if _, err := os.Stat(path); err != nil {
+		t.Skip("no generated catalog")
+	}
+	c, err := gamedata.Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const sword, stormSlash, slashEnchant = 500055, 5213, 311275 // Espada Vil Invernal, Dilacerar, Cristal Invernal (Dilacerar)
+	if c.Items[sword] == nil || len(c.Enchants[sword]) < 3 || c.Skills[stormSlash] == nil {
+		t.Skip("catalog without the Vil Invernal data")
+	}
+	s, err := New(Options{Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Catalog: c, NoRateLimit: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	groups := func(b calc.Build) map[string]optGroup {
+		out := map[string]optGroup{}
+		for _, g := range s.optimize(context.Background(), b, true, "pt").Groups {
+			if g.Enchant {
+				out[g.Label] = g
+			}
+		}
+		return out
+	}
+	b := calc.Build{Job: 4252, BaseLv: 250, JobLv: 50, Stats: [6]int{120, 100, 80, 1, 100, 1}, Target: 1039,
+		Equip: map[string]calc.Equip{calc.Weapon: {Item: sword}}}
+	// Basic attack: the skill enchants (positions 3 and 4) are listed, explained.
+	g := groups(b)
+	if len(g) != 3 || !g["Arma · Encantamento (slot 4)"].SkillOnly {
+		t.Fatalf("basic attack: %+v", g)
+	}
+	// Storm Slash with its enchant in position 4: still listed, as the best.
+	b.Skills = map[int]int{stormSlash: 5}
+	b.Atk = calc.AttackChoice{Skill: stormSlash, Level: 5}
+	b.Equip[calc.Weapon] = calc.Equip{Item: sword, Cards: [4]int{0, 0, 0, slashEnchant}}
+	g = groups(b)
+	if p4 := g["Arma · Encantamento (slot 4)"]; len(g) != 3 || !p4.Best || len(p4.Options) != 0 {
+		t.Fatalf("enchanted position: %+v", g)
+	}
+	if p3 := g["Arma · Encantamento (slot 3)"]; len(p3.Options) == 0 || p3.Options[0].Item.ID != slashEnchant {
+		t.Errorf("position 3 should suggest the Storm Slash enchant: %+v", p3)
 	}
 }
 

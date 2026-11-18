@@ -73,6 +73,7 @@
     const url = new URL(location.href);
     url.searchParams.set("b", code);
     url.searchParams.delete("new");
+    if (saved) url.searchParams.set("s", saved.id);
     history.replaceState(null, "", url);
     try { localStorage.setItem(SAVE_KEY, code); } catch {}
   }
@@ -122,24 +123,28 @@
   });
 
   // ---- basic info buttons ----
-  let saved = boot.saved; // {id, name} once saved
-  async function saveBuild(ask) {
-    if (!boot.saving) { say("Não foi possível abrir o arquivo de builds salvos.", true); return; }
+  // Saved builds live in this browser (saved.js). ?s=ID ties the page to
+  // one of them, so saving again updates it.
+  let saved = window.ROSaved ? ROSaved.get(new URLSearchParams(location.search).get("s") || "") : null;
+  function saveBuild(ask) {
+    if (!window.ROSaved || !ROSaved.available()) {
+      say("Este navegador não permite salvar (modo anônimo?). Use Copiar link para guardar o build.", true);
+      return;
+    }
     let name = saved ? saved.name : "";
     if (ask || !saved) {
       name = prompt("Nome do build:", name);
       if (name === null) return;
     }
-    try {
-      const res = await fetch("/builds/save", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: saved ? saved.id : 0, name, code }) });
-      if (!res.ok) throw new Error((await res.text()).trim() || res.status);
-      saved = { id: (await res.json()).id, name: name.trim() || "Sem nome" };
-      history.replaceState(null, "", "/build?s=" + saved.id);
-      say(`Build "${saved.name}" salvo.`);
-    } catch (err) {
-      say("Não foi possível salvar: " + err.message, true);
-    }
+    const jobName = (document.querySelector("#build_basic .ro-basic__name") || {}).textContent || "";
+    const e = ROSaved.put({ id: saved ? saved.id : "", name: (name.trim() || "Sem nome").slice(0, 40), code,
+      j: build.j, job: jobName.trim(), b: build.b, jl: build.jl });
+    if (!e) { say("Não foi possível salvar: o armazenamento do navegador está cheio ou bloqueado.", true); return; }
+    saved = e;
+    const url = new URL(location.href);
+    url.searchParams.set("s", e.id);
+    history.replaceState(null, "", url);
+    say(`Build "${e.name}" salvo neste navegador.`);
   }
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); saveBuild(false); }
@@ -147,11 +152,12 @@
   document.addEventListener("click", async (e) => {
     if (e.target.closest("[data-save-build]")) saveBuild(true);
     if (e.target.closest("[data-copy-link]")) {
+      const link = location.origin + "/build?b=" + code;
       try {
-        await navigator.clipboard.writeText(code);
-        say("Código do build copiado! Quem tiver o app pode colar em Início → Abrir código.");
+        await navigator.clipboard.writeText(link);
+        say("Link do build copiado!");
       } catch {
-        prompt("Copie o código do build:", code);
+        prompt("Copie o link do build:", link);
       }
     }
     if (e.target.closest("[data-new-build]")) {

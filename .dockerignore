@@ -1,0 +1,13 @@
+.git
+.env
+bin
+dist
+tmp
+testdata
+data/rathena
+data/browiki
+data/cache
+*.db
+*.db-*
+resume.txt
+__pycache__

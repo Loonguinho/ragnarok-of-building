@@ -12,42 +12,21 @@
   </section>
   {{else}}
   <div class="ro-home__cols">
-    <!-- Saved builds, like the client's character select -->
+    <!-- Builds saved in this browser, like the client's character select -->
     <section class="ro-window ro-window--fixed ro-charsel">
-      <header class="ro-window__title">Personagens <small>{{with .Slots}}({{len .}}){{end}}</small></header>
+      <header class="ro-window__title">Personagens <small id="slot-count"></small></header>
       <div class="ro-window__body ro-charsel__body">
-        <div class="ro-charsel__grid" role="listbox" aria-label="Builds salvos">
-          {{range $i, $s := .Slots}}
-          <button type="button" class="ro-charslot{{if eq $i 0}} is-selected{{end}}" role="option" data-slot="{{$s.ID}}"
-            data-name="{{$s.Name}}" data-job="{{$s.JobName}}" data-lv="{{$s.BaseLv}} / {{$s.JobLv}}" data-when="{{$s.Updated.Format "02/01/2006 15:04"}}">
-            <b>{{$s.Name}}</b>
-            <span>{{$s.JobName}}</span>
-            <small>Nv. {{$s.BaseLv}} / {{$s.JobLv}}</small>
-          </button>
-          {{end}}
+        <div class="ro-charsel__grid" id="slots" role="listbox" aria-label="Builds salvos">
           <a class="ro-charslot ro-charslot--empty" href="/new">+ Novo build</a>
         </div>
-        <aside class="ro-charsel__info" aria-live="polite">
-          {{if .Slots}}{{with index .Slots 0}}
-          <dl>
-            <dt>Nome</dt><dd data-info="name">{{.Name}}</dd>
-            <dt>Classe</dt><dd data-info="job">{{.JobName}}</dd>
-            <dt>Nível</dt><dd data-info="lv">{{.BaseLv}} / {{.JobLv}}</dd>
-            <dt>Salvo em</dt><dd data-info="when">{{.Updated.Format "02/01/2006 15:04"}}</dd>
-          </dl>
-          {{end}}{{else}}
-          <p class="ro-npc">Nenhum build salvo ainda.<br><br>Monte um build e aperte <b>Salvar</b> (ou <b>Ctrl+S</b>) para ele aparecer aqui.</p>
-          {{end}}
+        <aside class="ro-charsel__info" id="slot-info" aria-live="polite">
+          <p class="ro-npc">Nenhum build salvo ainda.<br><br>Monte um build e aperte <b>Salvar</b> (ou <b>Ctrl+S</b>) para ele aparecer aqui.<br><br><small>Os builds ficam salvos neste navegador.</small></p>
         </aside>
       </div>
-      {{if .Slots}}
-      <footer class="ro-window__footer">
-        <a class="ro-btn" data-open href="/build?s={{(index .Slots 0).ID}}">Abrir</a>
-        <form method="post" data-delete action="/builds/{{(index .Slots 0).ID}}/delete">
-          <button class="ro-btn" type="submit">Excluir</button>
-        </form>
+      <footer class="ro-window__footer" id="slot-actions" hidden>
+        <a class="ro-btn" id="slot-open" href="#">Abrir</a>
+        <button class="ro-btn" type="button" id="slot-delete">Excluir</button>
       </footer>
-      {{end}}
     </section>
 
     <!-- Main menu -->
@@ -57,10 +36,9 @@
         <nav class="ro-homemenu__list">
           <a class="ro-homemenu__item" href="/new"><b>Novo build</b><span>Importar um replay (.rrf) ou começar em branco</span></a>
           <a class="ro-homemenu__item" href="/build"><b>Continuar</b><span>Volta ao último build aberto</span></a>
-          <a class="ro-homemenu__item" href="#" data-load-code><b>Abrir código</b><span>Cole o código que alguém compartilhou</span></a>
+          <a class="ro-homemenu__item" href="#" data-load-code><b>Abrir link</b><span>Cole o link de um build compartilhado</span></a>
           <a class="ro-homemenu__item" href="/items"><b>Banco de Itens</b><span>Buscar itens, cartas e encantamentos</span></a>
           <a class="ro-homemenu__item" href="/skills"><b>Árvore de Habilidades</b><span>Ver as habilidades de cada classe</span></a>
-          {{if .Desktop}}<a class="ro-homemenu__item" href="/setup?refresh=1"><b>Atualizar dados do jogo</b><span>Depois de um patch do RO: lê o cliente de novo</span></a>{{end}}
         </nav>
       </div>
     </section>
@@ -68,45 +46,76 @@
   {{end}}
 </main>
 <script>
-  (() => {
+  document.addEventListener("DOMContentLoaded", () => {
     const load = document.querySelector("[data-load-code]");
     if (load) load.addEventListener("click", (e) => {
       e.preventDefault();
-      const v = (prompt("Cole o código do build (ou um link com ?b=…):") || "").trim();
+      const v = (prompt("Cole o link do build (ou só o código):") || "").trim();
       if (!v) return;
       const m = v.match(/[?&]b=([A-Za-z0-9_-]+)/);
       location.href = "/build?b=" + (m ? m[1] : v.replace(/[^A-Za-z0-9_-]/g, ""));
     });
 
-    // Character select: arrows, Enter and double click like the client.
-    const slots = [...document.querySelectorAll("[data-slot]")];
-    if (!slots.length) return;
-    const open = document.querySelector("[data-open]");
-    const del = document.querySelector("[data-delete]");
-    let sel = 0;
-    const select = (i) => {
-      sel = (i + slots.length) % slots.length;
-      const s = slots[sel];
-      slots.forEach((el, k) => el.classList.toggle("is-selected", k === sel));
-      for (const k of ["name", "job", "lv", "when"]) document.querySelector(`[data-info="${k}"]`).textContent = s.dataset[k];
-      open.href = "/build?s=" + s.dataset.slot;
-      del.action = "/builds/" + s.dataset.slot + "/delete";
-      s.focus();
-    };
-    slots.forEach((el, i) => {
-      el.addEventListener("click", () => select(i));
-      el.addEventListener("dblclick", () => open.click());
+    // Character select from the builds saved in this browser.
+    const grid = document.getElementById("slots");
+    if (!grid || !window.ROSaved) return;
+    const info = document.getElementById("slot-info");
+    const actions = document.getElementById("slot-actions");
+    const open = document.getElementById("slot-open");
+    const count = document.getElementById("slot-count");
+    const fmt = (t) => new Date(t).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+    let list = [], sel = 0;
+
+    function render() {
+      list = ROSaved.list();
+      grid.querySelectorAll("[data-slot]").forEach((el) => el.remove());
+      const add = grid.lastElementChild; // "+ Novo build"
+      list.forEach((e, i) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "ro-charslot";
+        b.setAttribute("role", "option");
+        b.dataset.slot = i;
+        const name = document.createElement("b"); name.textContent = e.name;
+        const job = document.createElement("span"); job.textContent = e.job || "?";
+        const lv = document.createElement("small"); lv.textContent = `Nv. ${e.b || "?"} / ${e.jl || "?"}`;
+        b.append(name, job, lv);
+        b.addEventListener("click", () => select(i));
+        b.addEventListener("dblclick", () => open.click());
+        grid.insertBefore(b, add);
+      });
+      count.textContent = list.length ? `(${list.length})` : "";
+      actions.hidden = !list.length;
+      if (list.length) select(Math.min(sel, list.length - 1), true);
+    }
+
+    function select(i, quiet) {
+      sel = (i + list.length) % list.length;
+      const e = list[sel];
+      grid.querySelectorAll("[data-slot]").forEach((el, k) => el.classList.toggle("is-selected", k === sel));
+      const dl = document.createElement("dl");
+      for (const [k, v] of [["Nome", e.name], ["Classe", e.job || "?"], ["Nível", `${e.b || "?"} / ${e.jl || "?"}`], ["Salvo em", fmt(e.t)]]) {
+        const dt = document.createElement("dt"); dt.textContent = k;
+        const dd = document.createElement("dd"); dd.textContent = v;
+        dl.append(dt, dd);
+      }
+      info.replaceChildren(dl);
+      open.href = "/build?b=" + encodeURIComponent(e.code) + "&s=" + encodeURIComponent(e.id);
+      if (!quiet) grid.querySelector(`[data-slot="${sel}"]`).focus();
+    }
+
+    document.getElementById("slot-delete").addEventListener("click", () => {
+      const e = list[sel];
+      if (e && confirm(`Excluir o build "${e.name}"?`)) { ROSaved.remove(e.id); render(); }
     });
     document.addEventListener("keydown", (e) => {
-      if (!document.activeElement.closest(".ro-charsel__grid")) return;
+      if (!list.length || !document.activeElement.closest("#slots")) return;
       if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); select(sel + 1); }
       else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); select(sel - 1); }
       else if (e.key === "Enter") open.click();
-      else if (e.key === "Delete") del.requestSubmit();
+      else if (e.key === "Delete") document.getElementById("slot-delete").click();
     });
-    del.addEventListener("submit", (e) => {
-      if (!confirm("Excluir o build \"" + slots[sel].dataset.name + "\"?")) e.preventDefault();
-    });
-  })();
+    render();
+  });
 </script>
 {{end}}

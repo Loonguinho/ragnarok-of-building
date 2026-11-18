@@ -6,8 +6,10 @@
   <title>{{.Title}}</title>
   <link rel="stylesheet" href="/static/css/ro-ui.css">
   <link rel="icon" type="image/png" href="/static/img/icon.png">
+  <meta name="htmx-config" content='{"allowEval":false}'>
   <script src="/static/js/htmx.min.js" defer></script>
   <script src="/static/js/rowindow.js" defer></script>
+  <script src="/static/js/saved.js" defer></script>
 </head>
 <body class="ro-desktop">
   {{template "content" .}}

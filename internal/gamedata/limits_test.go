@@ -5,8 +5,8 @@ import "testing"
 func TestLatamLimits(t *testing.T) {
 	c := &Catalog{Jobs: map[int]*Job{
 		4255: {ID: 4255, MaxBaseLv: 275, MaxJobLv: 60, Fourth: true}, // Magus
-		4055: {ID: 4055, MaxBaseLv: 200, MaxJobLv: 70},                // Arcano
-		4012: {ID: 4012, MaxBaseLv: 99, MaxJobLv: 70},                 // trans
+		4055: {ID: 4055, MaxBaseLv: 200, MaxJobLv: 70},               // Arcano
+		4012: {ID: 4012, MaxBaseLv: 99, MaxJobLv: 70},                // trans
 	}}
 	c.ApplyLatamLimits()
 	if j := c.Jobs[4255]; j.MaxBaseLv != 250 || j.MaxJobLv != 50 {

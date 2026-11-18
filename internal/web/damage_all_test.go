@@ -27,7 +27,7 @@ func TestDamageWindowEverySkill(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := New(Options{Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Catalog: c})
+	s, err := New(Options{Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Catalog: c, NoRateLimit: true})
 	if err != nil {
 		t.Fatal(err)
 	}

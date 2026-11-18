@@ -101,3 +101,8 @@
     });
   });
 })();
+
+// Enter on a focused list row acts like a click (item lists, menus).
+document.addEventListener("keyup", (e) => {
+  if (e.key === "Enter" && e.target.matches && e.target.matches(".ro-itemrow")) e.target.click();
+});

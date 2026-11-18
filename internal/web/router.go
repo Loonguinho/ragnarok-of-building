@@ -14,7 +14,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"ragnarok-of-building/internal/gamedata"
-	"ragnarok-of-building/internal/store"
 	assets "ragnarok-of-building/web"
 )
 
@@ -25,10 +24,8 @@ type Options struct {
 	// Dev reads templates and static files from ./web on every request
 	// (edit + refresh, no rebuild).
 	Dev bool
-	// Desktop: running inside the desktop app (shows "Atualizar dados do jogo").
-	Desktop bool
-	// Store keeps the saved builds; nil disables saving.
-	Store *store.Store
+	// NoRateLimit turns off the per-IP request limits (tests).
+	NoRateLimit bool
 }
 
 // Server holds parsed templates and dependencies for handlers.
@@ -80,31 +77,37 @@ func (s *Server) parse() (map[string]*template.Template, error) {
 // Routes returns the HTTP handler.
 func (s *Server) Routes() http.Handler {
 	r := chi.NewRouter()
-	r.Use(middleware.RequestID, middleware.RealIP, middleware.Recoverer, middleware.Compress(5))
+	r.Use(middleware.RequestID, middleware.RealIP, middleware.Recoverer, middleware.Compress(5), securityHeaders)
+	// Per-IP limits: the damage window recalculates on every change, replay
+	// uploads are the heaviest request.
+	calcLimit := newRateLimiter(10, 40)
+	searchLimit := newRateLimiter(10, 40)
+	importLimit := newRateLimiter(0.2, 5) // 5 in a row, then one every 5 s
+	if s.opt.NoRateLimit {
+		calcLimit, searchLimit, importLimit = nil, nil, nil
+	}
 
 	static, _ := fs.Sub(s.fsys, "static")
 	fileServer := http.StripPrefix("/static/", http.FileServer(http.FS(static)))
 	if s.opt.Dev {
 		r.Handle("/static/*", noCache(fileServer))
 	} else {
-		r.Handle("/static/*", fileServer)
+		r.Handle("/static/*", staticCache(fileServer))
 	}
 
 	r.Get("/", s.handleHome)
 	r.Get("/uikit", s.simple("uikit", "RO UI Kit"))
 	r.Get("/skills", s.handleSkills)
 	r.Get("/items", s.handleItems)
-	r.Get("/items/search", s.handleItemSearch)
+	r.With(searchLimit.limit).Get("/items/search", s.handleItemSearch)
 	r.Get("/items/{id}", s.handleItemInfo)
 	r.Get("/new", s.handleNew)
-	r.Post("/build/import", s.handleImport)
+	r.With(importLimit.limit).Post("/build/import", oneAtATime(2, http.HandlerFunc(s.handleImport)).ServeHTTP)
 	r.Get("/build", s.handleBuild)
-	r.Post("/build/calc", s.handleBuildCalc)
+	r.With(calcLimit.limit).Post("/build/calc", s.handleBuildCalc)
 	r.Get("/build/skills", s.handleBuildSkills)
-	r.Get("/build/items", s.handleBuildItems)
-	r.Get("/build/monsters", s.handleBuildMonsters)
-	r.Post("/builds/save", s.handleSaveBuild)
-	r.Post("/builds/{id}/delete", s.handleDeleteBuild)
+	r.With(searchLimit.limit).Get("/build/items", s.handleBuildItems)
+	r.With(searchLimit.limit).Get("/build/monsters", s.handleBuildMonsters)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
 	return r
 }
@@ -131,10 +134,6 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, page string, dat
 	if !ok {
 		http.NotFound(w, r)
 		return
-	}
-	if m, ok := data.(map[string]any); ok {
-		m["Saving"] = s.opt.Store != nil
-		m["Desktop"] = s.opt.Desktop
 	}
 	var buf bytes.Buffer
 	if err := t.ExecuteTemplate(&buf, "layout.html", data); err != nil {

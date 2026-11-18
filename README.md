@@ -1,16 +1,20 @@
 # Ragnarok of Building
 
-A build simulator for **Ragnarok Online LATAM**, with a UI modeled on the game client: draggable windows, Alt hotkeys, a character-select home screen and NPC dialogs. Ships as a Windows desktop app.
+A build simulator for **Ragnarok Online LATAM**, with a UI modeled on the game client: draggable windows, Alt hotkeys, a character-select home screen and NPC dialogs.
 
-Stack: Go (chi) · HTMX + Go templates · SQLite · data from the LATAM client itself (+ Divine Pride for item bonuses) · PT-BR / ES / EN.
+Stack: Go (chi) · HTMX + Go templates · data from the LATAM client itself (+ Divine Pride for item bonuses) · PT-BR / ES / EN.
 
-## Desktop app (ready to use)
+## Online
+
+The site is one Go binary plus the game catalog, packaged with Docker (about 170 MB of RAM, so free 512 MB plans fit). The catalog is generated from your own client and copied into the image: it is never committed to git.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\build-desktop.ps1   # -> dist\RagnarokOfBuilding.exe
+go run ./cmd/fetchrathena; go run ./cmd/import   # once, and after each game patch
+docker build -t ragnarok-of-building .
+docker run -p 8080:8080 ragnarok-of-building    # http://localhost:8080
 ```
 
-Double-click `RagnarokOfBuilding.exe`. On first run it finds the RO LATAM client (or asks for its folder), downloads the rAthena tables (~15 MB, GPL-3.0, never redistributed) and reads the client. That takes under a minute. The app then opens in its own window (Edge/Chrome/Brave app mode) and quits when the window closes. Everything lives in `%LOCALAPPDATA%\RagnarokOfBuilding`: the catalog, the rAthena tables and `builds.db` (saved builds). After a game patch use **Atualizar dados do jogo** on the home screen.
+Hosts pass the port in `PORT`. Saved builds live in each visitor's browser (localStorage) and builds are shared by link, so the server keeps no state and any free container host works. Per-IP rate limits protect the calculation and replay upload endpoints, and the pages send a Content-Security-Policy.
 
 ## Running from source
 
@@ -24,15 +28,15 @@ go run ./cmd/import         # client + rAthena -> data/gen/catalog.json.gz (~3 s
 and every time:
 
 ```powershell
-go run ./cmd/server         # http://localhost:8080 (saved builds: data/app.db, change with DB=...)
+go run ./cmd/server         # http://localhost:8080
 go test ./...
 ```
 
 Re-run `go run ./cmd/import` after each game patch.
 
 **Pages**
-- `/` is the home screen: saved builds as character slots, plus the menu
-- `/build` is the **build editor**, with Basic Info (Alt+V), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S), Bonuses (Alt+B), Target/Damage (Alt+D) and Buffs (Alt+U). Ctrl+S saves. **Copiar código** copies a code anyone can paste in Início → Abrir código.
+- `/` is the home screen: builds saved in this browser as character slots, plus the menu
+- `/build` is the **build editor**, with Basic Info (Alt+V), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S), Bonuses (Alt+B), Target/Damage (Alt+D) and Buffs (Alt+U). Ctrl+S saves the build in the browser; **Copiar link** shares it.
 - `/new` starts a build from a replay (`.rrf`) or a blank class
 - `/items` is the item database (PT/ES/EN search, filter by type)
 - `/skills` is a standalone skill tree
@@ -79,7 +83,7 @@ go run ./cmd/scriptcov                                                 # how muc
 - [x] Phase 3: in-game-style skill tree with skill point limits per class step
 - [x] Phase 4: equipment, cards, enchants, refine, class restrictions, item combos (rAthena + LATAM-only items read from the client descriptions)
 - [x] Phase 5: physical and magic damage vs monsters with LATAM formulas for every class, checked against bROWiki; buffs and consumables
-- [x] Phase 6: share codes, last build restored, saved builds (SQLite, character select home), desktop app
+- [x] Phase 6: share links, last build restored, saved builds (browser storage, character select home), Docker image for hosting
 - [x] Phase 6b: import a character from a replay (`.rrf`)
 - [ ] Phase 7: compare + optimizer
 - [ ] Phase 8: polish

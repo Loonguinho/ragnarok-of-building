@@ -5,6 +5,31 @@ package web
 // TestTemplatesTranslated checks that every {{t "…"}} in the templates is
 // here.
 var dict = map[string][2]string{
+	// ---- optimizer ----
+	"Otimizador": {"Optimizer", "Optimizador"},
+	"Otimizar":   {"Optimize", "Optimizar"},
+	"Testa cada carta que encaixa em cada slot, uma por vez, contra o alvo da janela de dano, com a habilidade escolhida nela.": {
+		"Tries every card that fits each slot, one at a time, against the damage window's target with the skill chosen there.",
+		"Prueba cada carta que encaja en cada slot, una a la vez, contra el objetivo de la ventana de daño, con la habilidad elegida en ella."},
+	"Incluir encantamentos (só nas posições já encantadas)": {"Include enchants (only positions already enchanted)", "Incluir encantamientos (solo en las posiciones ya encantadas)"},
+	"Os dados não dizem quais encantamentos cada item aceita: confira se a sugestão existe para o seu item.": {
+		"The data doesn't say which enchants each item takes: check that the suggestion exists for your item.",
+		"Los datos no dicen qué encantamientos acepta cada objeto: verifica que la sugerencia exista para tu objeto."},
+	"Calcular":    {"Calculate", "Calcular"},
+	"Calculando…": {"Calculating…", "Calculando…"},
+	"Escolha um alvo na janela de dano (Alt+D) primeiro.": {"Choose a target in the damage window (Alt+D) first.", "Elige un objetivo en la ventana de daño (Alt+D) primero."},
+	"Nenhum item equipado tem slot de carta.":             {"No equipped item has a card slot.", "Ningún objeto equipado tiene slot de carta."},
+	"Dano esperado atual":                                 {"Current expected damage", "Daño esperado actual"},
+	"Tempo esgotado: alguns slots não foram testados.":    {"Time ran out: some slots were not tested.", "Se agotó el tiempo: algunos slots no se probaron."},
+	"atual":               {"current", "actual"},
+	"Carta":               {"Card", "Carta"},
+	"Encantamento":        {"Enchant", "Encantamiento"},
+	"Aplicar":             {"Apply", "Aplicar"},
+	"Já é a melhor opção": {"Already the best option", "Ya es la mejor opción"},
+	"%d combinações testadas. Bônus condicionais entram pela média, como na janela de dano.": {
+		"%d combinations tested. Conditional bonuses count by their average, as in the damage window.",
+		"%d combinaciones probadas. Los bonos condicionales cuentan por su promedio, como en la ventana de daño."},
+
 	// ---- compare ----
 	"Comparar Builds": {"Compare Builds", "Comparar Builds"},
 	"Comparar builds": {"Compare builds", "Comparar builds"},

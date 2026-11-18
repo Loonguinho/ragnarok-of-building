@@ -414,3 +414,14 @@ body:has(.ro-compare) #ro-chat { display: none; }
 .ro-cmptable__group th { text-align: left !important; background: linear-gradient(#eef2f9, #dde5f2); color: #1d3f7a; font-weight: bold !important; padding-top: 5px; }
 .ro-cmptable td.is-best { color: #1b7a2e; font-weight: bold; background: #e8f6ea; }
 
+
+/* Optimizer */
+.ro-optwin .ro-window__body { max-height: 70vh; overflow: auto; }
+.ro-optwin__go { margin: 6px 0; text-align: right; }
+.ro-optwin__base { margin: 6px 0; }
+.ro-optgroup { margin: 8px 0; }
+.ro-optgroup__title { font-weight: bold; color: #1d3f7a; padding: 2px 4px; background: linear-gradient(#eef2f9, #dde5f2); }
+.ro-optgroup__title small { font-weight: normal; color: #5a6a88; }
+.ro-optrow { display: flex; align-items: center; gap: 6px; padding: 2px 4px; border-bottom: 1px dotted #c4c8d0; }
+.ro-optrow span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ro-optrow__gain { color: #1b7a2e; }

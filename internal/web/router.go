@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -37,6 +38,10 @@ type Server struct {
 	fsys  fs.FS
 	pages map[string]*template.Template
 	items *gamedata.ItemIndex
+
+	// Optimizer card pools, built on first use.
+	optOnce                  sync.Once
+	optCardList, optEnchants []*gamedata.Item
 }
 
 // New parses templates (once, unless Dev).
@@ -114,6 +119,7 @@ func (s *Server) Routes() http.Handler {
 	r.With(importLimit.limit).Post("/build/import", oneAtATime(2, http.HandlerFunc(s.handleImport)).ServeHTTP)
 	r.Get("/build", s.handleBuild)
 	r.With(calcLimit.limit).Post("/build/calc", s.handleBuildCalc)
+	r.With(calcLimit.limit).Post("/build/optimize", oneAtATime(2, http.HandlerFunc(s.handleOptimize)).ServeHTTP)
 	r.Get("/build/skills", s.handleBuildSkills)
 	r.With(searchLimit.limit).Get("/build/items", s.handleBuildItems)
 	r.With(searchLimit.limit).Get("/build/monsters", s.handleBuildMonsters)

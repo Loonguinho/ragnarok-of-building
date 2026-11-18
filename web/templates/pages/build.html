@@ -40,6 +40,18 @@
   <div class="ro-window__body" id="build_buffs">{{template "build_buffs" .}}</div>
 </section>
 
+<!-- Optimizer (Alt+O) -->
+<section class="ro-window ro-optwin is-hidden" id="win-optimize" data-hotkey="o" style="left:828px;top:16px;width:380px">
+  <header class="ro-window__title">{{t "Otimizador"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
+  <div class="ro-window__body">
+    <p class="ro-note">{{t "Testa cada carta que encaixa em cada slot, uma por vez, contra o alvo da janela de dano, com a habilidade escolhida nela."}}</p>
+    <label class="ro-check"><input type="checkbox" id="opt-enchants"> {{t "Incluir encantamentos (só nas posições já encantadas)"}}</label>
+    <p class="ro-note">{{t "Os dados não dizem quais encantamentos cada item aceita: confira se a sugestão existe para o seu item."}}</p>
+    <div class="ro-optwin__go"><button class="ro-btn" data-optimize>{{t "Calcular"}}</button></div>
+    <div id="opt-results"></div>
+  </div>
+</section>
+
 <!-- Target / Damage (Alt+D) -->
 <section class="ro-window ro-dmgwin" id="win-damage" data-hotkey="d" style="left:828px;top:16px;width:380px">
   <header class="ro-window__title">{{t "Alvo / Dano"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
@@ -160,6 +172,7 @@
   <button class="ro-btn" data-toggle="win-bonus" title="Alt+B">{{t "Bônus"}}</button>
   <button class="ro-btn" data-toggle="win-damage" title="Alt+D">{{t "Dano"}}</button>
   <button class="ro-btn" data-toggle="win-buffs" title="Alt+U">Buffs</button>
+  <button class="ro-btn" data-toggle="win-optimize" title="Alt+O">{{t "Otimizar"}}</button>
 </div>
 <div class="ro-basic__menu">
   <button class="ro-btn" data-save-build title="{{t "Salvar neste navegador (Ctrl+S)"}}">{{t "Salvar"}}</button>
@@ -336,6 +349,32 @@
 {{end}}
 {{if .Combos}}<div class="ro-combos"><h4>{{t "Combos ativos"}}</h4>{{range .Combos}}<div class="ro-bonus"><span>{{.}}</span></div>{{end}}</div>{{end}}
 {{if .R.SkippedScriptEffects}}<div class="ro-note">{{.R.SkippedScriptEffects}} {{t "efeito(s) de equipamento ainda não simulado(s) (procs, habilidades concedidas, efeitos condicionais)."}}</div>{{end}}
+{{end}}
+
+{{define "build_optimize"}}
+{{if .NoTarget}}<p class="ro-note">{{t "Escolha um alvo na janela de dano (Alt+D) primeiro."}}</p>
+{{else if .NoItems}}<p class="ro-note">{{t "Nenhum item equipado tem slot de carta."}}</p>
+{{else}}
+<p class="ro-optwin__base">{{t "Alvo"}}: <b>{{.Target}}</b> · {{.Attack}}<br>{{t "Dano esperado atual"}}: <b>{{.Base}}</b></p>
+{{if .Partial}}<p class="ro-note">{{t "Tempo esgotado: alguns slots não foram testados."}}</p>{{end}}
+{{range .Groups}}
+<div class="ro-optgroup">
+  <div class="ro-optgroup__title">{{.Label}} <small>{{t "atual"}}: {{with .Current}}{{.Name}}{{else}}{{t "vazio"}}{{end}}</small></div>
+  <ul class="ro-list ro-optlist">
+  {{range .Options}}
+    <li class="ro-optrow">
+      <img src="https://static.divine-pride.net/images/items/item/{{.Item.ID}}.png" alt="" width="24" height="24" loading="lazy">
+      <span>{{.Item.Name}}</span>
+      <b class="ro-optrow__gain">{{.Gain}}</b>
+      <button class="ro-btn" data-opt-apply="{{.Slot}}" data-opt-index="{{.Index}}" data-opt-card="{{.Item.ID}}" title="{{.Value}}">{{t "Aplicar"}}</button>
+    </li>
+  {{end}}
+  </ul>
+</div>
+{{end}}
+{{with .Same}}<p class="ro-note">{{t "Já é a melhor opção"}}: {{range $i, $s := .}}{{if $i}}, {{end}}{{$s}}{{end}}</p>{{end}}
+<p class="ro-note">{{printf (t "%d combinações testadas. Bônus condicionais entram pela média, como na janela de dano.") .Tested}}</p>
+{{end}}
 {{end}}
 
 {{define "pick_results"}}

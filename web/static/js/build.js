@@ -294,6 +294,41 @@
     if (e.target.closest("[data-unequip]")) { unequip(slotOpen); say(T("Item removido.")); recalc(); }
   });
 
+  // ---- optimizer ----
+  const optOut = document.getElementById("opt-results");
+  let optBusy = false;
+  async function optimize() {
+    if (!optOut || optBusy) return;
+    optBusy = true;
+    optOut.innerHTML = '<p class="ro-note">' + T("Calculando…") + "</p>";
+    try {
+      const res = await fetch("/build/optimize?lang=" + lang, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ b: build, enc: document.getElementById("opt-enchants").checked }),
+      });
+      if (!res.ok) throw new Error((await res.text()).trim() || "HTTP " + res.status);
+      optOut.innerHTML = await res.text();
+    } catch (err) {
+      optOut.innerHTML = "";
+      say(T("Erro ao calcular: ") + err.message, true);
+    } finally {
+      optBusy = false;
+    }
+  }
+  document.addEventListener("click", async (e) => {
+    if (e.target.closest("[data-optimize]")) { optimize(); return; }
+    const ap = e.target.closest("[data-opt-apply]");
+    if (!ap) return;
+    const slot = ap.dataset.optApply, i = Number(ap.dataset.optIndex), id = Number(ap.dataset.optCard);
+    const cur = build.e[slot];
+    if (!cur) return;
+    const keys = HEAD.includes(slot) ? HEAD.filter((h) => build.e[h] && build.e[h].i === cur.i) : [slot];
+    keys.forEach((k) => { const eq = build.e[k]; eq.c = eq.c || [0, 0, 0, 0]; eq.c[i] = id; });
+    say(T("Carta aplicada."));
+    await recalc();
+    optimize();
+  });
+
   document.addEventListener("change", (e) => {
     const r = e.target.closest("[data-refine]");
     if (!r || !slotOpen) return;

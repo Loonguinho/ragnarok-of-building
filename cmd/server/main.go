@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"ragnarok-of-building/internal/config"
+	"ragnarok-of-building/internal/divinepride"
 	"ragnarok-of-building/internal/gamedata"
 	"ragnarok-of-building/internal/web"
 )
@@ -34,7 +35,11 @@ func main() {
 	}
 
 	sounds := env("SOUNDS", filepath.Join(filepath.Dir(catalogPath), "sounds"))
-	srv, err := web.New(web.Options{Log: log, Catalog: cat, Dev: dev, SoundDir: sounds})
+	var dp *divinepride.Client
+	if key := os.Getenv("DP_API_KEY"); key != "" {
+		dp = divinepride.New(key, "LATAM", env("DP_CACHE", "data/cache/dp"))
+	}
+	srv, err := web.New(web.Options{Log: log, Catalog: cat, Dev: dev, SoundDir: sounds, DP: dp})
 	if err != nil {
 		log.Error("init", "err", err)
 		os.Exit(1)

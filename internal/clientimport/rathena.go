@@ -28,6 +28,16 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 		}
 		c.Monsters[id].Names = monsterNames(c, m.Cards)
 	}
+	// Monsters rAthena lists without stats: searchable, stats on demand.
+	c.MonsterStubs = map[int]string{}
+	for id, aegis := range db.MobStubs {
+		c.MonsterStubs[id] = aegis
+	}
+	for id, m := range db.Mobs {
+		if c.Monsters[id] == nil && m.Aegis != "" {
+			c.MonsterStubs[id] = m.Aegis
+		}
+	}
 	if db.Commit != "" {
 		c.Source += " + rAthena " + db.Commit[:min(8, len(db.Commit))]
 	}

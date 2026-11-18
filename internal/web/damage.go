@@ -81,7 +81,7 @@ func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
 
 	// Skill ratio: manual value wins, then the LATAM formula, then the
 	// description's per-level %, then 100%.
-	m := c.Monsters[b.Target]
+	m := c.Monster(b.Target)
 	sk := c.Skills[b.Atk.Skill]
 	var formula *calc.SkillFormula
 	if sk != nil {

@@ -79,7 +79,8 @@ func (s *Server) compare(codes, names []string, target int, l string) compareTab
 			}
 		}
 	}
-	t.Target = c.Monsters[target]
+	s.loadTarget(target, l)
+	t.Target = c.Monster(target)
 	for i, code := range codes {
 		col := compareCol{Name: names[i]}
 		if b, ok := decodeBuild(code); ok {

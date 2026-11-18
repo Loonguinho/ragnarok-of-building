@@ -215,7 +215,7 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 		delete(b.Equip, Shield)
 	}
 	normalizeSkills(b, c)
-	if _, ok := c.Monsters[b.Target]; !ok {
+	if c.Monster(b.Target) == nil {
 		b.Target = 0
 	}
 	at := &b.Atk

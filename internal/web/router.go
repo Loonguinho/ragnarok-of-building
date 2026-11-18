@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"ragnarok-of-building/internal/divinepride"
 	"ragnarok-of-building/internal/gamedata"
 	assets "ragnarok-of-building/web"
 )
@@ -30,6 +31,9 @@ type Options struct {
 	// SoundDir holds the interface sounds extracted from the client
 	// (data/gen/sounds); empty or missing means a silent interface.
 	SoundDir string
+	// DP fetches, one ID at a time, monsters rAthena has no stats for
+	// (nil: no Divine Pride key).
+	DP *divinepride.Client
 }
 
 // Server holds parsed templates and dependencies for handlers.
@@ -42,6 +46,10 @@ type Server struct {
 	// Optimizer card pools, built on first use.
 	optOnce     sync.Once
 	optCardList []*gamedata.Item
+
+	// Monster stats being fetched from Divine Pride, and IDs that failed.
+	mobMu     sync.Mutex
+	mobFailed map[int]bool
 }
 
 // New parses templates (once, unless Dev).

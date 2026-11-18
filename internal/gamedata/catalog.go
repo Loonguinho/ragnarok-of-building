@@ -219,6 +219,11 @@ type Catalog struct {
 	// Enchants[item][card index] = enchant item IDs the item accepts there
 	// (client enchant list). Items missing here have no known enchant data.
 	Enchants map[int]map[int][]int `json:"enchants,omitempty"`
+	// MonsterStubs are monsters rAthena knows only by ID (ID -> AegisName);
+	// their stats are fetched on demand (Divine Pride) and kept with AddMonster.
+	MonsterStubs map[int]string `json:"monsterStubs,omitempty"`
+
+	extraMobs sync.Map // int -> *Monster, loaded at run time
 
 	comboOnce sync.Once
 	comboIdx  map[int][]int // item ID -> indexes into Combos

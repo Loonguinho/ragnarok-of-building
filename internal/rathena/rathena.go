@@ -93,6 +93,9 @@ type DB struct {
 	// (group: Armor, Weapon, Shadow_Armor, Shadow_Weapon).
 	Refine map[string]map[int][]int
 	Mobs   map[int]*Mob
+	// MobStubs are monsters mob_db.yml lists only as a commented ID and
+	// AegisName, without stats (ID -> AegisName).
+	MobStubs map[int]string
 	// AttrFix[defElementLevel][atkElement][defElement] = damage %.
 	AttrFix map[int]map[string]map[string]int
 	// SizeFix[weaponType][Small|Medium|Large] = damage %.

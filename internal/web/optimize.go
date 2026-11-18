@@ -93,7 +93,7 @@ func (s *Server) optimize(ctx context.Context, b calc.Build, enchants bool, l st
 	c := s.opt.Catalog
 	calc.Normalize(&b, c)
 	var res optResult
-	m := c.Monsters[b.Target]
+	m := c.Monster(b.Target)
 	if m == nil {
 		res.NoTarget = true
 		return res
@@ -297,6 +297,7 @@ func (s *Server) handleOptimize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	l := lang(r)
+	s.loadTarget(in.B.Target, l)
 	res := s.optimize(r.Context(), in.B, in.Enc, l)
 	s.fragment(w, r, "build", "build_optimize", res)
 }

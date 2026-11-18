@@ -1,6 +1,15 @@
 package rathena
 
-import "path/filepath"
+import (
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+)
+
+// mobStub matches a commented-out mob_db entry: "#  - Id: 20994" followed by
+// "#    AegisName: MD_BETELGEUSE".
+var mobStub = regexp.MustCompile(`(?m)^#\s*- Id:\s*(\d+)\s*\n#\s*AegisName:\s*(\S+)`)
 
 // Mob is one monster from mob_db.yml (renewal).
 type Mob struct {
@@ -91,6 +100,18 @@ func (db *DB) loadMobs(re string) error {
 			m.DropAegis = append(m.DropAegis, d.Item)
 		}
 		db.Mobs[m.ID] = m
+	}
+
+	// Commented entries: monsters rAthena knows only by ID.
+	raw, err := os.ReadFile(filepath.Join(re, "mob_db.yml"))
+	if err != nil {
+		return err
+	}
+	db.MobStubs = map[int]string{}
+	for _, m := range mobStub.FindAllSubmatch(raw, -1) {
+		if id, _ := strconv.Atoi(string(m[1])); id > 0 && db.Mobs[id] == nil {
+			db.MobStubs[id] = string(m[2])
+		}
 	}
 
 	// attr_fix.yml: Body: [{Level: n, <AtkEle>: {<DefEle>: pct}}]

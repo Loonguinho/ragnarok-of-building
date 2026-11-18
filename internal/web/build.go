@@ -213,7 +213,11 @@ func (s *Server) handleBuild(w http.ResponseWriter, r *http.Request) {
 			b = d
 		}
 	}
+	note := s.loadTarget(b.Target, l)
 	v := s.buildView(b, l)
+	if note != "" {
+		v.Notes = append(v.Notes, note)
+	}
 	s.render(w, r, "build", map[string]any{"Title": "Build — " + v.JobName, "Lang": l, "V": v,
 		"Skills": s.skillTreeData(v.Build.Job, v.Build.JobLv, l, v.Build.Skills)})
 }
@@ -229,7 +233,11 @@ func (s *Server) handleBuildCalc(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid build", http.StatusBadRequest)
 		return
 	}
+	note := s.loadTarget(b.Target, lang(r))
 	v := s.buildView(b, lang(r))
+	if note != "" {
+		v.Notes = append(v.Notes, note)
+	}
 	out := map[string]any{"build": v.Build, "code": v.Code, "notes": v.Notes, "html": map[string]string{},
 		"skillGroups": s.opt.Catalog.SkillBudgets(v.Build.Job, v.Build.JobLv)}
 	for _, name := range []string{"build_status", "build_basic", "build_equip", "build_bonus", "build_damage", "build_buffs"} {

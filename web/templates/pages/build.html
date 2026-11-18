@@ -121,7 +121,7 @@
 <div class="ro-target">
   <div class="ro-target__head">
     <img src="https://static.divine-pride.net/images/mobs/png/{{.Target.ID}}.png" alt="" loading="lazy">
-    <div><b>{{.Target.NameIn lang}}</b> <small>#{{.Target.ID}}</small></div>
+    <div><b>{{.Target.NameIn lang}}</b> <small>#{{.Target.ID}}{{with .Target.Source}} · {{t "atributos"}}: {{.}}{{end}}</small></div>
   </div>
   <div class="ro-target__grid">{{range .TargetInfo}}<span>{{t .Label}}</span><b>{{t .Value}}</b>{{end}}</div>
 </div>
@@ -149,7 +149,7 @@
 {{range .Results}}
 <li class="ro-list__item ro-itemrow" tabindex="0" data-monster="{{.ID}}">
   <span>{{.NameIn lang}}{{if .MVP}} <em class="ro-mvp">MVP</em>{{end}}{{with .OtherName lang}} <small>({{.}})</small>{{end}}</span>
-  <small>{{t "Nv"}} {{.Level}} · {{call $.RaceName .Race}} · {{call $.EleName .Element}} {{.ElementLv}}</small>
+  {{if .Stub}}<small>{{t "sem atributos no rAthena: buscados no Divine Pride ao escolher"}}</small>{{else}}<small>{{t "Nv"}} {{.Level}} · {{call $.RaceName .Race}} · {{call $.EleName .Element}} {{.ElementLv}}{{with .Source}} · {{.}}{{end}}</small>{{end}}
 </li>
 {{else}}
 <li class="ro-list__empty">{{t "Nenhum monstro encontrado."}}</li>

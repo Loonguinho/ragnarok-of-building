@@ -440,6 +440,8 @@ body.ro-desktop:has(.ro-newbuild) { overflow: auto; }
 
 /* Optimizer */
 .ro-optwin .ro-window__body { max-height: 70vh; overflow: auto; }
+/* Equipment bonuses: long with many combos, so the body scrolls. */
+.ro-bonuswin .ro-window__body { max-height: min(60vh, 560px); overflow-y: auto; overscroll-behavior: contain; }
 .ro-optwin__go { margin: 6px 0; text-align: right; }
 .ro-optwin__base { margin: 6px 0; }
 .ro-optgroup { margin: 8px 0; }

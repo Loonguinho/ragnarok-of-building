@@ -75,6 +75,7 @@ type Item struct {
 	EquipLvMin  int
 	EquipLvMax  int
 	Refineable  bool
+	Gradable    bool
 	Jobs        []string
 	Classes     []string
 	Gender      string
@@ -92,7 +93,12 @@ type DB struct {
 	// Refine[group][equipLevel][refine] = cumulative bonus in 1/100
 	// (group: Armor, Weapon, Shadow_Armor, Shadow_Weapon).
 	Refine map[string]map[int][]int
-	Mobs   map[int]*Mob
+	// GradeBonus[Weapon|Armor][level][grade] = % added to the refine bonus
+	// (enchantgrade.yml; grade 1 = D ... 4 = A, index 0 unused).
+	GradeBonus map[string]map[int][5]int
+	// RandomOpts: random option scripts by option ID.
+	RandomOpts map[int]*RandomOpt
+	Mobs       map[int]*Mob
 	// MobStubs are monsters mob_db.yml lists only as a commented ID and
 	// AegisName, without stats (ID -> AegisName).
 	MobStubs map[int]string
@@ -223,6 +229,12 @@ func Load(dir string) (*DB, error) {
 	}
 
 	if err := db.loadMobs(re); err != nil {
+		return nil, err
+	}
+	if err := db.loadGrades(re); err != nil {
+		return nil, err
+	}
+	if err := db.loadRandomOpts(re); err != nil {
 		return nil, err
 	}
 
@@ -396,6 +408,7 @@ type itemEntry struct {
 	EquipLevelMin int             `yaml:"EquipLevelMin"`
 	EquipLevelMax int             `yaml:"EquipLevelMax"`
 	Refineable    bool            `yaml:"Refineable"`
+	Gradable      bool            `yaml:"Gradable"`
 	Jobs          map[string]bool `yaml:"Jobs"`
 	Classes       map[string]bool `yaml:"Classes"`
 	Gender        string          `yaml:"Gender"`
@@ -419,7 +432,7 @@ func (e itemEntry) item() *Item {
 		MagicAttack: e.MagicAttack, Defense: e.Defense, Range: e.Range,
 		WeaponLevel: e.WeaponLevel, ArmorLevel: e.ArmorLevel,
 		EquipLvMin: e.EquipLevelMin, EquipLvMax: e.EquipLevelMax,
-		Refineable: e.Refineable, Jobs: keys(e.Jobs), Classes: keys(e.Classes),
+		Refineable: e.Refineable, Gradable: e.Gradable, Jobs: keys(e.Jobs), Classes: keys(e.Classes),
 		Gender: e.Gender, Script: e.Script, Weight: e.Weight,
 	}
 }

@@ -97,9 +97,19 @@ type slotView struct {
 	Key, Label, Side string
 	Item             *itemView
 	Refine           int
+	Grade            int
+	Opts             []optLine // random options
+	MaxOpts          int
 	Cards            []*itemView // len = item slots
 	Refineable       bool
+	Gradable         bool
 	CardSlots        int // positions below this are card slots; above, enchants
+}
+
+// optLine is a random option on an item, as shown and edited.
+type optLine struct {
+	ID, Value int
+	Label     string
 }
 
 type bonusLine struct {
@@ -135,6 +145,13 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 			if it := c.Items[e.Item]; it != nil {
 				iv := viewItem(it, l)
 				sv.Item, sv.Refine, sv.Refineable = &iv, e.Refine, it.Refineable
+				sv.Grade, sv.Gradable = e.Grade, it.Gradable
+				sv.MaxOpts = calc.MaxRandomOpts
+				for _, o := range e.Opts {
+					if ro := c.RandomOpts[o[0]]; ro != nil {
+						sv.Opts = append(sv.Opts, optLine{ID: o[0], Value: o[1], Label: ro.Label(l, o[1])})
+					}
+				}
 				// Show the card slots plus any enchant positions in use.
 				n := min(it.Slots, 4)
 				for i := 3; i >= n; i-- {
@@ -433,7 +450,7 @@ var bonusLabels = map[string]string{
 	"bHit": "Precisão", "bHitRate": "Precisão", "bFlee": "Esquiva", "bFleeRate": "Esquiva", "bFlee2": "Esquiva perfeita",
 	"bCritical": "Crítico", "bCriticalRate": "Crítico", "bDef": "DEF", "bDefRate": "DEF", "bDef2": "DEF suave",
 	"bMdef": "DEFM", "bMdefRate": "DEFM", "bMdef2": "DEFM suave",
-	"bAspd": "ASPD", "bAspdRate": "ASPD", "bLongAtkRate": "Dano à distância", "bCritAtkRate": "Dano crítico",
+	"bAspd": "ASPD", "bAspdRate": "ASPD", "bLongAtkRate": "Dano à distância", "bShortAtkRate": "Dano corpo a corpo", "bCritAtkRate": "Dano crítico",
 	"bPAtk": "P.ATQ", "bSMatk": "S.ATQM", "bRes": "RES", "bMRes": "MRES", "bHPlus": "H.PLUS", "bCRate": "C.RATE",
 	"bVariableCastrate": "Conjuração variável", "bFixedCastrate": "Conjuração fixa", "bFixedCast": "Conjuração fixa (ms)",
 	"bDelayrate": "Pós-conjuração", "bHPrecovRate": "Recuperação de HP", "bSPrecovRate": "Recuperação de SP",

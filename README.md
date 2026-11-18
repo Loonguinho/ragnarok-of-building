@@ -86,7 +86,7 @@ go run ./cmd/scriptcov                                                 # how muc
 - [x] Phase 1: client data import (items, skills, trees, jobs in PT/ES/EN)
 - [x] Phase 2: build model, stats, HP/SP/ASPD, traits (rAthena renewal formulas)
 - [x] Phase 3: in-game-style skill tree with skill point limits per class step
-- [x] Phase 4: equipment, cards, enchants, refine, class restrictions, item combos (rAthena + LATAM-only items read from the client descriptions)
+- [x] Phase 4: equipment, cards, enchants, refine, enchant grades (D–A: refine bonus and the items' own grade bonuses), random options (the client's option texts + rAthena scripts, also read from replays), class restrictions, item combos (rAthena + LATAM-only items read from the client descriptions)
 - [x] Phase 5: physical and magic damage vs monsters with LATAM formulas for every class, checked against bROWiki; buffs and consumables
 - [x] Phase 6: share links, last build restored, saved builds (browser storage, character select home), Docker image for hosting
 - [x] Phase 6b: import a character from a replay (`.rrf`)

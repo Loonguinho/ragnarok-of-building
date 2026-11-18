@@ -74,6 +74,7 @@ type Item struct {
 	EquipLvMin  int      `json:"elv,omitempty"`
 	EquipLvMax  int      `json:"elvMax,omitempty"`
 	Refineable  bool     `json:"refine,omitempty"`
+	Gradable    bool     `json:"grade,omitempty"` // takes an enchant grade (D..A)
 	Script      string   `json:"script,omitempty"`
 	// For items without an rAthena script: bonuses read from the client
 	// description (clientimport.DescScript) and the lines it skipped.
@@ -205,6 +206,10 @@ type Catalog struct {
 	TraitPoints []int `json:"traitPoints,omitempty"`
 	// Refine[group][equipLevel][refine] = cumulative bonus in 1/100 (rAthena refine.yml).
 	Refine map[string]map[int][]int `json:"refine,omitempty"`
+	// GradeBonus[Weapon|Armor][level][grade] = % added to the refine bonus.
+	GradeBonus map[string]map[int][5]int `json:"gradeBonus,omitempty"`
+	// RandomOpts are the random options an item can roll, by option ID.
+	RandomOpts map[int]*RandomOpt `json:"randomOpts,omitempty"`
 	// Monsters and damage tables (rAthena renewal).
 	Monsters map[int]*Monster `json:"monsters,omitempty"`
 	// AttrFix[defElementLevel][atkElement][defElement] = damage %.

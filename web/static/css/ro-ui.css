@@ -261,12 +261,18 @@ a { color: #1d4fa8; }
 .ro-eslot em { color: #9aa; font-style: normal; }
 .ro-eslot__empty { flex: none; display: inline-block; width: 24px; height: 24px; background: #eef0f4; border: 1px dashed #c4c8d0; border-radius: 2px; }
 
-.ro-slotedit { display: grid; gap: 6px; }
+.ro-slotedit { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .ro-slotedit__refine { display: flex; gap: 4px; align-items: center; margin-top: 4px; }
+.ro-grade { color: var(--ro-grade, #b5179e); font-weight: bold; }
 .ro-slotedit__desc { max-height: 120px; overflow-y: auto; background: #fff; border: 1px solid #b7bcc6; padding: 4px 6px; user-select: text; }
 .ro-slotedit__actions { display: flex; gap: 4px; justify-content: flex-end; }
 .ro-cards { min-height: 0; }
 .ro-cardrow { display: flex; align-items: center; gap: 4px; padding: 2px; }
+.ro-ropts { min-width: 0; margin: 0; padding: 2px 6px 4px; border: 1px solid var(--ro-border, #9aa8c0); }
+.ro-ropts legend { font-weight: bold; padding: 0 4px; }
+.ro-roptrow { display: flex; align-items: center; gap: 4px; padding: 2px 0; }
+.ro-roptrow span, .ro-roptrow select { flex: 1; width: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ro-roptrow__val { width: 64px; }
 .ro-cardrow span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ro-picklist { height: 220px; }
 

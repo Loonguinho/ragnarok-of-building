@@ -36,6 +36,8 @@ var RathenaFiles = []string{
 	"db/re/job_exp.yml",
 	"db/re/mob_db.yml",
 	"db/re/attr_fix.yml",
+	"db/re/enchantgrade.yml",
+	"db/re/item_randomopt_db.yml",
 	"db/re/item_combos.yml",
 	"db/re/item_db_usable.yml",
 	"src/common/mmo.hpp", // e_job enum: job name -> ID
@@ -141,6 +143,9 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 	}
 	if _, _, err := clientimport.MergeLatamCalc(c, mobs); err != nil {
 		progress("Lista de monstros do latam-ro-calc não lida: " + err.Error())
+	}
+	if _, err := clientimport.ImportRandomOpts(clientDir, c, db.RandomOpts); err != nil {
+		progress("Nomes dos bônus aleatórios não lidos: " + err.Error())
 	}
 	progress("Lendo a lista de encantamentos do cliente…")
 	if _, err := clientimport.ImportEnchants(clientDir, c, db.Aegis); err != nil {

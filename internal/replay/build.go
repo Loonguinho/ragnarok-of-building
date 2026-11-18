@@ -59,7 +59,7 @@ func ToBuild(s *Snapshot, c *gamedata.Catalog) (calc.Build, []string) {
 		}
 		for _, eb := range equipBits {
 			if mask&eb.bit != 0 {
-				b.Equip[eb.slot] = calc.Equip{Item: it.ItemID, Refine: it.Refine, Cards: it.Cards}
+				b.Equip[eb.slot] = calc.Equip{Item: it.ItemID, Refine: it.Refine, Grade: it.Grade, Cards: it.Cards, Opts: it.Opts}
 			}
 		}
 	}

@@ -14,6 +14,8 @@ import (
 // Context is what a script can read.
 type Context struct {
 	Refine   int
+	Grade    int // enchant grade: 0 none, 1 D ... 4 A
+	OptValue int // getrandomoptinfo(ROA_VALUE): a random option's rolled value
 	BaseLv   int
 	JobLv    int
 	Param    map[string]int // readparam(bStr) etc.: base stats by rAthena name
@@ -470,6 +472,19 @@ func (p *parser) unary() int {
 		case t.s == "getrefine":
 			p.args()
 			return p.ctx.Refine
+		case t.s == "getenchantgrade":
+			p.args()
+			return p.ctx.Grade
+		case t.s == "getrandomoptinfo":
+			if a := p.rawArgs(); len(a) == 1 && a[0] == "ROA_VALUE" {
+				return p.ctx.OptValue
+			}
+			p.bad = true
+			return 0
+		case strings.HasPrefix(t.s, "ENCHANTGRADE_"):
+			if g, ok := map[string]int{"NONE": 0, "D": 1, "C": 2, "B": 3, "A": 4}[strings.TrimPrefix(t.s, "ENCHANTGRADE_")]; ok {
+				return g
+			}
 		case t.s == "readparam":
 			args := p.rawArgs()
 			if len(args) == 1 {

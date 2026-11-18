@@ -43,7 +43,8 @@ type Item struct {
 	Refine   int
 	Grade    int
 	Cards    [4]int
-	Equipped uint32 // rAthena e_equip_pos bitmask; 0 = not worn
+	Opts     [][2]int // random options: [ID, value]
+	Equipped uint32   // rAthena e_equip_pos bitmask; 0 = not worn
 }
 
 // Snapshot is the character as it was when recording started.
@@ -271,6 +272,7 @@ const (
 	tagNameID    = 291
 	tagRefine    = 295
 	tagGrade     = 299
+	tagOptions   = 301 // 5 x {u16 id, i16 value, u8 param}
 )
 
 func readItems(data []byte) []Item {
@@ -359,6 +361,14 @@ func readRecord(rec []byte) (pos int, it Item) {
 	it.ItemID, it.Qty = num(tagNameID), num(tagQty)
 	it.Equipped = uint32(num(tagWear))
 	it.Refine, it.Grade = num(tagRefine), num(tagGrade)
+	if f, ok := fields[tagOptions]; ok && f.n == 25 {
+		for i := 0; i < 5; i++ {
+			o := f.off + i*5
+			if id := int(binary.LittleEndian.Uint16(rec[o:])); id != 0 {
+				it.Opts = append(it.Opts, [2]int{id, int(int16(binary.LittleEndian.Uint16(rec[o+2:])))})
+			}
+		}
+	}
 	if f, ok := fields[tagCards]; ok && f.n == 16 {
 		for i := range it.Cards {
 			it.Cards[i] = int(int32(binary.LittleEndian.Uint32(rec[f.off+i*4:])))

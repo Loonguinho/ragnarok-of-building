@@ -130,6 +130,7 @@ func (s *Server) Routes() http.Handler {
 	r.With(calcLimit.limit).Post("/build/optimize", oneAtATime(2, http.HandlerFunc(s.handleOptimize)).ServeHTTP)
 	r.Get("/build/skills", s.handleBuildSkills)
 	r.With(searchLimit.limit).Get("/build/items", s.handleBuildItems)
+	r.Get("/build/randomopts", s.handleRandomOpts)
 	r.With(searchLimit.limit).Get("/build/monsters", s.handleBuildMonsters)
 	r.Get("/sounds/{name}", s.handleSound)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })

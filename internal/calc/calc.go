@@ -54,6 +54,8 @@ const (
 	ShAccR    = "Shadow_Right_Accessory"
 	ShAccL    = "Shadow_Left_Accessory"
 	maxRefine = 20
+	// MaxRandomOpts is how many random options an item holds (client: 5).
+	MaxRandomOpts = 5
 )
 
 // Slots lists every slot the build supports.
@@ -62,9 +64,12 @@ var Slots = []string{HeadTop, HeadMid, HeadLow, Armor, Weapon, Shield, Garment, 
 
 // Equip is one equipped item.
 type Equip struct {
-	Item   int    `json:"i"`
-	Refine int    `json:"r,omitempty"`
-	Cards  [4]int `json:"c,omitempty"`
+	Item   int `json:"i"`
+	Refine int `json:"r,omitempty"`
+	Grade  int `json:"g,omitempty"` // enchant grade: 0 none, 1 D, 2 C, 3 B, 4 A
+	// Opts are random options ("bônus aleatórios"): [option ID, value].
+	Opts  [][2]int `json:"o,omitempty"`
+	Cards [4]int   `json:"c,omitempty"`
 }
 
 // Build is everything the player chooses.
@@ -191,6 +196,18 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 		if !it.Refineable {
 			e.Refine = 0
 		}
+		e.Grade = clamp(e.Grade, 0, 4)
+		if !it.Gradable {
+			e.Grade = 0
+		}
+		// Up to 5 known options; values fit the client's int16.
+		var opts [][2]int
+		for _, o := range e.Opts {
+			if c.RandomOpts[o[0]] != nil && len(opts) < MaxRandomOpts {
+				opts = append(opts, [2]int{o[0], clamp(o[1], -32768, 32767)})
+			}
+		}
+		e.Opts = opts
 		// The client keeps cards and enchants in the same 4 positions: the
 		// item's card slots first, enchants after them.
 		for i, cd := range e.Cards {
@@ -459,11 +476,21 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			continue
 		}
 		seen[e.Item] = true
-		ctx := script.Context{Refine: e.Refine, BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs}
+		ctx := script.Context{Refine: e.Refine, Grade: e.Grade, BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs}
 		res := script.Eval(itemScript(it, &r.SkippedScriptEffects), ctx)
 		addAll(bonus, res.Bonus)
 		addAll(extra, res.Extra)
 		r.SkippedScriptEffects += res.Skipped
+		for _, o := range e.Opts {
+			if ro := c.RandomOpts[o[0]]; ro != nil {
+				octx := ctx
+				octx.OptValue = o[1]
+				or := script.Eval(ro.Script, octx)
+				addAll(bonus, or.Bonus)
+				addAll(extra, or.Extra)
+				r.SkippedScriptEffects += or.Skipped
+			}
+		}
 		for _, cd := range e.Cards {
 			if ci := c.Items[cd]; cd > 0 && ci != nil {
 				cr := script.Eval(itemScript(ci, &r.SkippedScriptEffects), script.Context{BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs})
@@ -476,11 +503,14 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		switch {
 		case it.Type == "Weapon" && slot == Weapon:
 			r.WeaponATK = it.Attack
-			r.WeaponRefineATK = refineRaw(c, "Weapon", it.WeaponLv, e.Refine) / 100
+			// A grade adds a % of the refine bonus (rAthena status_calc_pc).
+			gradePct := c.GradeBonus["Weapon"][it.WeaponLv][e.Grade]
+			refAtk := refineRaw(c, "Weapon", it.WeaponLv, e.Refine) / 100
+			r.WeaponRefineATK = refAtk + refAtk*gradePct/100
 			r.WeaponLv, r.WeaponRefine, r.WeaponWeight = it.WeaponLv, e.Refine, it.Weight
 			r.WeaponMATK = it.MagicAttack
 			if it.SubType != "Bow" {
-				r.WeaponRefineMATK = refineRaw(c, "Weapon", it.WeaponLv, e.Refine) / 100
+				r.WeaponRefineMATK = refAtk + refAtk*gradePct/100
 			}
 			if it.WeaponLv == 5 { // 4th-gen weapons: refine also gives P.ATK/S.MATK
 				wlv5Traits += e.Refine * 2

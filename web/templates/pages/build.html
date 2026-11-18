@@ -269,7 +269,7 @@
 {{define "equip_slot"}}
 <button class="ro-eslot{{if .Item}} is-filled{{end}}" data-slot="{{.Key}}" data-loc="{{with .Item}}{{.Loc}}{{end}}" title="{{t .Label}}">
   {{with .Item}}<img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="24" height="24">{{else}}<i class="ro-eslot__empty"></i>{{end}}
-  <span>{{with .Item}}{{if $.Refine}}+{{$.Refine}} {{end}}{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}{{else}}<em>{{t .Label}}</em>{{end}}</span>
+  <span>{{with .Item}}{{if $.Grade}}<b class="ro-grade">[{{gradeName $.Grade}}]</b> {{end}}{{if $.Refine}}+{{$.Refine}} {{end}}{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}{{else}}<em>{{t .Label}}</em>{{end}}</span>
 </button>
 {{end}}
 
@@ -280,11 +280,18 @@
     <div class="ro-iteminfo__body">
       <div class="ro-iteminfo__icon"><img src="https://static.divine-pride.net/images/items/item/{{.Item.ID}}.png" alt="" width="40" height="40"></div>
       <div>
-        <b>{{if .Refine}}+{{.Refine}} {{end}}{{.Item.Name}}{{if .Item.Slots}} [{{.Item.Slots}}]{{end}}</b>
+        <b>{{if .Grade}}<span class="ro-grade">[{{gradeName .Grade}}]</span> {{end}}{{if .Refine}}+{{.Refine}} {{end}}{{.Item.Name}}{{if .Item.Slots}} [{{.Item.Slots}}]{{end}}</b>
         {{if .Refineable}}
         <label class="ro-slotedit__refine">{{t "Refino"}}
           <select class="ro-select" data-refine>
             {{range $r := (list 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)}}<option value="{{$r}}"{{if eq $r $.Refine}} selected{{end}}>+{{$r}}</option>{{end}}
+          </select>
+        </label>
+        {{end}}
+        {{if .Gradable}}
+        <label class="ro-slotedit__refine">{{t "Grau"}}
+          <select class="ro-select" data-grade>
+            {{range $g := (list 0 1 2 3 4)}}<option value="{{$g}}"{{if eq $g $.Grade}} selected{{end}}>{{if $g}}{{gradeName $g}}{{else}}{{t "nenhum"}}{{end}}</option>{{end}}
           </select>
         </label>
         {{end}}
@@ -301,6 +308,19 @@
       {{end}}
     </ul>
     {{end}}
+    <fieldset class="ro-ropts">
+      <legend>{{t "Bônus aleatórios"}}</legend>
+      {{range $i, $o := .Opts}}
+      <div class="ro-roptrow"><span>{{$o.Label}}</span>
+        <input class="ro-input ro-roptrow__val" type="number" value="{{$o.Value}}" min="-32768" max="32767" data-ropt-val="{{$i}}" aria-label="{{t "Valor"}}">
+        <button class="ro-btn" data-ropt-remove="{{$i}}" title="{{t "Remover"}}">×</button></div>
+      {{end}}
+      {{if lt (len .Opts) .MaxOpts}}
+      <div class="ro-roptrow"><select class="ro-select" data-ropt-new aria-label="{{t "Bônus aleatório"}}"><option value="">{{t "Adicionar bônus…"}}</option></select>
+        <input class="ro-input ro-roptrow__val" type="number" value="1" min="-32768" max="32767" data-ropt-newval aria-label="{{t "Valor"}}">
+        <button class="ro-btn" data-ropt-add>{{t "Adicionar"}}</button></div>
+      {{end}}
+    </fieldset>
     <div class="ro-slotedit__desc">{{roText .Item.Desc}}</div>
     <div class="ro-slotedit__actions">
       <button class="ro-btn" data-pick-item>{{t "Trocar item"}}</button>

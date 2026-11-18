@@ -235,3 +235,52 @@ func TestRealDragonKnight(t *testing.T) {
 		t.Errorf("implausible: %+v", r)
 	}
 }
+
+func TestEnchantGrade(t *testing.T) {
+	c := novice()
+	w := *c.Items[1201]
+	w.Gradable, w.Script = true, "if (getenchantgrade()>=ENCHANTGRADE_B) { bonus bLuk,3; }"
+	c.Items[1201] = &w
+	c.GradeBonus = map[string]map[int][5]int{"Weapon": {w.WeaponLv: {0, 10, 30, 50, 100}}}
+	b := Build{Job: 0, BaseLv: 3, JobLv: 1, Stats: [6]int{1, 1, 1, 1, 1, 1}, Equip: map[string]Equip{
+		Weapon: {Item: 1201, Refine: 7, Grade: 4},
+		Armor:  {Item: 2301, Grade: 3}, // not gradable: dropped
+	}}
+	Normalize(&b, c)
+	if b.Equip[Armor].Grade != 0 {
+		t.Error("grade kept on an item that takes none")
+	}
+	r := Compute(b, c)
+	if r.WeaponRefineATK != 28 { // 14 refine ATK + 100% (grade A)
+		t.Errorf("refine ATK with grade A = %d, want 28", r.WeaponRefineATK)
+	}
+	if r.Stats[LUK].Bonus != 3 {
+		t.Errorf("grade script bonus: LUK %d, want 3", r.Stats[LUK].Bonus)
+	}
+	b.Equip[Weapon] = Equip{Item: 1201, Refine: 7, Grade: 1}
+	if r := Compute(b, c); r.WeaponRefineATK != 15 || r.Stats[LUK].Bonus != 0 {
+		t.Errorf("grade D: refine ATK %d (want 15), LUK %d", r.WeaponRefineATK, r.Stats[LUK].Bonus)
+	}
+}
+
+func TestRandomOptions(t *testing.T) {
+	c := novice()
+	c.RandomOpts = map[int]*gamedata.RandomOpt{
+		3:  {ID: 3, Script: "bonus bStr,getrandomoptinfo(ROA_VALUE);"},
+		17: {ID: 17, Script: "bonus bAtk,getrandomoptinfo(ROA_VALUE);"},
+	}
+	b := Build{Job: 0, BaseLv: 3, JobLv: 1, Stats: [6]int{1, 1, 1, 1, 1, 1}, Equip: map[string]Equip{
+		Weapon: {Item: 1201, Opts: [][2]int{{17, 50}, {3, 4}, {999, 1}, {3, 1}, {3, 1}, {3, 1}, {3, 1}}},
+	}}
+	Normalize(&b, c)
+	if n := len(b.Equip[Weapon].Opts); n != MaxRandomOpts {
+		t.Errorf("%d options kept, want %d (unknown dropped, then capped)", n, MaxRandomOpts)
+	}
+	r := Compute(b, c)
+	if r.Stats[STR].Bonus != 4+1+1+1 || r.SkippedScriptEffects != 0 {
+		t.Errorf("STR bonus %d, skipped %d", r.Stats[STR].Bonus, r.SkippedScriptEffects)
+	}
+	if r.OtherEquipATK != 50 {
+		t.Errorf("ATK option: other equip ATK %d, want 50", r.OtherEquipATK)
+	}
+}

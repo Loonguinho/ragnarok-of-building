@@ -213,7 +213,21 @@
     if (!tpl) return;
     slotWin.querySelector("[data-slot-title]").textContent = tpl.dataset.label;
     slotBody.innerHTML = tpl.innerHTML;
+    fillRandomOpts();
     pickMode.textContent = cardIndex >= 0 ? "Escolha uma carta (slot " + (cardIndex + 1) + ")" : "Escolha um item para " + tpl.dataset.label;
+  }
+
+  // Random option picker: the list is fetched once per language.
+  let roptList = null;
+  async function fillRandomOpts() {
+    const sel = slotBody.querySelector("[data-ropt-new]");
+    if (!sel) return;
+    if (roptList === null) {
+      roptList = "";
+      const res = await fetch("/build/randomopts?lang=" + lang);
+      roptList = res.ok ? await res.text() : "";
+    }
+    sel.insertAdjacentHTML("beforeend", roptList);
   }
 
   let searchTimer = null;
@@ -292,6 +306,22 @@
     }
     const pc = e.target.closest("[data-pick-card]");
     if (pc) { cardIndex = Number(pc.dataset.pickCard); renderSlotEditor(); pickQ.value = ""; search(); pickQ.focus(); return; }
+    const ra = e.target.closest("[data-ropt-add]");
+    if (ra) {
+      const id = Number(slotBody.querySelector("[data-ropt-new]").value);
+      const v = Number(slotBody.querySelector("[data-ropt-newval]").value);
+      if (!id) return;
+      eachLinked(slotOpen, (eq) => { eq.o = [...(eq.o || []), [id, v]]; });
+      recalc();
+      return;
+    }
+    const rr = e.target.closest("[data-ropt-remove]");
+    if (rr) {
+      const i = Number(rr.dataset.roptRemove);
+      eachLinked(slotOpen, (eq) => { eq.o = (eq.o || []).filter((_, k) => k !== i); });
+      recalc();
+      return;
+    }
     const rc = e.target.closest("[data-remove-card]");
     if (rc) { eachLinked(slotOpen, (eq) => { if (eq.c) eq.c[Number(rc.dataset.removeCard)] = 0; }); recalc(); return; }
     if (e.target.closest("[data-pick-item]")) { cardIndex = -1; renderSlotEditor(); pickQ.value = ""; search(); pickQ.focus(); return; }
@@ -334,6 +364,19 @@
   });
 
   document.addEventListener("change", (e) => {
+    const rv = e.target.closest("[data-ropt-val]");
+    if (rv && slotOpen) {
+      const i = Number(rv.dataset.roptVal);
+      eachLinked(slotOpen, (eq) => { if (eq.o && eq.o[i]) eq.o[i] = [eq.o[i][0], Number(rv.value)]; });
+      recalc();
+      return;
+    }
+    const g = e.target.closest("[data-grade]");
+    if (g && slotOpen) {
+      eachLinked(slotOpen, (eq) => { eq.g = Number(g.value); });
+      recalc();
+      return;
+    }
     const r = e.target.closest("[data-refine]");
     if (!r || !slotOpen) return;
     eachLinked(slotOpen, (eq) => { eq.r = Number(r.value); });

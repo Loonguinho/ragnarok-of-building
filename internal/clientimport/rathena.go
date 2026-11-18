@@ -14,6 +14,7 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 	c.StatPoints = db.StatPoints
 	c.TraitPoints = db.TraitPoints
 	c.Refine = db.Refine
+	c.GradeBonus = db.GradeBonus
 	c.AttrFix, c.SizeFix = db.AttrFix, db.SizeFix
 	c.Monsters = map[int]*gamedata.Monster{}
 	for id, m := range db.Mobs {
@@ -87,6 +88,7 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 		it.WeaponLv, it.ArmorLv = ri.WeaponLevel, ri.ArmorLevel
 		it.EquipLvMin, it.EquipLvMax = ri.EquipLvMin, ri.EquipLvMax
 		it.Refineable, it.Script = ri.Refineable, ri.Script
+		it.Gradable = ri.Gradable
 		it.EquipJobs, it.EquipClasses = ri.Jobs, ri.Classes
 		it.Weight = ri.Weight
 		if it.Slots == 0 {

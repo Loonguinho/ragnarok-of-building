@@ -58,7 +58,14 @@ func buildRRF(t *testing.T) []byte {
 	tlv(tagCards, cards)
 	tlv(tagNameID, le32(1201))
 	tlv(tagRefine, []byte{9})
-	tlv(tagGrade, []byte{0})
+	tlv(tagGrade, []byte{2})
+	// Random options: ATQ +50 and FOR -2 (5 entries of id u16, value i16, param u8).
+	opts := make([]byte, 25)
+	binary.LittleEndian.PutUint16(opts[0:], 17)
+	binary.LittleEndian.PutUint16(opts[2:], 50)
+	binary.LittleEndian.PutUint16(opts[5:], 3)
+	binary.LittleEndian.PutUint16(opts[7:], uint16(0xFFFE))
+	tlv(tagOptions, opts)
 	tlv(999, make([]byte, 221-len(rec)-6)) // pad to the record size
 	// The record-size probe reads a plausible item id at offset 104 (inside the padding).
 	binary.LittleEndian.PutUint32(rec[nameIDOffset:], 1201)
@@ -99,7 +106,8 @@ func TestDecodeSynthetic(t *testing.T) {
 		t.Errorf("session = %+v", s)
 	}
 	if len(s.Equipped) != 1 || s.Equipped[0].ItemID != 1201 || s.Equipped[0].Refine != 9 ||
-		s.Equipped[0].Cards != [4]int{4001, 4002, 0, 0} || s.Equipped[0].Equipped != 0x2 {
+		s.Equipped[0].Cards != [4]int{4001, 4002, 0, 0} || s.Equipped[0].Equipped != 0x2 || s.Equipped[0].Grade != 2 ||
+		len(s.Equipped[0].Opts) != 2 || s.Equipped[0].Opts[0] != [2]int{17, 50} || s.Equipped[0].Opts[1] != [2]int{3, -2} {
 		t.Errorf("equipped = %+v", s.Equipped)
 	}
 	if s.Skills[5] != 10 || s.Skills[62] != 7 {
@@ -108,7 +116,7 @@ func TestDecodeSynthetic(t *testing.T) {
 
 	c := &gamedata.Catalog{Jobs: map[int]*gamedata.Job{4252: {ID: 4252}}, Items: map[int]*gamedata.Item{1201: {ID: 1201}}}
 	b, _ := ToBuild(s, c)
-	if e := b.Equip[calc.Weapon]; e.Item != 1201 || e.Refine != 9 || e.Cards[1] != 4002 {
+	if e := b.Equip[calc.Weapon]; e.Item != 1201 || e.Refine != 9 || e.Cards[1] != 4002 || e.Grade != 2 || len(e.Opts) != 2 {
 		t.Errorf("build weapon = %+v", b.Equip)
 	}
 }

@@ -143,6 +143,10 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 						break
 					}
 				}
+				// ...and every position the client's enchant list opens.
+				for k := range c.Enchants[it.ID] {
+					n = max(n, min(k+1, 4))
+				}
 				sv.CardSlots = it.Slots
 				for i := 0; i < n; i++ {
 					var cv *itemView
@@ -267,6 +271,20 @@ func (s *Server) handleBuildItems(w http.ResponseWriter, r *http.Request) {
 	card := r.URL.Query().Get("card") == "1"
 	job := s.opt.Catalog.Jobs[atoi(r.URL.Query().Get("job"))]
 	q := r.URL.Query().Get("q")
+	// An enchant position of an item the client's enchant list covers
+	// offers only the enchants listed for it.
+	var allowed map[int]bool
+	if card && r.URL.Query().Has("idx") {
+		idx := atoi(r.URL.Query().Get("idx"))
+		if it := s.opt.Catalog.Items[atoi(r.URL.Query().Get("item"))]; it != nil && idx >= it.Slots {
+			if ench, ok := s.opt.Catalog.Enchants[it.ID]; ok {
+				allowed = map[int]bool{}
+				for _, id := range ench[idx] {
+					allowed[id] = true
+				}
+			}
+		}
+	}
 	var pool []*gamedata.Item
 	if q != "" {
 		pool = s.items.Search(q, 5000)
@@ -280,6 +298,9 @@ func (s *Server) handleBuildItems(w http.ResponseWriter, r *http.Request) {
 	for _, it := range pool {
 		known := it.Type != "" // the picker only offers items whose slot rules are known
 		ok := known && ((card && calc.CardFits(it, slot)) || (!card && calc.Fits(it, slot) && job.CanEquip(it)))
+		if allowed != nil {
+			ok = allowed[it.ID]
+		}
 		if ok && it.Name.Get(l) != "" {
 			out = append(out, viewItem(it, l))
 			if len(out) >= searchLimit {

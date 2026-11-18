@@ -22,6 +22,10 @@ func TestOptimizeCards(t *testing.T) {
 		Locations: []string{"Right_Hand"}, Script: "bonus bBaseAtk,200;"}
 	c.Monsters = map[int]*gamedata.Monster{1002: {ID: 1002, Name: "Poring", Level: 1, HP: 5000, Size: "Medium",
 		Race: "Plant", Element: "Water", ElementLv: 1, Class: "Normal", DamageTaken: 100}}
+	// Enchants: the dagger takes 4100 in its 4th position; 4101 fits nothing.
+	c.Items[4100] = &gamedata.Item{ID: 4100, Name: gamedata.Text{"pt": "Encanto Forte"}, Type: "Card", SubType: "Enchant", Script: "bonus bBaseAtk,50;"}
+	c.Items[4101] = &gamedata.Item{ID: 4101, Name: gamedata.Text{"pt": "Encanto Solto"}, Type: "Card", SubType: "Enchant", Script: "bonus bBaseAtk,500;"}
+	c.Enchants = map[int]map[int][]int{1201: {3: {4100}}}
 	s, err := New(Options{Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Catalog: c, NoRateLimit: true})
 	if err != nil {
 		t.Fatal(err)
@@ -46,8 +50,18 @@ func TestOptimizeCards(t *testing.T) {
 	if strings.Contains(html, `data-opt-card="4002"`) {
 		t.Error("a card that adds no damage must not be suggested")
 	}
+	if !strings.Contains(html, `data-opt-index="3" data-opt-card="4100"`) || strings.Contains(html, `data-opt-card="4101"`) {
+		t.Errorf("enchants must follow the item's enchant list: %s", html)
+	}
+	// The picker for that position lists only the listed enchant.
+	if _, body := get(t, h, "/build/items?slot=Right_Hand&card=1&idx=3&item=1201"); !strings.Contains(body, "Encanto Forte") || strings.Contains(body, "Encanto Solto") {
+		t.Errorf("enchant picker not filtered: %s", body)
+	}
+	if _, body := get(t, h, "/build/items?slot=Right_Hand&card=1&idx=0&item=1201"); !strings.Contains(body, "Carta Forte") {
+		t.Errorf("card picker filtered by mistake: %s", body)
+	}
 	// Once every slot holds it, nothing is better.
-	b.Equip[calc.Weapon] = calc.Equip{Item: 1201, Cards: [4]int{4003, 4003, 4003}}
+	b.Equip[calc.Weapon] = calc.Equip{Item: 1201, Cards: [4]int{4003, 4003, 4003, 4100}}
 	if _, html := post(b, "pt"); strings.Contains(html, "data-opt-apply") || !strings.Contains(html, "Já é a melhor opção") {
 		t.Errorf("full build still gets suggestions:\n%s", html)
 	}
@@ -111,5 +125,24 @@ func TestOptFamily(t *testing.T) {
 		if got := optFamily(in); got != want {
 			t.Errorf("optFamily(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestMonsterLocalNames(t *testing.T) {
+	c := &gamedata.Catalog{Monsters: map[int]*gamedata.Monster{
+		1061: {ID: 1061, Name: "Nightmare", Names: gamedata.Text{"pt": "Pesadelo", "es": "Pesadilla"}},
+		1002: {ID: 1002, Name: "Poring"},
+	}}
+	m := c.Monsters[1061]
+	if m.NameIn("pt") != "Pesadelo" || m.NameIn("en") != "Nightmare" || m.NameIn("es") != "Pesadilla" || m.OtherName("pt") != "Nightmare" {
+		t.Errorf("names: %q %q %q", m.NameIn("pt"), m.NameIn("en"), m.NameIn("es"))
+	}
+	for _, q := range []string{"pesadelo", "nightmare", "pesadilla"} {
+		if r := c.SearchMonsters(q, 5); len(r) != 1 || r[0].ID != 1061 {
+			t.Errorf("search %q: %v", q, r)
+		}
+	}
+	if c.Monsters[1002].NameIn("pt") != "Poring" || c.Monsters[1002].OtherName("pt") != "" {
+		t.Error("monster without a local name")
 	}
 }

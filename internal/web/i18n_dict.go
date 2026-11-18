@@ -11,10 +11,8 @@ var dict = map[string][2]string{
 	"Testa cada carta que encaixa em cada slot, uma por vez, contra o alvo da janela de dano, com a habilidade escolhida nela.": {
 		"Tries every card that fits each slot, one at a time, against the damage window's target with the skill chosen there.",
 		"Prueba cada carta que encaja en cada slot, una a la vez, contra el objetivo de la ventana de daño, con la habilidad elegida en ella."},
-	"Incluir encantamentos (só nas posições já encantadas)": {"Include enchants (only positions already enchanted)", "Incluir encantamientos (solo en las posiciones ya encantadas)"},
-	"Os dados não dizem quais encantamentos cada item aceita: confira se a sugestão existe para o seu item.": {
-		"The data doesn't say which enchants each item takes: check that the suggestion exists for your item.",
-		"Los datos no dicen qué encantamientos acepta cada objeto: verifica que la sugerencia exista para tu objeto."},
+	"Incluir encantamentos (os que o cliente lista para cada item)":            {"Include enchants (the ones the client lists for each item)", "Incluir encantamientos (los que el cliente lista para cada objeto)"},
+	"Sem lista de encantamentos no cliente (encantados por NPC), não testados": {"No enchant list in the client (NPC enchants), not tested", "Sin lista de encantamientos en el cliente (encantados por NPC), no probados"},
 	"Calcular":    {"Calculate", "Calcular"},
 	"Calculando…": {"Calculating…", "Calculando…"},
 	"Escolha um alvo na janela de dano (Alt+D) primeiro.": {"Choose a target in the damage window (Alt+D) first.", "Elige un objetivo en la ventana de daño (Alt+D) primero."},

@@ -9,7 +9,8 @@ import (
 // Monster is a damage target (rAthena renewal mob_db).
 type Monster struct {
 	ID          int      `json:"id"`
-	Name        string   `json:"name"` // English (rAthena)
+	Name        string   `json:"name"`            // English (rAthena)
+	Names       Text     `json:"names,omitempty"` // pt/es from the monster's card name in the client
 	Level       int      `json:"lv"`
 	HP          int      `json:"hp"`
 	DEF         int      `json:"def"`
@@ -25,6 +26,28 @@ type Monster struct {
 	MVP         bool     `json:"mvp,omitempty"`
 	DamageTaken int      `json:"dmgTaken"` // % of player damage taken (100 = normal)
 	Modes       []string `json:"modes,omitempty"`
+}
+
+// NameIn is the monster's name in a language: the local name taken from its
+// card when known, else the rAthena (English) name.
+func (m *Monster) NameIn(lang string) string {
+	if lang != "en" {
+		if n := m.Names[lang]; n != "" {
+			return n
+		}
+		if n := m.Names["pt"]; n != "" && lang == "es" {
+			return n
+		}
+	}
+	return m.Name
+}
+
+// OtherName is the English name when the shown name differs (search hint).
+func (m *Monster) OtherName(lang string) string {
+	if n := m.NameIn(lang); n != m.Name {
+		return m.Name
+	}
+	return ""
 }
 
 // SoftDEF is the renewal status DEF of a non-player: (level + VIT) / 2.
@@ -46,15 +69,26 @@ func (c *Catalog) SearchMonsters(q string, limit int) []*Monster {
 		rank int
 	}
 	var hits []hit
+	words := strings.Fields(q)
 	for _, m := range c.Monsters {
-		n := Normalize(m.Name)
-		switch {
-		case idErr == nil && m.ID == id:
+		if idErr == nil && m.ID == id {
 			hits = append(hits, hit{m, 0})
-		case strings.HasPrefix(n, q):
-			hits = append(hits, hit{m, 1})
-		case containsAll(n, strings.Fields(q)):
-			hits = append(hits, hit{m, 2})
+			continue
+		}
+		// Any of its names (English from rAthena, local from the card).
+		rank := 0
+		for _, name := range append([]string{m.Name}, m.Names["pt"], m.Names["es"]) {
+			n := Normalize(name)
+			switch {
+			case n == "":
+			case strings.HasPrefix(n, q):
+				rank = 1
+			case rank == 0 && containsAll(n, words):
+				rank = 2
+			}
+		}
+		if rank > 0 {
+			hits = append(hits, hit{m, rank})
 		}
 	}
 	sort.Slice(hits, func(i, j int) bool {

@@ -109,6 +109,10 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 		return nil, fmt.Errorf("rAthena: %w", err)
 	}
 	clientimport.MergeRathena(c, db)
+	progress("Lendo a lista de encantamentos do cliente…")
+	if _, err := clientimport.ImportEnchants(clientDir, c, db.Aegis); err != nil {
+		progress("Lista de encantamentos não lida: " + err.Error())
+	}
 	progress("Lendo os bônus das descrições dos itens exclusivos do LATAM…")
 	clientimport.DescBonuses(c)
 	c.ApplyLatamLimits()

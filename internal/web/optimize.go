@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -52,6 +53,7 @@ type optResult struct {
 	Attack   string
 	Groups   []optGroup
 	Same     []string // positions where the current card is already the best
+	NoEnch   []string // enchanted items the client's enchant list doesn't cover
 	Tested   int
 	Partial  bool // stopped by the time limit
 }
@@ -66,26 +68,17 @@ type optPosition struct {
 	pool    []*gamedata.Item
 }
 
-// optCards lists, once, the cards and the enchants (the catalog never changes).
-func (s *Server) optCards() (cards, enchants []*gamedata.Item) {
+// optCards lists the cards once (the catalog never changes).
+func (s *Server) optCards() []*gamedata.Item {
 	s.optOnce.Do(func() {
 		for _, it := range s.opt.Catalog.Items {
-			if it.Type != "Card" || it.Name.Get("pt") == "" {
-				continue
-			}
-			if it.SubType == "Enchant" {
-				s.optEnchants = append(s.optEnchants, it)
-			} else {
+			if it.Type == "Card" && it.SubType != "Enchant" && it.Name.Get("pt") != "" {
 				s.optCardList = append(s.optCardList, it)
 			}
 		}
-		byID := func(l []*gamedata.Item) {
-			sort.Slice(l, func(i, j int) bool { return l[i].ID < l[j].ID })
-		}
-		byID(s.optCardList)
-		byID(s.optEnchants)
+		sort.Slice(s.optCardList, func(i, j int) bool { return s.optCardList[i].ID < s.optCardList[j].ID })
 	})
-	return s.optCardList, s.optEnchants
+	return s.optCardList
 }
 
 // optExpected is the objective: expected damage per use of the attack. The
@@ -105,7 +98,7 @@ func (s *Server) optimize(ctx context.Context, b calc.Build, enchants bool, l st
 		res.NoTarget = true
 		return res
 	}
-	res.Target = m.Name
+	res.Target = m.NameIn(l)
 	res.Attack = tr(l, "Ataque básico")
 	if sk := c.Skills[b.Atk.Skill]; sk != nil {
 		res.Attack = sk.Name.Get(l) + " " + tr(l, "Nv.") + " " + strconv.Itoa(b.Atk.Level)
@@ -113,7 +106,7 @@ func (s *Server) optimize(ctx context.Context, b calc.Build, enchants bool, l st
 	base := s.optExpected(b)
 	res.Base = fmtInt(int64(base + 0.5))
 
-	cards, enchList := s.optCards()
+	cards := s.optCards()
 	var pos []optPosition
 	done := map[string]bool{}
 	for _, info := range append(append([]slotInfo{}, equipSlots...), shadowSlots...) {
@@ -139,16 +132,26 @@ func (s *Server) optimize(ctx context.Context, b calc.Build, enchants bool, l st
 				pool = append(pool, cd)
 			}
 		}
+		// Enchants: only what the client's enchant list gives this item.
+		ench := c.Enchants[it.ID]
 		for i := 0; i < 4; i++ {
 			p := optPosition{slots: linked, label: info.Label, index: i, current: e.Cards[i]}
 			switch {
 			case i < it.Slots:
 				p.pool = pool
-			case enchants && e.Cards[i] != 0 && c.Items[e.Cards[i]] != nil && c.Items[e.Cards[i]].SubType == "Enchant":
-				// The data does not say which enchants each item takes, so
-				// only positions already enchanted are tried.
-				p.pool, p.enchant = enchList, true
+			case enchants && len(ench[i]) > 0:
+				p.enchant = true
+				for _, id := range ench[i] {
+					if ei := c.Items[id]; ei != nil {
+						p.pool = append(p.pool, ei)
+					}
+				}
 			default:
+				if enchants && ench == nil && e.Cards[i] != 0 {
+					if name := it.Name.Get(l); !slices.Contains(res.NoEnch, name) {
+						res.NoEnch = append(res.NoEnch, name)
+					}
+				}
 				continue
 			}
 			pos = append(pos, p)
@@ -220,7 +223,7 @@ feed:
 	for pi, p := range pos {
 		label := tr(l, p.label) + " · " + tr(l, "Carta") + " " + strconv.Itoa(p.index+1)
 		if p.enchant {
-			label = tr(l, p.label) + " · " + tr(l, "Encantamento") + " " + strconv.Itoa(p.index+1-c.Items[b.Equip[p.slots[0]].Item].Slots)
+			label = tr(l, p.label) + " · " + tr(l, "Encantamento") + " (slot " + strconv.Itoa(p.index+1) + ")"
 		}
 		g := optGroup{Slot: p.slots[0], Label: label, Index: p.index, Enchant: p.enchant}
 		if ci := c.Items[p.current]; p.current != 0 && ci != nil {

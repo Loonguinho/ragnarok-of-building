@@ -216,6 +216,9 @@ type Catalog struct {
 	// Item combos (rAthena item_combos.yml): the script applies when every
 	// listed item (an ID twice = two copies) is equipped, cards included.
 	Combos []Combo `json:"combos,omitempty"`
+	// Enchants[item][card index] = enchant item IDs the item accepts there
+	// (client enchant list). Items missing here have no known enchant data.
+	Enchants map[int]map[int][]int `json:"enchants,omitempty"`
 
 	comboOnce sync.Once
 	comboIdx  map[int][]int // item ID -> indexes into Combos

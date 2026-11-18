@@ -24,6 +24,8 @@ type Mob struct {
 	MVP         bool
 	DamageTaken int // % of damage taken from players (default 100)
 	Modes       []string
+	DropAegis   []string // dropped items (AegisName), resolved into Cards
+	Cards       []int    // dropped cards (item IDs)
 }
 
 type mobEntry struct {
@@ -51,6 +53,9 @@ type mobEntry struct {
 	Class           string          `yaml:"Class"`
 	DamageTaken     *int            `yaml:"DamageTaken"`
 	Modes           map[string]bool `yaml:"Modes"`
+	Drops           []struct {
+		Item string `yaml:"Item"`
+	} `yaml:"Drops"`
 }
 
 // loadMobs reads mob_db.yml, attr_fix.yml and size_fix.yml.
@@ -82,6 +87,9 @@ func (db *DB) loadMobs(re string) error {
 			m.DamageTaken = *e.DamageTaken
 		}
 		m.MVP = e.Modes["Mvp"]
+		for _, d := range e.Drops {
+			m.DropAegis = append(m.DropAegis, d.Item)
+		}
 		db.Mobs[m.ID] = m
 	}
 

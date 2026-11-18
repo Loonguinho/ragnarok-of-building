@@ -221,7 +221,11 @@
     clearTimeout(searchTimer);
     searchTimer = setTimeout(async () => {
       const params = new URLSearchParams({ slot: slotOpen, q: pickQ.value, lang, job: build.j });
-      if (cardIndex >= 0) params.set("card", "1");
+      if (cardIndex >= 0) {
+        params.set("card", "1");
+        params.set("idx", cardIndex);
+        if (build.e[slotOpen]) params.set("item", build.e[slotOpen].i);
+      }
       const res = await fetch("/build/items?" + params);
       pickList.innerHTML = res.ok ? await res.text() : "";
     }, 150);

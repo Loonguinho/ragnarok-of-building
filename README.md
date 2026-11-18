@@ -40,7 +40,7 @@ Re-run `go run ./cmd/import` after each game patch.
 
 **Pages**
 - `/` is the home screen: builds saved in this browser as character slots, plus the menu
-- `/build` is the **build editor**, with Basic Info (Alt+V), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S), Bonuses (Alt+B), Target/Damage (Alt+D), Buffs (Alt+U) and the Optimizer (Alt+O), which tries every card that fits each slot against the damage window's target and ranks them by expected damage. Ctrl+S saves the build in the browser; **Copiar link** shares it.
+- `/build` is the **build editor**, with Basic Info (Alt+V), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S), Bonuses (Alt+B), Target/Damage (Alt+D), Buffs (Alt+U) and the Optimizer (Alt+O), which tries every card that fits each slot (and the enchants the client's enchant list gives each item) against the damage window's target and ranks them by expected damage. Ctrl+S saves the build in the browser; **Copiar link** shares it.
 - `/new` starts a build from a replay (`.rrf`) or a blank class
 - `/compare` puts up to 4 builds side by side (saved, current or pasted links) against one monster: stats, status and damage with each build's own skill, the best value of each row highlighted; the URL keeps the comparison
 - `/items` is the item database (PT/ES/EN search, filter by type)

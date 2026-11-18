@@ -26,6 +26,7 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 			Element: m.Element, ElementLv: m.ElementLv, Class: m.Class, MVP: m.MVP,
 			DamageTaken: m.DamageTaken, Modes: m.Modes,
 		}
+		c.Monsters[id].Names = monsterNames(c, m.Cards)
 	}
 	if db.Commit != "" {
 		c.Source += " + rAthena " + db.Commit[:min(8, len(db.Commit))]
@@ -95,6 +96,30 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 		}
 	}
 	return jobs, items
+}
+
+// cardPrefix is how each client language names a monster's card.
+var cardPrefix = map[string]string{"pt": "Carta ", "es": "Carta "}
+
+// monsterNames takes a monster's local names from its card ("Carta Pesar
+// Noturno" -> "Pesar Noturno"): the client has no monster name table.
+func monsterNames(c *gamedata.Catalog, cards []int) gamedata.Text {
+	for _, id := range cards {
+		it := c.Items[id]
+		if it == nil {
+			continue
+		}
+		names := gamedata.Text{}
+		for l, p := range cardPrefix {
+			if n := it.Name.Get(l); strings.HasPrefix(n, p) && len(n) > len(p) {
+				names[l] = strings.TrimSpace(strings.TrimPrefix(n, p))
+			}
+		}
+		if len(names) > 0 {
+			return names
+		}
+	}
+	return nil
 }
 
 // isUpper mirrors rAthena's (class & JOBL_UPPER) || pc_is_primary_fourth:

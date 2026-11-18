@@ -255,7 +255,7 @@ func (s *Server) handleCompareCalc(w http.ResponseWriter, r *http.Request) {
 	}
 	out := map[string]any{"html": html}
 	if t.Target != nil {
-		out["target"] = map[string]any{"id": t.Target.ID, "name": t.Target.Name}
+		out["target"] = map[string]any{"id": t.Target.ID, "name": t.Target.NameIn(l)}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(out)

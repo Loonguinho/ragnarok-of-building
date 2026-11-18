@@ -40,8 +40,8 @@ type Server struct {
 	items *gamedata.ItemIndex
 
 	// Optimizer card pools, built on first use.
-	optOnce                  sync.Once
-	optCardList, optEnchants []*gamedata.Item
+	optOnce     sync.Once
+	optCardList []*gamedata.Item
 }
 
 // New parses templates (once, unless Dev).

@@ -99,6 +99,8 @@ type DB struct {
 	SizeFix map[string]map[string]int
 	// Combos: item sets whose script applies when all are equipped.
 	Combos []Combo
+	// Aegis maps AegisName to item ID (equipment and etc items).
+	Aegis map[string]int
 }
 
 // Combo is one item set (IDs; an ID twice means two copies) and its script.
@@ -235,6 +237,14 @@ func Load(dir string) (*DB, error) {
 				continue // only cards matter from the etc table
 			}
 			db.Items[e.ID] = e.item()
+		}
+	}
+	db.Aegis = aegis
+	for _, m := range db.Mobs {
+		for _, a := range m.DropAegis {
+			if id, ok := aegis[a]; ok && db.Items[id] != nil && db.Items[id].Type == "Card" && db.Items[id].SubType != "Enchant" {
+				m.Cards = append(m.Cards, id)
+			}
 		}
 	}
 	if err := db.loadCombos(filepath.Join(re, "item_combos.yml"), aegis); err != nil {

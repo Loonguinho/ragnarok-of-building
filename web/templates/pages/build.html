@@ -45,8 +45,7 @@
   <header class="ro-window__title">{{t "Otimizador"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
   <div class="ro-window__body">
     <p class="ro-note">{{t "Testa cada carta que encaixa em cada slot, uma por vez, contra o alvo da janela de dano, com a habilidade escolhida nela."}}</p>
-    <label class="ro-check"><input type="checkbox" id="opt-enchants"> {{t "Incluir encantamentos (só nas posições já encantadas)"}}</label>
-    <p class="ro-note">{{t "Os dados não dizem quais encantamentos cada item aceita: confira se a sugestão existe para o seu item."}}</p>
+    <label class="ro-check"><input type="checkbox" id="opt-enchants" checked> {{t "Incluir encantamentos (os que o cliente lista para cada item)"}}</label>
     <div class="ro-optwin__go"><button class="ro-btn" data-optimize>{{t "Calcular"}}</button></div>
     <div id="opt-results"></div>
   </div>
@@ -122,7 +121,7 @@
 <div class="ro-target">
   <div class="ro-target__head">
     <img src="https://static.divine-pride.net/images/mobs/png/{{.Target.ID}}.png" alt="" loading="lazy">
-    <div><b>{{.Target.Name}}</b> <small>#{{.Target.ID}}</small></div>
+    <div><b>{{.Target.NameIn lang}}</b> <small>#{{.Target.ID}}</small></div>
   </div>
   <div class="ro-target__grid">{{range .TargetInfo}}<span>{{t .Label}}</span><b>{{t .Value}}</b>{{end}}</div>
 </div>
@@ -149,7 +148,7 @@
 {{define "mob_results"}}
 {{range .Results}}
 <li class="ro-list__item ro-itemrow" tabindex="0" data-monster="{{.ID}}">
-  <span>{{.Name}}{{if .MVP}} <em class="ro-mvp">MVP</em>{{end}}</span>
+  <span>{{.NameIn lang}}{{if .MVP}} <em class="ro-mvp">MVP</em>{{end}}{{with .OtherName lang}} <small>({{.}})</small>{{end}}</span>
   <small>{{t "Nv"}} {{.Level}} · {{call $.RaceName .Race}} · {{call $.EleName .Element}} {{.ElementLv}}</small>
 </li>
 {{else}}
@@ -372,6 +371,7 @@
   </ul>
 </div>
 {{end}}
+{{with .NoEnch}}<p class="ro-note">{{t "Sem lista de encantamentos no cliente (encantados por NPC), não testados"}}: {{range $i, $s := .}}{{if $i}}, {{end}}{{$s}}{{end}}</p>{{end}}
 {{with .Same}}<p class="ro-note">{{t "Já é a melhor opção"}}: {{range $i, $s := .}}{{if $i}}, {{end}}{{$s}}{{end}}</p>{{end}}
 <p class="ro-note">{{printf (t "%d combinações testadas. Bônus condicionais entram pela média, como na janela de dano.") .Tested}}</p>
 {{end}}

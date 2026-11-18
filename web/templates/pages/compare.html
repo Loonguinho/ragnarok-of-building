@@ -1,0 +1,57 @@
+{{define "content"}}
+<main class="ro-compare">
+  <section class="ro-window ro-window--fixed ro-comparewin" id="win-compare">
+    <header class="ro-window__title">{{t "Comparar Builds"}} <a class="ro-window__close" href="/" aria-label="{{t "Fechar"}}">×</a></header>
+    {{if not .Ready}}
+    <div class="ro-window__body ro-npc">{{t "Os dados do jogo ainda não foram importados."}}</div>
+    {{else}}
+    <div class="ro-window__body">
+      <div class="ro-compare__target">
+        <label for="cmp-mob-q">{{t "Alvo"}}</label>
+        <input class="ro-input" type="search" id="cmp-mob-q" placeholder="{{t "Buscar monstro (nome ou ID)…"}}" autocomplete="off">
+        <b id="cmp-target-name"></b>
+        <ul class="ro-list ro-moblist" id="cmp-mob-results" hidden></ul>
+      </div>
+      <div class="ro-compare__pickers" id="cmp-pickers" data-max="{{.Max}}"></div>
+      <div id="cmp-table" aria-live="polite"></div>
+      <p class="ro-note">{{t "Cada build usa a habilidade escolhida na janela de dano dele. O melhor valor de cada linha fica em destaque."}}</p>
+    </div>
+    <footer class="ro-window__footer">
+      <button class="ro-btn" type="button" id="cmp-add">{{t "+ Adicionar build"}}</button>
+      <button class="ro-btn" type="button" id="cmp-link">{{t "Copiar link"}}</button>
+      <a class="ro-btn" href="/">{{t "Início"}}</a>
+    </footer>
+    {{end}}
+  </section>
+</main>
+<script>
+  window.CMP_I18N = {
+    current: {{t "Build atual"}}, paste: {{t "Colar link…"}}, choose: {{t "Escolha um build"}},
+    remove: {{t "Remover"}}, pastePrompt: {{t "Cole o link do build (ou só o código):"}},
+    copied: {{t "Link da comparação copiado!"}}, copyPrompt: {{t "Copie o link da comparação:"}},
+    pasted: {{t "Build colado"}}
+  };
+</script>
+<script src="{{asset "js/compare.js"}}" defer></script>
+{{end}}
+
+{{define "compare_table"}}
+{{if .Cols}}
+<div class="ro-compare__scroll">
+<table class="ro-cmptable">
+  <thead>
+    <tr><th></th>{{range .Cols}}<th>{{if .Valid}}<b>{{.Name}}</b><small>{{.Job}} · {{t "Nv."}} {{.Levels}}</small>{{else}}<em>{{t "código de build inválido"}}</em>{{end}}</th>{{end}}</tr>
+  </thead>
+  <tbody>
+    {{range .Rows}}
+    {{if .Group}}<tr class="ro-cmptable__group"><th colspan="{{inc (len .Cells)}}">{{t .Group}}</th></tr>{{end}}
+    <tr><th>{{t .Label}}</th>{{range .Cells}}<td{{if .Best}} class="is-best"{{end}}>{{.Text}}</td>{{end}}</tr>
+    {{end}}
+  </tbody>
+</table>
+</div>
+{{if not .Target}}<p class="ro-note">{{t "Escolha um alvo para comparar o dano."}}</p>{{end}}
+{{else}}
+<p class="ro-npc">{{t "Escolha os builds para comparar."}}</p>
+{{end}}
+{{end}}

@@ -151,6 +151,16 @@
   });
   document.addEventListener("click", async (e) => {
     if (e.target.closest("[data-save-build]")) saveBuild(true);
+    if (e.target.closest("[data-compare-build]")) {
+      persist();
+      const url = new URL("/compare", location.origin);
+      url.searchParams.append("b", code);
+      for (const s of (window.ROSaved ? ROSaved.list() : [])) {
+        if (s.code !== code) { url.searchParams.append("b", s.code); break; }
+      }
+      if (build.m) url.searchParams.set("m", build.m);
+      location.href = url.href;
+    }
     if (e.target.closest("[data-copy-link]")) {
       const link = location.origin + "/build?b=" + code;
       try {

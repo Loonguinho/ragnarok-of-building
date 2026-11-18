@@ -5,6 +5,29 @@ package web
 // TestTemplatesTranslated checks that every {{t "…"}} in the templates is
 // here.
 var dict = map[string][2]string{
+	// ---- compare ----
+	"Comparar Builds": {"Compare Builds", "Comparar Builds"},
+	"Comparar builds": {"Compare builds", "Comparar builds"},
+	"Comparar":        {"Compare", "Comparar"},
+	"Ver lado a lado atributos, status e dano de até 4 builds": {"See stats, status and damage of up to 4 builds side by side", "Ver lado a lado atributos, estado y daño de hasta 4 builds"},
+	"Comparar este build com outros":                           {"Compare this build with others", "Comparar este build con otros"},
+	"Alvo":                                                     {"Target", "Objetivo"},
+	"+ Adicionar build":                                        {"+ Add build", "+ Añadir build"},
+	"Build atual":                                              {"Current build", "Build actual"},
+	"Colar link…":                                              {"Paste link…", "Pegar enlace…"},
+	"Escolha um build":                                         {"Choose a build", "Elige un build"},
+	"Build colado":                                             {"Pasted build", "Build pegado"},
+	"Link da comparação copiado!":                              {"Comparison link copied!", "¡Enlace de la comparación copiado!"},
+	"Copie o link da comparação:":                              {"Copy the comparison link:", "Copia el enlace de la comparación:"},
+	"Status":                                                   {"Status", "Estado"},
+	"Dano contra o alvo":                                       {"Damage against the target", "Daño contra el objetivo"},
+	"código de build inválido":                                 {"invalid build code", "código de build inválido"},
+	"Escolha um alvo para comparar o dano.":                    {"Choose a target to compare the damage.", "Elige un objetivo para comparar el daño."},
+	"Escolha os builds para comparar.":                         {"Choose the builds to compare.", "Elige los builds para comparar."},
+	"Cada build usa a habilidade escolhida na janela de dano dele. O melhor valor de cada linha fica em destaque.": {
+		"Each build uses the skill chosen in its damage window. The best value of each row is highlighted.",
+		"Cada build usa la habilidad elegida en su ventana de daño. El mejor valor de cada fila queda resaltado."},
+
 	// ---- language / home ----
 	"Som":                       {"Sound", "Sonido"},
 	"Som dos botões":            {"Button sounds", "Sonido de los botones"},

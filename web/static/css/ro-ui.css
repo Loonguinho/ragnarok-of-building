@@ -391,3 +391,26 @@ body.ro-desktop:has(.ro-newbuild) { overflow: auto; }
 .ro-btn.is-pressed, .ro-homemenu__item.is-pressed, .ro-charslot.is-pressed {
   filter: brightness(0.92); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .25);
 }
+
+/* Build comparison */
+.ro-compare { display: flex; justify-content: center; padding: 24px 16px; }
+.ro-comparewin { width: min(980px, 100%); }
+.ro-compare__target { position: relative; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.ro-compare__target .ro-input { width: 240px; max-width: 100%; }
+.ro-compare__target .ro-moblist { position: absolute; top: 100%; left: 40px; z-index: 5; width: 320px; max-height: 260px; overflow: auto; background: #fff; border: 1px solid #b7bcc6; }
+.ro-compare__pickers { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.ro-compare__pickers .ro-compare__picker { width: 220px; }
+.ro-cmptable thead .ro-compare__picker { margin-bottom: 4px; }
+body:has(.ro-compare) #ro-chat { display: none; }
+.ro-compare__picker { display: flex; gap: 3px; }
+.ro-compare__picker .ro-select { flex: 1; min-width: 0; }
+.ro-compare__scroll { overflow-x: auto; }
+.ro-cmptable { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ro-cmptable th, .ro-cmptable td { padding: 3px 8px; border-bottom: 1px dotted #c4c8d0; text-align: right; white-space: nowrap; }
+.ro-cmptable tbody th { text-align: left; color: #4a5a78; font-weight: normal; width: 110px; }
+.ro-cmptable thead th { text-align: right; vertical-align: bottom; }
+.ro-cmptable thead th b, .ro-cmptable thead th small { display: block; }
+.ro-cmptable thead th small { color: #5a6a88; font-weight: normal; }
+.ro-cmptable__group th { text-align: left !important; background: linear-gradient(#eef2f9, #dde5f2); color: #1d3f7a; font-weight: bold !important; padding-top: 5px; }
+.ro-cmptable td.is-best { color: #1b7a2e; font-weight: bold; background: #e8f6ea; }
+

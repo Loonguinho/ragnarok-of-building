@@ -109,6 +109,8 @@ func (s *Server) Routes() http.Handler {
 	r.With(searchLimit.limit).Get("/items/search", s.handleItemSearch)
 	r.Get("/items/{id}", s.handleItemInfo)
 	r.Get("/new", s.handleNew)
+	r.Get("/compare", s.handleCompare)
+	r.With(calcLimit.limit).Post("/compare/calc", s.handleCompareCalc)
 	r.With(importLimit.limit).Post("/build/import", oneAtATime(2, http.HandlerFunc(s.handleImport)).ServeHTTP)
 	r.Get("/build", s.handleBuild)
 	r.With(calcLimit.limit).Post("/build/calc", s.handleBuildCalc)

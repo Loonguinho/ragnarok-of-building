@@ -41,6 +41,31 @@ var RathenaFiles = []string{
 	"src/common/mmo.hpp", // e_job enum: job name -> ID
 }
 
+// LatamCalcCommit pins latam-ro-calc (MIT), whose monster list has the
+// LATAM monsters rAthena has no stats for; bump deliberately.
+const LatamCalcCommit = "63131d2dc67796a76aef3e570689511e350d1be8"
+
+// LatamCalcMonsters is where its monster list is kept (not committed).
+func LatamCalcMonsters(rathenaDir string) string {
+	return filepath.Join(filepath.Dir(rathenaDir), "latam-ro-calc", "monster.json")
+}
+
+// FetchLatamCalc downloads latam-ro-calc's monster list to dst unless it is
+// already there for the pinned commit.
+func FetchLatamCalc(ctx context.Context, dst string, progress Progress) error {
+	stamp := filepath.Join(filepath.Dir(dst), "COMMIT")
+	have, _ := os.ReadFile(stamp)
+	if _, err := os.Stat(dst); err == nil && strings.TrimSpace(string(have)) == LatamCalcCommit {
+		return nil
+	}
+	progress("Baixando a lista de monstros do latam-ro-calc…")
+	url := "https://raw.githubusercontent.com/adsonpleal/latam-ro-calc/" + LatamCalcCommit + "/src/assets/demo/data/monster.json"
+	if err := download(ctx, &http.Client{Timeout: 3 * time.Minute}, url, dst); err != nil {
+		return fmt.Errorf("latam-ro-calc: %w", err)
+	}
+	return os.WriteFile(stamp, []byte(LatamCalcCommit+"\n"), 0o644)
+}
+
 // Progress receives human-readable steps (PT).
 type Progress func(msg string)
 
@@ -109,6 +134,14 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 		return nil, fmt.Errorf("rAthena: %w", err)
 	}
 	clientimport.MergeRathena(c, db)
+	progress("Juntando os monstros do LATAM (latam-ro-calc)…")
+	mobs := LatamCalcMonsters(rathenaDir)
+	if err := FetchLatamCalc(context.Background(), mobs, progress); err != nil {
+		progress("Lista de monstros do latam-ro-calc não baixada: " + err.Error())
+	}
+	if _, _, err := clientimport.MergeLatamCalc(c, mobs); err != nil {
+		progress("Lista de monstros do latam-ro-calc não lida: " + err.Error())
+	}
 	progress("Lendo a lista de encantamentos do cliente…")
 	if _, err := clientimport.ImportEnchants(clientDir, c, db.Aegis); err != nil {
 		progress("Lista de encantamentos não lida: " + err.Error())

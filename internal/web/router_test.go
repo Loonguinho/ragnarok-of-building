@@ -58,7 +58,7 @@ func TestRoutes(t *testing.T) {
 	}
 	h := s.Routes()
 	cases := []struct{ path, want string }{
-		{"/", "Selecionar Servidor"},
+		{"/", "Personagens"},
 		{"/uikit", "Atributos"},
 		{"/healthz", "ok"},
 		{"/static/css/ro-ui.css", "ro-window"},

@@ -122,40 +122,40 @@
   });
 
   // ---- basic info buttons ----
-  let saved = boot.saved; // {id, name} once saved to the account
-  document.addEventListener("click", async (e) => {
-    if (e.target.closest("[data-save-build]")) {
-      if (!boot.accounts) { say("As contas estão desativadas neste servidor.", true); return; }
-      if (!boot.user) {
-        if (confirm("Entre na sua conta para salvar. Abrir o login?")) {
-          location.href = "/login?next=" + encodeURIComponent("/build?b=" + code);
-        }
-        return;
-      }
-      const name = prompt("Nome do build:", saved ? saved.name : "");
+  let saved = boot.saved; // {id, name} once saved
+  async function saveBuild(ask) {
+    if (!boot.saving) { say("Não foi possível abrir o arquivo de builds salvos.", true); return; }
+    let name = saved ? saved.name : "";
+    if (ask || !saved) {
+      name = prompt("Nome do build:", name);
       if (name === null) return;
-      try {
-        const res = await fetch("/builds/save", { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: saved ? saved.id : 0, name, code }) });
-        if (!res.ok) throw new Error((await res.text()).trim() || res.status);
-        saved = { id: (await res.json()).id, name: name.trim() || "Sem nome" };
-        history.replaceState(null, "", "/build?s=" + saved.id);
-        say(`Build "${saved.name}" salvo na conta ${boot.user}.`);
-      } catch (err) {
-        say("Não foi possível salvar: " + err.message, true);
-      }
     }
+    try {
+      const res = await fetch("/builds/save", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: saved ? saved.id : 0, name, code }) });
+      if (!res.ok) throw new Error((await res.text()).trim() || res.status);
+      saved = { id: (await res.json()).id, name: name.trim() || "Sem nome" };
+      history.replaceState(null, "", "/build?s=" + saved.id);
+      say(`Build "${saved.name}" salvo.`);
+    } catch (err) {
+      say("Não foi possível salvar: " + err.message, true);
+    }
+  }
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); saveBuild(false); }
+  });
+  document.addEventListener("click", async (e) => {
+    if (e.target.closest("[data-save-build]")) saveBuild(true);
     if (e.target.closest("[data-copy-link]")) {
-      const link = location.origin + "/build?b=" + code;
       try {
-        await navigator.clipboard.writeText(link);
-        say("Link do build copiado!");
+        await navigator.clipboard.writeText(code);
+        say("Código do build copiado! Quem tiver o app pode colar em Início → Abrir código.");
       } catch {
-        prompt("Copie o link:", link);
+        prompt("Copie o código do build:", code);
       }
     }
     if (e.target.closest("[data-new-build]")) {
-      if (!confirm("Começar um build novo? O atual continua no link copiado.")) return;
+      if (!confirm("Começar um build novo? Salve o atual antes (Ctrl+S) se quiser guardá-lo.")) return;
       build = { j: build.j, b: build.b, jl: build.jl, s: [1, 1, 1, 1, 1, 1], t: [0, 0, 0, 0, 0, 0], e: {}, k: {} };
       loadSkills(build.j);
       recalc();

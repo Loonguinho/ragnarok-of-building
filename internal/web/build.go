@@ -207,14 +207,12 @@ func (s *Server) handleBuild(w http.ResponseWriter, r *http.Request) {
 			b = d
 		}
 	}
-	// A saved build (?s=ID) of the logged-in account.
+	// A saved build (?s=ID).
 	var saved *store.Build
-	if id, err := strconv.ParseInt(r.URL.Query().Get("s"), 10, 64); err == nil && id > 0 {
-		if u, ok := s.user(r); ok {
-			if sb, err := s.opt.Store.GetBuild(u.ID, id); err == nil {
-				if d, ok := decodeBuild(sb.Code); ok {
-					b, saved = d, &sb
-				}
+	if id, err := strconv.ParseInt(r.URL.Query().Get("s"), 10, 64); err == nil && id > 0 && s.opt.Store != nil {
+		if sb, err := s.opt.Store.GetBuild(id); err == nil {
+			if d, ok := decodeBuild(sb.Code); ok {
+				b, saved = d, &sb
 			}
 		}
 	}

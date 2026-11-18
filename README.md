@@ -1,33 +1,42 @@
 # Ragnarok of Building
 
-A build simulator for **Ragnarok Online LATAM**, with a UI modeled on the game client: draggable windows, Alt+A/Q/S hotkeys, login/char-select-style screens, and NPC dialogs.
+A build simulator for **Ragnarok Online LATAM**, with a UI modeled on the game client: draggable windows, Alt hotkeys, a character-select home screen and NPC dialogs. Ships as a Windows desktop app.
 
 Stack: Go (chi) · HTMX + Go templates · SQLite · data from the LATAM client itself (+ Divine Pride for item bonuses) · PT-BR / ES / EN.
 
-## Running
+## Desktop app (ready to use)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\build-desktop.ps1   # -> dist\RagnarokOfBuilding.exe
+```
+
+Double-click `RagnarokOfBuilding.exe`. On first run it finds the RO LATAM client (or asks for its folder), downloads the rAthena tables (~15 MB, GPL-3.0, never redistributed) and reads the client. That takes under a minute. The app then opens in its own window (Edge/Chrome/Brave app mode) and quits when the window closes. Everything lives in `%LOCALAPPDATA%\RagnarokOfBuilding`: the catalog, the rAthena tables and `builds.db` (saved builds). After a game patch use **Atualizar dados do jogo** on the home screen.
+
+## Running from source
 
 You need the RO LATAM client installed (default `C:\Gravity\Ragnarok`). Then, once:
 
 ```powershell
 go run ./cmd/fetchrathena   # downloads rAthena's tables (GPL-3.0) to data/rathena (not committed)
-go run ./cmd/import         # client + rAthena -> data/gen/catalog.json.gz (~2 s)
+go run ./cmd/import         # client + rAthena -> data/gen/catalog.json.gz (~3 s)
 ```
 
 and every time:
 
 ```powershell
-go run ./cmd/server         # http://localhost:8080 (accounts and saved builds: data/app.db, change with DB=...)
+go run ./cmd/server         # http://localhost:8080 (saved builds: data/app.db, change with DB=...)
 go test ./...
 ```
 
 Re-run `go run ./cmd/import` after each game patch.
 
 **Pages**
-- `/` is the home screen, styled as the RO server-select screen
-- `/build` is the **build editor**, with Basic Info (Alt+V), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S), Bonuses (Alt+B) and Target/Damage (Alt+D). The build lives in the URL, so copy the link to share it.
+- `/` is the home screen: saved builds as character slots, plus the menu
+- `/build` is the **build editor**, with Basic Info (Alt+V), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S), Bonuses (Alt+B), Target/Damage (Alt+D) and Buffs (Alt+U). Ctrl+S saves. **Copiar código** copies a code anyone can paste in Início → Abrir código.
+- `/new` starts a build from a replay (`.rrf`) or a blank class
 - `/items` is the item database (PT/ES/EN search, filter by type)
 - `/skills` is a standalone skill tree
-- `/uikit` is the RO UI kit
+- `/uikit` is the RO UI kit (development)
 
 ### Development (hot reload)
 
@@ -70,7 +79,7 @@ go run ./cmd/scriptcov                                                 # how muc
 - [x] Phase 3: in-game-style skill tree with skill point limits per class step
 - [x] Phase 4: equipment, cards, enchants, refine, class restrictions, item combos (rAthena + LATAM-only items read from the client descriptions)
 - [x] Phase 5: physical and magic damage vs monsters with LATAM formulas for every class, checked against bROWiki; buffs and consumables
-- [x] Phase 6: share links, last build restored, accounts and saved builds (SQLite, character select screen)
+- [x] Phase 6: share codes, last build restored, saved builds (SQLite, character select home), desktop app
 - [x] Phase 6b: import a character from a replay (`.rrf`)
 - [ ] Phase 7: compare + optimizer
 - [ ] Phase 8: polish

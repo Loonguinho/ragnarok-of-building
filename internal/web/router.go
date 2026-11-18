@@ -25,7 +25,9 @@ type Options struct {
 	// Dev reads templates and static files from ./web on every request
 	// (edit + refresh, no rebuild).
 	Dev bool
-	// Store keeps accounts and saved builds; nil disables them.
+	// Desktop: running inside the desktop app (shows "Atualizar dados do jogo").
+	Desktop bool
+	// Store keeps the saved builds; nil disables saving.
 	Store *store.Store
 }
 
@@ -88,7 +90,7 @@ func (s *Server) Routes() http.Handler {
 		r.Handle("/static/*", fileServer)
 	}
 
-	r.Get("/", s.simple("home", "Ragnarok of Building"))
+	r.Get("/", s.handleHome)
 	r.Get("/uikit", s.simple("uikit", "RO UI Kit"))
 	r.Get("/skills", s.handleSkills)
 	r.Get("/items", s.handleItems)
@@ -101,11 +103,6 @@ func (s *Server) Routes() http.Handler {
 	r.Get("/build/skills", s.handleBuildSkills)
 	r.Get("/build/items", s.handleBuildItems)
 	r.Get("/build/monsters", s.handleBuildMonsters)
-	r.Get("/login", s.handleLoginPage)
-	r.Post("/login", s.handleLogin(false))
-	r.Post("/register", s.handleLogin(true))
-	r.Post("/logout", s.handleLogout)
-	r.Get("/chars", s.handleChars)
 	r.Post("/builds/save", s.handleSaveBuild)
 	r.Post("/builds/{id}/delete", s.handleDeleteBuild)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
@@ -136,12 +133,8 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, page string, dat
 		return
 	}
 	if m, ok := data.(map[string]any); ok {
-		if _, set := m["User"]; !set {
-			if u, ok := s.user(r); ok {
-				m["User"] = u
-			}
-		}
-		m["Accounts"] = s.opt.Store != nil
+		m["Saving"] = s.opt.Store != nil
+		m["Desktop"] = s.opt.Desktop
 	}
 	var buf bytes.Buffer
 	if err := t.ExecuteTemplate(&buf, "layout.html", data); err != nil {

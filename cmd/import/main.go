@@ -10,8 +10,7 @@ import (
 	"os"
 	"time"
 
-	"ragnarok-of-building/internal/clientimport"
-	"ragnarok-of-building/internal/rathena"
+	"ragnarok-of-building/internal/setup"
 )
 
 func main() {
@@ -21,21 +20,9 @@ func main() {
 	flag.Parse()
 
 	start := time.Now()
-	c, err := clientimport.Import(*client)
+	c, err := setup.BuildCatalog(*client, *ra, *out, func(m string) { fmt.Println(m) })
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "import:", err)
-		os.Exit(1)
-	}
-	if db, err := rathena.Load(*ra); err != nil {
-		fmt.Fprintln(os.Stderr, "warning: no rAthena data, stats/equipment will be missing:", err)
-	} else {
-		jobs, items := clientimport.MergeRathena(c, db)
-		fmt.Printf("rAthena: %d jobs with stat tables, %d items with equipment data\n", jobs, items)
-	}
-	scripts, combos := clientimport.DescBonuses(c)
-	fmt.Printf("descriptions: %d items without rAthena script read from the client text, %d combos\n", scripts, combos)
-	if err := c.Save(*out); err != nil {
-		fmt.Fprintln(os.Stderr, "save:", err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	st, _ := os.Stat(*out)

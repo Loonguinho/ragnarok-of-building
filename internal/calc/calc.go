@@ -439,7 +439,10 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 
 	// Equipment bonuses: first pass with base stats for readparam().
 	param := map[string]int{"bStr": b.Stats[STR] + jb[0], "bAgi": b.Stats[AGI] + jb[1], "bVit": b.Stats[VIT] + jb[2],
-		"bInt": b.Stats[INT] + jb[3], "bDex": b.Stats[DEX] + jb[4], "bLuk": b.Stats[LUK] + jb[5]}
+		"bInt": b.Stats[INT] + jb[3], "bDex": b.Stats[DEX] + jb[4], "bLuk": b.Stats[LUK] + jb[5],
+		// Traits (4th jobs): readparam(bCon) etc. in the Nebula/Constellation enchants.
+		"bPow": b.Traits[POW] + jb[6+POW], "bSta": b.Traits[STA] + jb[6+STA], "bWis": b.Traits[WIS] + jb[6+WIS],
+		"bSpl": b.Traits[SPL] + jb[6+SPL], "bCon": b.Traits[CON] + jb[6+CON], "bCrt": b.Traits[CRT] + jb[6+CRT]}
 	equipIDs := map[int]bool{}
 	for _, e := range b.Equip {
 		equipIDs[e.Item] = true
@@ -493,7 +496,8 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		}
 		for _, cd := range e.Cards {
 			if ci := c.Items[cd]; cd > 0 && ci != nil {
-				cr := script.Eval(itemScript(ci, &r.SkippedScriptEffects), script.Context{BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs})
+				// Cards and enchants read the refine and grade of the item they are in.
+				cr := script.Eval(itemScript(ci, &r.SkippedScriptEffects), script.Context{Refine: e.Refine, Grade: e.Grade, BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs})
 				addAll(bonus, cr.Bonus)
 				addAll(extra, cr.Extra)
 				r.SkippedScriptEffects += cr.Skipped

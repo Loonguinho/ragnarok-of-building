@@ -284,3 +284,21 @@ func TestRandomOptions(t *testing.T) {
 		t.Errorf("ATK option: other equip ATK %d, want 50", r.OtherEquipATK)
 	}
 }
+
+// Cards/enchants read the refine and grade of their item, and readparam of
+// traits (the Nebula/Constellation enchants).
+func TestEnchantReadsItemAndTraits(t *testing.T) {
+	c := novice()
+	c.Items[4900] = &gamedata.Item{ID: 4900, Type: "Card", SubType: "Enchant",
+		Script: "bonus bLuk,getrefine()/3;\nbonus bDex,readparam(bCon)/15;\nif (getenchantgrade()>=ENCHANTGRADE_D) { bonus bAgi,1; }"}
+	a := *c.Items[2301]
+	a.Gradable = true
+	c.Items[2301] = &a
+	b := Build{Job: 0, BaseLv: 3, JobLv: 1, Stats: [6]int{1, 1, 1, 1, 1, 1}, Traits: [6]int{CON: 30},
+		Equip: map[string]Equip{Armor: {Item: 2301, Refine: 9, Grade: 1, Cards: [4]int{0, 0, 0, 4900}}}}
+	r := Compute(b, c)
+	if r.Stats[LUK].Bonus != 3 || r.Stats[DEX].Bonus != 2 || r.Stats[AGI].Bonus != 1 {
+		t.Errorf("LUK %d (want 3, refine 9), DEX %d (want 2, CON 30), AGI %d (want 1, grade D)",
+			r.Stats[LUK].Bonus, r.Stats[DEX].Bonus, r.Stats[AGI].Bonus)
+	}
+}

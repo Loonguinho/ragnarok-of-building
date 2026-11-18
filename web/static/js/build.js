@@ -356,8 +356,17 @@
         params.set("idx", cardIndex);
         if (build.e[slotOpen]) params.set("item", build.e[slotOpen].i);
       }
-      const res = await fetch("/build/items?" + params);
-      pickList.innerHTML = res.ok ? await res.text() : "";
+      try {
+        const res = await fetch("/build/items?" + params);
+        if (!res.ok) throw new Error(res.status);
+        pickList.innerHTML = await res.text();
+      } catch {
+        // The server is down or refused: say so instead of an empty list.
+        const li = document.createElement("li");
+        li.className = "ro-list__empty";
+        li.textContent = T("O servidor não respondeu. Ele está rodando? Recarregue a página.");
+        pickList.replaceChildren(li);
+      }
     }, 150);
   }
   pickQ.addEventListener("input", search);

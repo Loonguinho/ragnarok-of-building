@@ -311,6 +311,9 @@ var dict = map[string][2]string{
 	"Um build em branco da classe escolhida, nos níveis máximos dela.": {
 		"A blank build of the chosen class, at its max levels.",
 		"Un build en blanco de la clase elegida, en sus niveles máximos."},
+	"O servidor não respondeu. Ele está rodando? Recarregue a página.": {
+		"The server did not answer. Is it running? Reload the page.",
+		"El servidor no respondió. ¿Está en ejecución? Recarga la página."},
 	"Grau":                         {"Grade", "Grado"},
 	"Bônus aleatórios":             {"Random options", "Opciones aleatorias"},
 	"Bônus aleatório":              {"Random option", "Opción aleatoria"},

@@ -657,11 +657,12 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		main, sub = st[DEX], st[STR]
 	}
 	r.StatusATK = (main*10+sub*10/5+st[LUK]*10/3+lv*10/4)/10 + 5*tr[POW]
-	r.StatusATK += bonus["bBaseAtk"]
+	// bBaseAtk ("ATQ +X" of items) is equipment ATK in renewal (pc.cpp
+	// SP_BASE_ATK -> bonus.eatk, battle_calc_equip_attack), not status ATK.
 	// Weapon ATK (scaled by bWeaponAtkRate, as rAthena does on wa->atk) + refine,
 	// and other equipment ATK (armor ATK, bAtk): kept apart for the damage formula.
 	r.WeaponATK += r.WeaponATK * bonus["bWeaponAtkRate"] / 100
-	r.OtherEquipATK += bonus["bAtk"] + bonus["bAtk2"]
+	r.OtherEquipATK += bonus["bAtk"] + bonus["bAtk2"] + bonus["bBaseAtk"]
 	r.EquipATK = r.WeaponATK + r.WeaponRefineATK + r.OtherEquipATK
 	matk := st[INT] + st[INT]/2 + st[DEX]/5 + st[LUK]/3 + lv/4 + 5*tr[SPL]
 	r.MATKMin, r.MATKMax = matk, matk

@@ -39,9 +39,17 @@ func LatamItemScripts(path string, c *gamedata.Catalog) (int, error) {
 		script := map[string][]string{}
 		for k, raw := range li.Script {
 			var lines []string
-			if json.Unmarshal(raw, &lines) == nil && len(lines) > 0 {
-				script[k] = lines
+			if json.Unmarshal(raw, &lines) != nil || len(lines) == 0 {
+				continue
 			}
+			if p, ok := strings.CutPrefix(k, "chance__"); ok {
+				if it.LatamProcs == nil {
+					it.LatamProcs = map[string][]string{}
+				}
+				it.LatamProcs[p] = lines
+				continue
+			}
+			script[k] = lines
 		}
 		if len(script) > 0 {
 			it.Latam = script

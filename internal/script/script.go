@@ -1,8 +1,9 @@
 // Package script evaluates the subset of rAthena item scripts that affects
 // a character's status window: `bonus bX,expr;` with integer expressions,
 // local variables (.@x), getrefine(), readparam(), BaseLevel/JobLevel and
-// if/else blocks. Everything else (bonus2/3, autobonus, skill, unknown
-// functions) is skipped and counted in Result.Skipped, never guessed.
+// if/else blocks. autobonus scripts are kept apart (Result.Autobonus).
+// Everything else (skill, unknown functions...) is skipped and counted in
+// Result.Skipped, never guessed.
 package script
 
 import (
@@ -84,6 +85,10 @@ type Result struct {
 	// the status window; the damage engine and the UI read them.
 	Extra   map[string]int
 	Skipped int // statements the evaluator did not understand
+	// Autobonus are the scripts of the autobonus/autobonus2/autobonus3
+	// statements reached: bonuses for a while after a chance on attack,
+	// when hit or on a skill (the build turns them on or off).
+	Autobonus []string
 }
 
 // Eval runs a script and returns its bonuses.
@@ -267,6 +272,12 @@ func (p *parser) statement(run bool) {
 				p.res.Skipped++
 			}
 		}
+	case t.kind == 'i' && (t.s == "autobonus" || t.s == "autobonus2" || t.s == "autobonus3"):
+		p.pos++
+		if run && p.peek().kind == 's' {
+			p.res.Autobonus = append(p.res.Autobonus, p.peek().s)
+		}
+		p.skipStatement()
 	case t.kind == 'i' && t.s == "bonus":
 		p.pos++
 		name := p.peek()

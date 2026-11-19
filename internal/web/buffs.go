@@ -11,9 +11,10 @@ import (
 // The Buffs window, laid out like latamtools': the class's active skills
 // and effects, the learned passives that give bonuses, then the buffs.
 type buffsView struct {
-	Active   []buffItem  // class buffs and formula states (data-atk-state)
-	Passives []learnItem // passives with bonuses, at the learned level
-	Groups   []buffGroup // party buffs, consumables, other
+	Items    []effectItem // triggered effects of the equipped items
+	Active   []buffItem   // class buffs and formula states (data-atk-state)
+	Passives []learnItem  // passives with bonuses, at the learned level
+	Groups   []buffGroup  // party buffs, consumables, other
 }
 
 type buffGroup struct {
@@ -34,6 +35,37 @@ type buffItem struct {
 	Max        int         // > 0: number input
 	Value      int
 	ValueStr   string
+}
+
+// effectItem is an equipped item's triggered effect (Bota Desconhecida
+// FOR: STR +175 for a while on attack), counted when turned on.
+type effectItem struct {
+	Key, Label, Gives string
+	ItemID            int
+	Value             int
+}
+
+func itemEffectRows(r calc.Result, c *gamedata.Catalog, l string) []effectItem {
+	var out []effectItem
+	for _, ef := range r.ItemEffects {
+		it := c.Items[ef.Item]
+		if it == nil {
+			continue
+		}
+		var gives []string
+		for _, k := range sortedKeys(ef.Bonus) {
+			gives = append(gives, tr(l, bonusLabel(k))+" "+signed(ef.Bonus[k], k))
+		}
+		for _, k := range sortedKeys(ef.Extra) {
+			gives = append(gives, extraLabel(k, c, l)+" "+signed(ef.Extra[k], k))
+		}
+		row := effectItem{Key: ef.Key, Label: it.Name.Get(l), Gives: strings.Join(gives, ", "), ItemID: ef.Item}
+		if ef.On {
+			row.Value = 1
+		}
+		out = append(out, row)
+	}
+	return out
 }
 
 // learnItem is a passive in "Aprenda para ganhar bônus": its level is the

@@ -22,7 +22,7 @@ func TestEval(t *testing.T) {
 		{"baselevel", "bonus bMaxHP,BaseLevel*10;", map[string]int{"bMaxHP": 2000}, 0},
 		{"ternary", "bonus bCritical,(getrefine()>8?5:1);", map[string]int{"bCritical": 5}, 0},
 		{"bonus2 recorded as extra", "bonus2 bAddRace,RC_DemiHuman,10;\nbonus bStr,1;", map[string]int{"bStr": 1}, 0},
-		{"autobonus skipped", "autobonus \"{ bonus bAtk,50; }\",10,5000;", map[string]int{}, 1},
+		{"autobonus kept apart", "autobonus \"{ bonus bAtk,50; }\",10,5000;", map[string]int{}, 0},
 		{"unknown func in cond", "if (getskilllv(\"KN_TWOHANDQUICKEN\")) bonus bAtk,10;", map[string]int{}, 1},
 		{"unknown bonus", "bonus bNoWalkDelay;", map[string]int{}, 1},
 		{"comments", "// note\nbonus bVit,4; /* x */", map[string]int{"bVit": 4}, 0},
@@ -125,5 +125,19 @@ func TestFlagBonus(t *testing.T) {
 	r := Eval(`bonus bNoSizeFix; bonus bCriticalLong,15;`, Context{})
 	if r.Bonus["bNoSizeFix"] != 1 || r.Bonus["bCriticalLong"] != 15 || r.Skipped != 0 {
 		t.Errorf("got %v, skipped %d", r.Bonus, r.Skipped)
+	}
+}
+
+func TestAutobonus(t *testing.T) {
+	src := "if (getrefine()>=11) { autobonus \"{ .@g = getenchantgrade(); bonus bStr,175+(.@g>=1?25:0); }\",1,10000,BF_WEAPON; } autobonus2 \"{ bonus bDef,10; }\",5,3000;"
+	r := Eval(src, Context{Refine: 11, Grade: 1})
+	if len(r.Autobonus) != 2 {
+		t.Fatalf("autobonus scripts = %q", r.Autobonus)
+	}
+	if got := Eval(r.Autobonus[0], Context{Refine: 11, Grade: 1}).Bonus["bStr"]; got != 200 {
+		t.Errorf("proc STR = %d, want 200", got)
+	}
+	if r := Eval(src, Context{Refine: 9}); len(r.Autobonus) != 1 {
+		t.Errorf("below +11 only the other proc: %q", r.Autobonus)
 	}
 }

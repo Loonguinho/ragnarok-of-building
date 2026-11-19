@@ -516,6 +516,18 @@
 
 {{define "build_buffs"}}
 {{with .Buffs}}
+{{if .Items}}
+<h4 class="ro-fx__head">{{t "Efeitos de itens"}} <small>{{t "(ativados ao atacar, ao ser atingido ou ao usar habilidades)"}}</small></h4>
+<div class="ro-fx__grid">
+  {{range .Items}}
+  <div class="ro-fx{{if .Value}} is-on{{end}}" data-fx-row title="{{.Gives}}">
+    <img class="ro-fx__icon" src="https://static.divine-pride.net/images/items/item/{{.ItemID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">
+    <span class="ro-fx__name">{{.Label}} <small class="ro-fx__gives">{{.Gives}}</small></span>
+    <span class="ro-yesno" role="group" aria-label="{{.Label}}"><button type="button" class="ro-yesno__b{{if .Value}} is-on{{end}}" data-buff-set="{{.Key}}" data-buff-value="1">{{t "Sim"}}</button><button type="button" class="ro-yesno__b{{if not .Value}} is-on{{end}}" data-buff-set="{{.Key}}" data-buff-value="0">{{t "Não"}}</button></span>
+  </div>
+  {{end}}
+</div>
+{{end}}
 {{if .Active}}
 <h4 class="ro-fx__head">{{t "Habilidades e efeitos ativos"}}</h4>
 <div class="ro-fx__grid">{{range .Active}}{{template "buff_row" .}}{{end}}</div>

@@ -276,6 +276,7 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 		v.Combos = append(v.Combos, cv)
 	}
 	v.Buffs = buffsWindow(b, c, l)
+	v.Buffs.Items = itemEffectRows(r, c, l)
 	v.HPPct, v.SPPct = 100, 100
 	v.D = s.damageView(b, r, l)
 	v.D.Table = s.skillTable(b, r, l)

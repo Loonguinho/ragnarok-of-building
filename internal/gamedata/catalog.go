@@ -91,6 +91,10 @@ type Item struct {
 	Latam     map[string][]string `json:"lt,omitempty"`
 	LatamName string              `json:"ltn,omitempty"`
 	LatamKeys []string            `json:"ltk,omitempty"`
+	// LatamProcs: the item's triggered bonuses in latam-ro-calc
+	// ("chance__<key>" lines), for items whose rAthena script has no
+	// autobonus.
+	LatamProcs map[string][]string `json:"ltp,omitempty"`
 	// Who can equip it (rAthena Jobs/Classes); empty means everyone.
 	EquipJobs    []string `json:"jobs,omitempty"`
 	EquipClasses []string `json:"classes,omitempty"`

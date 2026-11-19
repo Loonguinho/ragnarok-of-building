@@ -716,8 +716,12 @@ func (e *latamEnv) line(pos string, main bool, refine int, s string) float64 {
 // (EQUIP[...]/EQUIP_ID[...]) only with sets; then they count once per
 // item and key, however many copies are worn.
 func (e *latamEnv) eval(it *gamedata.Item, id int, pos string, main bool, refine int, sets bool) map[string]float64 {
+	return e.evalScript(it.Latam, id, pos, main, refine, sets)
+}
+
+func (e *latamEnv) evalScript(src map[string][]string, id int, pos string, main bool, refine int, sets bool) map[string]float64 {
 	out := map[string]float64{}
-	for attr, lines := range it.Latam {
+	for attr, lines := range src {
 		sum := 0.0
 		for _, l := range lines {
 			if strings.HasPrefix(l, "EQUIP[") || strings.HasPrefix(l, "EQUIP_ID[") {

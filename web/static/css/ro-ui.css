@@ -542,3 +542,5 @@ button.ro-jobcard { font-family: inherit; cursor: pointer; }
 .ro-optrow { display: flex; align-items: center; gap: 6px; padding: 2px 4px; border-bottom: 1px dotted #c4c8d0; }
 .ro-optrow span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ro-optrow__gain { color: #1b7a2e; }
+
+.ro-fx__gives { display: block; color: var(--ro-muted, #6b6b6b); font-size: 0.85em; line-height: 1.2; }

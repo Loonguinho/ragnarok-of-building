@@ -165,6 +165,7 @@ type Result struct {
 	Bonuses              map[string]int // every applied script bonus, for display
 	Extra                map[string]int // bonus2..5 effects (damage modifiers), for display/damage
 	SkippedScriptEffects int            // bonuses the evaluator could not apply
+	ItemEffects          []ItemEffect   // triggered item bonuses the build can turn on
 	Warnings             []string
 }
 
@@ -566,6 +567,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	slotRefine, slotGrade := slotStates(b)
 	sbase := scriptBase(b, c, param, equipIDs, slotRefine, slotGrade)
 	lenv := newLatamEnv(b, c) // LATAM item scripts (latamitem.go)
+	effects := &itemEffects{b: &b, c: c, env: lenv, seen: map[int]bool{}}
 	bonus := map[string]int{}
 	extra := map[string]int{}
 	r.WeaponType = "Fist"
@@ -597,6 +599,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		ctx.Refine, ctx.Grade = e.Refine, e.Grade
 		res := script.Eval(itemScript(it, &r.SkippedScriptEffects), ctx)
 		lenv.overLatam(it, e.Item, slot, true, e.Refine, &res)
+		effects.add(e.Item, it, ctx, res.Autobonus, slot, true, e.Refine)
 		addAll(bonus, res.Bonus)
 		addAll(extra, res.Extra)
 		r.SkippedScriptEffects += res.Skipped
@@ -617,6 +620,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 				cctx.Refine, cctx.Grade = e.Refine, e.Grade
 				cr := script.Eval(itemScript(ci, &r.SkippedScriptEffects), cctx)
 				lenv.overLatam(ci, cd, slot, false, e.Refine, &cr)
+				effects.add(cd, ci, cctx, cr.Autobonus, slot, false, e.Refine)
 				addAll(bonus, cr.Bonus)
 				addAll(extra, cr.Extra)
 				r.SkippedScriptEffects += cr.Skipped
@@ -650,6 +654,13 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		}
 	}
 	r.Combos, r.ComboEffects = applyCombos(c, &b, sbase, bonus, extra, &r.SkippedScriptEffects)
+	r.ItemEffects = effects.list
+	for _, ef := range effects.list {
+		if ef.On {
+			addAll(bonus, ef.Bonus)
+			addAll(extra, ef.Extra)
+		}
+	}
 	var baseJob [6]int
 	for i := range baseJob {
 		baseJob[i] = b.Stats[i] + jb[i]

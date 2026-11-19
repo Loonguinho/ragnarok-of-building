@@ -348,6 +348,14 @@ func (d *BuffDef) valid(v int) bool {
 // exclusive group (the first in display order).
 func normalizeBuffs(b *Build) {
 	for k, v := range b.Buffs {
+		if strings.HasPrefix(k, ItemEffectPrefix) {
+			if v <= 0 {
+				delete(b.Buffs, k)
+			} else {
+				b.Buffs[k] = 1
+			}
+			continue
+		}
 		d := buffByKey[k]
 		if d == nil || v <= 0 {
 			delete(b.Buffs, k)

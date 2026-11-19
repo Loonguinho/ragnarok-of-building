@@ -341,7 +341,7 @@
       return;
     }
     // Clicks inside keep it open (checkbox); the actions close it.
-    if (!e.target.closest("#settings-menu") || e.target.closest("[data-layout-reset], [data-show-all]")) closeSettings();
+    if (!e.target.closest("#settings-menu") || e.target.closest("[data-layout-reset], [data-show-all], [data-toggle]")) closeSettings();
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
   document.querySelector(".ro-desk")?.addEventListener("scroll", closeSettings, true);

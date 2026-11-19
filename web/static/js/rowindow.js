@@ -47,14 +47,19 @@
     for (const w of deskWins()) if (!w.classList.contains("is-hidden")) bottom = Math.max(bottom, w.offsetTop + w.offsetHeight);
     d.style.minHeight = floating() ? bottom + 40 + "px" : "";
   }
-  // A window opened while floating, with no spot yet: near the top of the view.
+  // A window opened while floating, with no spot yet: near the top of the
+  // view, in its column, cascading past windows already there.
   function place(win) {
     if (!floating() || win.style.left || !win.closest(".ro-desk")) return;
     const d = desk(), r = d.getBoundingClientRect();
     const col = win.closest(".ro-desk__col");
     win.style.width = (col ? col.getBoundingClientRect().width : 400) + "px";
-    win.style.left = Math.max(0, (col ? col.getBoundingClientRect().left : 40) - r.left) + "px";
-    win.style.top = Math.max(0, 60 - r.top) + "px";
+    let x = Math.max(0, (col ? col.getBoundingClientRect().left : 40) - r.left), y = Math.max(0, 60 - r.top);
+    const taken = deskWins().filter((w) => w !== win && !w.classList.contains("is-hidden") && w.style.left)
+      .map((w) => [parseFloat(w.style.left), parseFloat(w.style.top)]);
+    while (taken.some(([l, t]) => Math.abs(l - x) < 8 && Math.abs(t - y) < 8)) { x += 24; y += 24; }
+    win.style.left = x + "px";
+    win.style.top = y + "px";
   }
   // on: the windows leave the columns where they are (or go back to the
   // spots saved when restoring); off: back to the columns.
@@ -74,7 +79,7 @@
       d.classList.add("is-floating");
       wins.forEach((w, i) => {
         const s = spots[i];
-        if (s) { w.style.left = s.l; w.style.top = s.t; w.style.width = s.w; } else { w.style.left = ""; place(w); }
+        if (s) { w.style.left = s.l; w.style.top = s.t; w.style.width = s.w; } else { w.style.left = w.style.top = ""; } // closed: placed when opened
         if (!restore) persist(w);
       });
     } else {
@@ -155,7 +160,8 @@
     save(state);
     if (floating()) { setFloating(false); setFloating(true, false); }
   }
-  function showAll() { deskWins().forEach((w) => { if (w.classList.contains("is-hidden")) show(w); }); }
+  // Every window but the reference ones (the command list).
+  function showAll() { deskWins().forEach((w) => { if (w.classList.contains("is-hidden") && !w.hasAttribute("data-no-show-all")) show(w); }); }
 
   window.ROWin = { show, focus, toggle, setFloating, floating, resetLayout, showAll };
 

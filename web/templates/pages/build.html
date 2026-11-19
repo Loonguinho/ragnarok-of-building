@@ -27,6 +27,7 @@
       <input type="checkbox" data-layout-toggle> {{t "Janelas flutuantes"}} <kbd>Alt+W</kbd></label>
     <button type="button" class="ro-settings__row" data-layout-reset>{{t "Reorganizar as janelas"}}</button>
     <button type="button" class="ro-settings__row" data-show-all>{{t "Abrir todas as janelas"}}</button>
+    <button type="button" class="ro-settings__row" data-toggle="win-help">{{t "Atalhos e comandos"}} <kbd>Alt+H</kbd></button>
     <div class="ro-settings__row ro-settings__lang">{{t "Idioma"}}:
       <nav class="ro-titlelang" aria-label="{{t "Idioma"}}">{{range uiLangs}}<a href="?lang={{.Code}}" hreflang="{{.HTML}}" lang="{{.HTML}}" title="{{.Label}}"{{if eq .Code lang}} class="is-active" aria-current="true"{{end}}>{{.Code | upper}}</a>{{end}}</nav>
     </div>
@@ -96,6 +97,44 @@
       </form>
       <p class="ro-note"><a href="/new">{{t "Importar replay"}}</a> {{t "(arquivo .rrf do jogo)"}}</p>
     </fieldset>
+  </div>
+</section>
+{{end}}
+{{with $.V}}
+<!-- Commands and shortcuts (Alt+H), from the gear menu -->
+<section class="ro-window ro-helpwin is-hidden" id="win-help" data-hotkey="h" data-no-show-all>
+  <header class="ro-window__title">{{t "Atalhos e comandos"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
+  <div class="ro-window__body">
+    <table class="ro-help">
+      <tr class="ro-help__sec"><th colspan="2">{{t "Janelas"}}</th></tr>
+      <tr><td><kbd>Alt+V</kbd></td><td>{{t "Informações Básicas"}}</td></tr>
+      <tr><td><kbd>Alt+A</kbd></td><td>{{t "Atributos"}}</td></tr>
+      <tr><td><kbd>Alt+Q</kbd></td><td>{{t "Equipamentos"}}</td></tr>
+      <tr><td><kbd>Alt+S</kbd></td><td>{{t "Habilidades"}}</td></tr>
+      <tr><td><kbd>Alt+B</kbd></td><td>{{t "Bônus do Equipamento"}}</td></tr>
+      <tr><td><kbd>Alt+D</kbd></td><td>{{t "Alvo / Dano"}}</td></tr>
+      <tr><td><kbd>Alt+U</kbd></td><td>{{t "Buffs"}}</td></tr>
+      <tr><td><kbd>Alt+O</kbd></td><td>{{t "Otimizador"}}</td></tr>
+      <tr><td><kbd>Alt+C</kbd></td><td>{{t "Builds salvos"}}</td></tr>
+      <tr><td><kbd>Alt+L</kbd></td><td>{{t "Compartilhar Build"}}</td></tr>
+      <tr><td><kbd>Alt+H</kbd></td><td>{{t "Esta lista de comandos"}}</td></tr>
+      <tr><td><kbd>Alt+W</kbd></td><td>{{t "Janelas flutuantes (liga/desliga)"}}</td></tr>
+      <tr><td colspan="2" class="ro-note">{{t "A mesma tecla de novo fecha a janela (ou a traz para a frente)."}}</td></tr>
+      <tr class="ro-help__sec"><th colspan="2">{{t "Build"}}</th></tr>
+      <tr><td><kbd>Ctrl+S</kbd></td><td>{{t "Salvar o build neste navegador"}}</td></tr>
+      <tr><td><kbd>Alt+J</kbd></td><td>{{t "Trocar a classe (lista de classes)"}}</td></tr>
+      <tr><td><kbd>{{t "Shift+clique"}}</kbd></td><td>{{t "Nos botões + e − dos atributos: ±10 pontos"}}</td></tr>
+      <tr class="ro-help__sec"><th colspan="2">{{t "Habilidades"}}</th></tr>
+      <tr><td><kbd>{{t "Clique"}}</kbd></td><td>{{t "Sobe um nível"}}</td></tr>
+      <tr><td><kbd>{{t "Shift+clique"}}</kbd></td><td>{{t "Sobe até o máximo que os pontos permitem"}}</td></tr>
+      <tr><td><kbd>{{t "Botão direito"}}</kbd></td><td>{{t "Desce um nível (Shift: zera)"}}</td></tr>
+      <tr><td><kbd>Enter / + / −</kbd></td><td>{{t "Com a habilidade selecionada: sobe ou desce"}}</td></tr>
+      <tr class="ro-help__sec"><th colspan="2">{{t "Listas e menus"}}</th></tr>
+      <tr><td><kbd>Enter</kbd></td><td>{{t "Escolhe o item, monstro ou build selecionado na lista"}}</td></tr>
+      <tr><td><kbd>↑ / ↓</kbd></td><td>{{t "Anda pela lista de classes"}}</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>{{t "Fecha a lista de classes, o menu ⚙ e a dica do item"}}</td></tr>
+      <tr><td><kbd>{{t "Mouse em cima"}}</kbd></td><td>{{t "Mostra o que o item faz (e o ganho de dano, na busca)"}}</td></tr>
+    </table>
   </div>
 </section>
 {{end}}

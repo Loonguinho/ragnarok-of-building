@@ -104,6 +104,14 @@ body.ro-desktop:has(.ro-desk) { overflow: auto; }
 .ro-settings__lang:hover { background: none; }
 .ro-settings .ro-titlelang { position: static; margin-left: auto; }
 .ro-settings .ro-titlelang a { font-size: 11px; color: #1d4fa8; }
+/* Commands and shortcuts window. */
+.ro-help { width: 100%; border-collapse: collapse; font-size: 11px; }
+.ro-help td { padding: 2px 4px; vertical-align: top; border-bottom: 1px solid #eef0f4; }
+.ro-help td:first-child { white-space: nowrap; width: 1%; }
+.ro-help kbd { display: inline-block; padding: 0 4px; border: 1px solid #b8c2d6; border-radius: 3px; background: #f4f6fa;
+  font: inherit; font-size: 10px; box-shadow: 0 1px 0 #b8c2d6; }
+.ro-help__sec th { padding: 6px 4px 2px; text-align: left; color: var(--ro-title-text); border-bottom: 1px solid #c4c8d0; }
+.ro-desk .ro-helpwin .ro-window__body { max-height: 60vh; overflow-y: auto; }
 @media (max-width: 720px) { .ro-settings [data-layout-toggle], .ro-settings [data-layout-reset] { display: none; } }
 .ro-window.is-focused { z-index: 10; }
 .ro-window__title {

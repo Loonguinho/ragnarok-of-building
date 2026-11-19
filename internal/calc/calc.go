@@ -672,7 +672,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	r.HIT = lv + st[DEX] + st[LUK]/3 + 175 + 2*tr[CON] + bonus["bHit"]
 	r.FLEE = lv + st[AGI] + st[LUK]/5 + 100 + 2*tr[CON] + bonus["bFlee"]
 	r.FLEE2 = (st[LUK]+10)/10 + bonus["bFlee2"]
-	r.CritTenths = lv/10 + 10 + st[LUK]*3 + 10*bonus["bCritical"]
+	r.CritTenths = lv/10 + 10 + st[LUK]*3 + 10*bonus["bCritical"] + bonus["bCritTenths"]
 	if r.WeaponType == "Katar" { // status_calc_bl: katars double CRIT (after every bonus)
 		r.CritTenths *= 2
 	}

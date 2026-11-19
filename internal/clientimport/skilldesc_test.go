@@ -22,6 +22,10 @@ func TestSkillDescEffects(t *testing.T) {
 			"ou ao atacar sem nenhuma arma.", "Nível l ATQ", "[Nv 10]: +30"),
 		4: descSkill("AL_DEMONBANE", "Flagelo do Mal", "Tipo: Passiva", "Aumenta o ATQ de perícia contra",
 			"Malditos, Mortos-Vivos e Demônios.", "Nível l ATQ", "[Nv 10]: +30"),
+		9: descSkill("MO_EXPLOSIONSPIRITS", "Fúria Interior", "Tipo: Suporte", "Aumenta o CRIT por 180 segundos.",
+			"Nível l CRIT", "[Nv 2]: +12,5", "[Nv 5]: +20,0"),
+		10: descSkill("SR_RAISINGDRAGON", "Dragão Ascendente", "Tipo: Suporte", "Aumenta o HP e SP máx. e o nº de Esferas.",
+			"Nível l Limite de Esferas l HP/SP l Duração", "[Nv 10]: 15 l +10% l 300 segundos"),
 		// Not buffs of the player: a resulting rate, a curse, a heal, an attack.
 		5: descSkill("CR_DEFENDER", "Aura Sagrada", "Tipo: Suporte", "Apenas com Escudo.",
 			"Nível l Resistência l Velocidade de ataque", "[Nv 5]: +80% l 95%"),
@@ -44,6 +48,12 @@ func TestSkillDescEffects(t *testing.T) {
 	}
 	if e := get(4); e == nil || e.Levels[10] != "bonus2 bMasteryAtkRace,RC_Undead,30; bonus2 bMasteryAtkRace,RC_Demon,30;" {
 		t.Errorf("Flagelo do Mal: %+v", e)
+	}
+	if e := get(9); e == nil || e.Levels[2] != "bonus bCritTenths,125;" || e.Levels[5] != "bonus bCritical,20;" {
+		t.Errorf("Fúria Interior (CRIT with a decimal): %+v", e)
+	}
+	if e := get(10); e == nil || e.Levels[10] != "bonus bMaxHPrate,10; bonus bMaxSPrate,10;" {
+		t.Errorf("Dragão Ascendente (HP/SP column): %+v", e)
 	}
 	for _, id := range []int{5, 6, 7, 8} {
 		if e := get(id); e != nil {

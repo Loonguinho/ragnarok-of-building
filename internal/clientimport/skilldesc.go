@@ -233,7 +233,7 @@ func colBonus(name string, v int, pct, passive bool, races []string) (script str
 		}
 	}
 	// "P.ATQ e S.ATQM": both columns with the same value.
-	if parts := strings.Split(n, " e "); len(parts) > 1 {
+	if parts := regexp.MustCompile(`\s+e\s+|/`).Split(n, -1); len(parts) > 1 {
 		var out []string
 		for _, p := range parts {
 			s, sk, ok := colBonus(p, v, pct, passive, races)
@@ -247,21 +247,24 @@ func colBonus(name string, v int, pct, passive bool, races []string) (script str
 	return "", false, false
 }
 
-func parseDescValue(s string) (int, bool, bool) {
+// parseDescValue reads "+10", "-40", "+2%" or "+12,5": the value in tenths
+// (125 for "+12,5"), whether it is a percentage, and ok.
+func parseDescValue(s string) (tenths int, pct, ok bool) {
 	m := reSkillValue.FindStringSubmatch(strings.TrimSpace(s))
 	if m == nil {
 		return 0, false, false
 	}
 	num := strings.ReplaceAll(m[1], ".", "")
-	if strings.Contains(num, ",") { // a decimal: not a whole bonus
-		return 0, false, false
-	}
 	// A bonus always has its sign ("+10", "-40"); "100%" or "5.000" is a
 	// resulting rate or a cost.
 	if !strings.HasPrefix(num, "+") && !strings.HasPrefix(num, "-") {
 		return 0, false, false
 	}
-	v, err := strconv.Atoi(strings.TrimPrefix(num, "+"))
+	whole, frac, _ := strings.Cut(strings.TrimPrefix(num, "+"), ",")
+	if len(frac) > 1 {
+		return 0, false, false
+	}
+	v, err := strconv.Atoi(whole + frac + strings.Repeat("0", 1-len(frac)))
 	return v, m[2] == "%", err == nil
 }
 
@@ -354,15 +357,24 @@ func SkillDescEffects(c *gamedata.Catalog) int {
 				if i >= len(head) {
 					break
 				}
-				v, pct, ok := parseDescValue(cell)
+				tenths, pct, ok := parseDescValue(cell)
+				v := tenths / 10
+				col := strings.ToLower(strings.NewReplacer(".", "", " ", "").Replace(head[i]))
+				if ok && tenths%10 != 0 {
+					if col == "crit" || col == "crítico" { // CRIT in tenths, like rAthena's cri
+						parts = append(parts, fmt.Sprintf("bonus bCritTenths,%d;", tenths))
+						positive = positive || tenths > 0
+						continue
+					}
+					ok = false // other bonuses are whole numbers
+				}
 				if !ok {
 					if !strings.Contains(strings.ToLower(head[i]), "duração") {
 						unread[head[i]] = true
 					}
 					continue
 				}
-				col := strings.ToLower(strings.NewReplacer(".", "", " ", "").Replace(head[i]))
-				if (col == "hp" || col == "sp") && !raisesHPSP {
+				if (col == "hp" || col == "sp" || col == "hp/sp") && !raisesHPSP {
 					continue // an HP/SP cost or a heal, not the maximum
 				}
 				if pct && ((col == "atq" || col == "atqm" || col == "dano") && v > 100 || col == "velatq" && v > 50) {

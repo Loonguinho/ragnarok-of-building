@@ -575,6 +575,7 @@ var known = map[string]bool{
 	// the generated passives write it, the damage engine adds it after the ATK
 	// multipliers).
 	"bMasteryAtk": true,
+	"bCritTenths": true, // CRIT in tenths (skill tables write "+12,5")
 }
 
 // Known reports whether a bonus name is applied by the calculator.

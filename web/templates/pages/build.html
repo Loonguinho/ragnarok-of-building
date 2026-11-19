@@ -493,6 +493,13 @@
 <details class="ro-buffs" data-buff-group="{{.Name}}"{{if .Open}} open{{end}}>
   <summary>{{t .Name}}{{if .Active}} <small class="ro-buffs__count">({{.Active}})</small>{{end}}</summary>
   {{range .Items}}
+  {{if .State}}
+  <label class="ro-buff">
+    {{if .Choices}}<span>{{.Label}}</span>
+      <select class="ro-select" data-atk-state="{{.Key}}">{{$v := .ValueStr}}{{range .Choices}}<option value="{{index . 0}}"{{if eq (index . 0) $v}} selected{{end}}>{{t (index . 1)}}</option>{{end}}</select>
+    {{else}}<input type="checkbox" data-atk-state="{{.Key}}"{{if .Value}} checked{{end}}> <span>{{.Label}}</span>{{end}}
+  </label>
+  {{else}}
   <label class="ro-buff"{{if .Excl}} title="{{t "Só um deste tipo por vez (escolher outro desliga este)."}}"{{end}}>
     {{if .Choices}}<span>{{.Label}}</span>
       <select class="ro-select" data-buff="{{.Key}}"{{if .Excl}} data-buff-excl="{{.Excl}}"{{end}}>{{$v := .ValueStr}}{{range .Choices}}<option value="{{index . 0}}"{{if eq (index . 0) $v}} selected{{end}}>{{t (index . 1)}}</option>{{end}}</select>
@@ -500,6 +507,7 @@
       <input class="ro-input ro-num ro-num--sm" type="number" min="0" max="{{.Max}}" value="{{.Value}}" data-buff="{{.Key}}">
     {{else}}<input type="checkbox" data-buff="{{.Key}}"{{if .Excl}} data-buff-excl="{{.Excl}}"{{end}}{{if .Value}} checked{{end}}> <span>{{.Label}}</span>{{end}}
   </label>
+  {{end}}
   {{end}}
 </details>
 {{end}}

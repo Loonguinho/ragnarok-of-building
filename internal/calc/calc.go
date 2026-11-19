@@ -250,15 +250,23 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 	if at.Element != "" && !slices.Contains(Elements, at.Element) {
 		at.Element = ""
 	}
-	// Only the selectors the class shows are kept.
+	// Only the selectors the class shows are kept: formula states and the
+	// class's own buffs (which share their keys).
 	allowed := map[string]bool{}
 	for _, o := range StatesFor(c, b.Job) {
 		allowed[o.Key] = true
 	}
+	own := map[string]*ClassBuff{}
+	for _, cb := range ClassBuffsFor(c, b.Job) {
+		own[cb.Key] = &cb
+		allowed[cb.Key] = true
+	}
 	for k, v := range at.States {
-		if !allowed[k] || v == 0 {
+		switch {
+		case !allowed[k] || v == 0:
 			delete(at.States, k)
-		} else {
+		case own[k] != nil && own[k].validValue(v):
+		default:
 			at.States[k] = clamp(v, 0, 10)
 		}
 	}
@@ -569,6 +577,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		baseJob[i] = b.Stats[i] + jb[i]
 	}
 	applyBuffs(&b, baseJob, bonus, extra)
+	applyClassBuffs(&b, c, bonus, extra) // the class's own buffs (Buffs window, Próprios)
 	LatamPassives(b, c, r.WeaponType, bonus) // class passives (e.g. War Book Mastery)
 	r.Bonuses = bonus
 	r.Extra = extra

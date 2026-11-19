@@ -17,6 +17,7 @@ type buffGroup struct {
 type buffItem struct {
 	Key, Label string
 	Excl       string      // only one of the same Excl group at a time
+	State      bool        // a class buff: kept in the attack states (data-atk-state)
 	Choices    [][2]string // selector; nil = checkbox or number
 	Max        int         // > 0: number input
 	Value      int
@@ -47,6 +48,25 @@ func buffGroups(b calc.Build, c *gamedata.Catalog, l string) []buffGroup {
 		if v > 0 {
 			g.Active++
 			g.Open = true
+		}
+		if d.Group == "Próprios" && d.Key == "concentration" && c != nil {
+			// The class's own buffs (generated from latam-ro-calc) join this group.
+			for _, cb := range calc.ClassBuffsFor(c, b.Job) {
+				label := cb.Label
+				if s := skills[cb.Skill]; s != nil && s.Name.Get(l) != "" {
+					label = s.Name.Get(l)
+				}
+				v := b.Atk.States[cb.Key]
+				it := buffItem{Key: cb.Key, Label: label, State: true, Value: v, ValueStr: strconv.Itoa(v)}
+				if !cb.Toggle {
+					it.Choices = cb.Choices
+				}
+				g.Items = append(g.Items, it)
+				if v > 0 {
+					g.Active++
+					g.Open = true
+				}
+			}
 		}
 	}
 	return out

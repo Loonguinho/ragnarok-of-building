@@ -112,3 +112,61 @@ func TestBuffSkillsExist(t *testing.T) {
 		}
 	}
 }
+
+// Every generated class buff gives bonuses the calculator reads.
+func TestClassBuffScripts(t *testing.T) {
+	names := map[string]bool{"bAddSize": true, "bIgnoreDefClassRate": true, "bMagicAddRace": true, "bSkillAtk": true}
+	for k := range buffBonusNames {
+		names[k] = true
+	}
+	n := 0
+	for job, bs := range latamClassBuffs {
+		for _, b := range bs {
+			for v, src := range b.Scripts {
+				n++
+				res := script.Eval(src, script.Context{BaseLv: 200, JobLv: 50})
+				if res.Skipped > 0 || len(res.Bonus)+len(res.Extra) == 0 {
+					t.Errorf("%s %s=%d: %q gives %v %v (skipped %d)", job, b.Name, v, src, res.Bonus, res.Extra, res.Skipped)
+				}
+				for k := range res.Bonus {
+					if !names[k] {
+						t.Errorf("%s %s: %s is not read by the calculator", job, b.Name, k)
+					}
+				}
+				for k := range res.Extra {
+					if !names[strings.Fields(k)[0]] {
+						t.Errorf("%s %s: %s is not read by the calculator", job, b.Name, k)
+					}
+				}
+			}
+		}
+	}
+	if n == 0 {
+		t.Fatal("no class buffs generated")
+	}
+}
+
+// A class buff turned on in the attack states changes the status window.
+func TestClassBuffApplies(t *testing.T) {
+	c, err := gamedata.Load(filepath.Join("..", "..", "data", "gen", "catalog.json.gz"))
+	if err != nil {
+		t.Skip("catalog not generated")
+	}
+	var job int
+	for id, j := range c.Jobs {
+		if j.Code == "JT_BIOLO" {
+			job = id
+		}
+	}
+	b := Build{Job: job, BaseLv: 250, JobLv: 50, Stats: [6]int{1, 1, 1, 1, 1, 1}}
+	Normalize(&b, c)
+	plain := Compute(b, c)
+	b.Atk.States = map[string]int{stateKey("Tempering"): 10}
+	Normalize(&b, c)
+	if b.Atk.States[stateKey("Tempering")] != 10 {
+		t.Fatalf("Tempering dropped by Normalize: %v", b.Atk.States)
+	}
+	if r := Compute(b, c); r.Bonuses["bPAtk"]-plain.Bonuses["bPAtk"] != 15 {
+		t.Errorf("Tempering 10: P.ATK bonus %d -> %d, want +15", plain.Bonuses["bPAtk"], r.Bonuses["bPAtk"])
+	}
+}

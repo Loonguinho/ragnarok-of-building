@@ -107,3 +107,7 @@ The full design doc is in `docs/design.md`.
 - **[rAthena](https://github.com/rathena/rathena)** (GPL-3.0): job tables, items, monsters and renewal formulas. Its data files are downloaded locally by `cmd/fetchrathena` and not redistributed.
 - **[Divine Pride](https://www.divine-pride.net)** (optional): stats of the remaining monsters that neither rAthena nor latam-ro-calc has, fetched one ID at a time when chosen as a target, only if you set your own `DP_API_KEY` in `.env`; cached in `data/cache/dp/` (not committed).
 - Game names, descriptions and skill trees are read from the user's own RO LATAM client. Ragnarok Online is © Gravity Co., Ltd.
+
+## License
+
+The code is under the [MIT License](LICENSE). Game data is not part of it: it is read from each user's own client, and rAthena's files are downloaded locally, never redistributed.

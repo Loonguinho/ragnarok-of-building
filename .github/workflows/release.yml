@@ -25,7 +25,7 @@ jobs:
         run: |
           mkdir -p dist/RagnarokOfBuilding
           go build -trimpath -ldflags "-s -w" -o dist/RagnarokOfBuilding/RagnarokOfBuilding.exe ./cmd/app
-          cp docs/LEIAME.txt dist/RagnarokOfBuilding/
+          cp docs/LEIAME.txt LICENSE dist/RagnarokOfBuilding/
           cd dist && zip -r "RagnarokOfBuilding-${GITHUB_REF_NAME}-windows.zip" RagnarokOfBuilding
       - name: Publish
         env:

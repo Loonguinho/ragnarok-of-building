@@ -11,9 +11,11 @@
   <script src="{{asset "js/htmx.min.js"}}" defer></script>
   <script src="{{asset "js/rowindow.js"}}" defer></script>
   <script src="{{asset "js/saved.js"}}" defer></script>
+  <script src="{{asset "js/replayimport.js"}}" defer></script>
   <script src="{{asset "js/itemtip.js"}}" defer></script>
 </head>
 <body class="ro-desktop"{{with .ClickSound}} data-click-sound="{{.}}"{{end}}>
+{{with savedFile}}<script id="ro-saved-file" type="application/json">{{.}}</script>{{end}}
   {{template "content" .}}
   {{template "chatlog" .}}
 </body>

@@ -17,7 +17,7 @@
 <!-- Basic Info (Alt+V) -->
 <section class="ro-window ro-basic" id="win-basic" data-hotkey="v">
   <header class="ro-window__title">{{t "Informações Básicas"}}
-    <button type="button" class="ro-gearbtn" data-settings aria-haspopup="menu" aria-expanded="false" title="{{t "Configurações"}}">⚙</button>
+    <button type="button" class="ro-gearbtn" data-settings aria-haspopup="menu" aria-expanded="false" title="{{t "Configurações"}}" aria-label="{{t "Configurações"}}"><svg class="ro-gearicon" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><g fill="currentColor"><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(0 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(45 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(90 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(135 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(180 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(225 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(270 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(315 8 8)"/></g><circle cx="8" cy="8" r="4.6" fill="none" stroke="currentColor" stroke-width="2.6"/></svg></button>
   </header>
   <div class="ro-window__body" id="build_basic">{{template "build_basic" .}}</div>
   <!-- General settings, opened from the gear in the title bar -->
@@ -43,19 +43,51 @@
   </div>
 </section>
 {{end}}
+<!-- Menu: the window buttons and the build commands -->
+<section class="ro-window ro-menuwin" id="win-menu" data-no-show-all>
+  <header class="ro-window__title">{{t "Menu"}}</header>
+  <div class="ro-window__body">
+    <div class="ro-menu__label">{{t "Janelas"}}</div>
+    <div class="ro-menu__grid">
+      <button class="ro-btn" data-toggle="win-status" title="Alt+A">{{t "Atrib"}}</button>
+      <button class="ro-btn" data-toggle="win-equip" title="Alt+Q">{{t "Equip"}}</button>
+      <button class="ro-btn" data-toggle="win-skills" title="Alt+S">{{t "Habil"}}</button>
+      <button class="ro-btn" data-toggle="win-bonus" title="Alt+B">{{t "Bônus"}}</button>
+      <button class="ro-btn" data-toggle="win-damage" title="Alt+D">{{t "Dano"}}</button>
+      <button class="ro-btn" data-toggle="win-buffs" title="Alt+U">Buffs</button>
+      <button class="ro-btn" data-toggle="win-optimize" title="Alt+O">{{t "Otimizar"}}</button>
+      <button class="ro-btn" data-toggle="win-rdmg" id="rdmg-btn" title="{{t "Resumo de dano do replay"}}" hidden>{{t "Dano do replay"}}</button>
+    </div>
+    <div class="ro-menu__label">{{t "Build"}}</div>
+    <div class="ro-menu__grid">
+      <button class="ro-btn" data-save-build title="{{t "Salvar o build (Ctrl+S)"}}">{{t "Salvar"}}</button>
+      <button class="ro-btn" data-toggle="win-saved" title="Alt+C">{{t "Builds"}}</button>
+      <button class="ro-btn" data-new-build>{{t "Novo"}}</button>
+      <button class="ro-btn" data-toggle="win-share" title="{{t "Compartilhar ou importar um build"}} (Alt+L)">{{t "Compartilhar"}}</button>
+      <button class="ro-btn" data-replay-pick title="{{t "Abrir um replay (.rrf) do jogo"}}">{{t "Importar replay"}}</button>
+      <input type="file" id="rrf-menu" accept=".rrf" hidden>
+    </div>
+  </div>
+</section>
 {{with $.V}}
 <!-- Saved builds (Alt+C), like the client's character select -->
 <section class="ro-window ro-savedwin is-hidden" id="win-saved" data-hotkey="c">
   <header class="ro-window__title">{{t "Builds salvos"}} <small id="saved-count"></small> <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
   <div class="ro-window__body">
     <ul class="ro-list ro-savedlist" id="saved-list" aria-label="{{t "Builds salvos"}}"></ul>
-    <p class="ro-note" id="saved-empty">{{th "Nenhum build salvo ainda. Aperte <b>Salvar</b> (ou <b>Ctrl+S</b>) para guardar o atual neste navegador."}}</p>
+    <p class="ro-note" id="saved-empty">{{th "Nenhum build salvo ainda. Aperte <b>Salvar</b> (ou <b>Ctrl+S</b>) para guardar o atual."}}</p>
+    <div class="ro-savedwin__io">
+      <span class="ro-note" id="saved-where"></span>
+      <button class="ro-btn" type="button" data-saved-export title="{{t "Baixar um arquivo com todos os builds salvos"}}">{{t "Exportar"}}</button>
+      <button class="ro-btn" type="button" data-saved-import title="{{t "Juntar os builds de um arquivo exportado"}}">{{t "Importar"}}</button>
+      <input type="file" id="saved-import-file" accept=".json,application/json" hidden>
+    </div>
     <form class="ro-savedwin__link" data-open-link>
       <input class="ro-input" type="text" name="link" placeholder="{{t "Cole o link de um build compartilhado"}}" aria-label="{{t "Abrir link"}}">
       <button class="ro-btn" type="submit">{{t "Abrir"}}</button>
     </form>
   </div>
-  <footer class="ro-window__footer"><a href="/new">{{t "Importar replay"}}</a> · <a href="/items">{{t "Banco de Itens"}}</a> · <a href="/skills">{{t "Árvore de Habilidades"}}</a></footer>
+  <footer class="ro-window__footer"><a href="/items">{{t "Banco de Itens"}}</a> · <a href="/skills">{{t "Árvore de Habilidades"}}</a></footer>
 </section>
 {{end}}
 {{with $.V}}
@@ -95,7 +127,6 @@
           <button class="ro-btn" type="submit">{{t "Importar"}}</button>
         </div>
       </form>
-      <p class="ro-note"><a href="/new">{{t "Importar replay"}}</a> {{t "(arquivo .rrf do jogo)"}}</p>
     </fieldset>
   </div>
 </section>
@@ -327,22 +358,6 @@
 {{if .Job.Fourth}}<div class="ro-bar ro-bar--ap"><span style="width:100%"></span><em>AP {{.R.AP}}</em></div>{{end}}
 <div class="ro-bar ro-bar--exp"><span style="width:{{pct .Build.BaseLv .R.MaxBaseLv}}%"></span><em>{{t "Base"}} {{.Build.BaseLv}}/{{.R.MaxBaseLv}}</em></div>
 <div class="ro-bar ro-bar--exp"><span style="width:{{pct .Build.JobLv .R.MaxJobLv}}%"></span><em>{{t "Classe"}} {{.Build.JobLv}}/{{.R.MaxJobLv}}</em></div>
-<div class="ro-basic__menu">
-  <button class="ro-btn" data-toggle="win-status" title="Alt+A">{{t "Atrib"}}</button>
-  <button class="ro-btn" data-toggle="win-equip" title="Alt+Q">{{t "Equip"}}</button>
-  <button class="ro-btn" data-toggle="win-skills" title="Alt+S">{{t "Habil"}}</button>
-  <button class="ro-btn" data-toggle="win-bonus" title="Alt+B">{{t "Bônus"}}</button>
-  <button class="ro-btn" data-toggle="win-damage" title="Alt+D">{{t "Dano"}}</button>
-  <button class="ro-btn" data-toggle="win-buffs" title="Alt+U">Buffs</button>
-  <button class="ro-btn is-hidden" data-toggle="win-rdmg" id="rdmg-btn" title="{{t "Resumo de dano do replay"}}">{{t "Replay"}}</button>
-  <button class="ro-btn" data-toggle="win-optimize" title="Alt+O">{{t "Otimizar"}}</button>
-</div>
-<div class="ro-basic__menu">
-  <button class="ro-btn" data-save-build title="{{t "Salvar neste navegador (Ctrl+S)"}}">{{t "Salvar"}}</button>
-  <button class="ro-btn" data-toggle="win-share" title="{{t "Compartilhar ou importar um build"}} (Alt+L)">{{t "Compartilhar"}}</button>
-  <button class="ro-btn" data-new-build>{{t "Novo"}}</button>
-  <button class="ro-btn" data-toggle="win-saved" title="Alt+C">{{t "Builds"}}</button>
-</div>
 {{end}}
 
 {{define "build_status"}}

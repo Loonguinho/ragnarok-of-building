@@ -88,9 +88,12 @@ body.ro-desktop:has(.ro-desk) { overflow: auto; }
 .ro-desk.is-floating .ro-window { position: absolute; }
 .ro-desk.is-floating .ro-window__title { cursor: move; }
 .ro-desk.is-floating .ro-chat { position: fixed; left: 8px; bottom: 8px; width: 360px; z-index: 5; }
-.ro-gearbtn { position: absolute; right: 4px; top: 0; padding: 0 3px; border: 0; background: none; cursor: pointer;
-  font-size: 13px; line-height: 18px; color: var(--ro-title-text); opacity: .7; }
-.ro-gearbtn:hover, .ro-gearbtn[aria-expanded="true"] { opacity: 1; }
+.ro-gearbtn { position: absolute; right: 3px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: center;
+  width: 20px; height: 18px; padding: 0; border: 1px solid transparent; border-radius: 3px; background: none; cursor: pointer;
+  color: var(--ro-title-text); opacity: .85; }
+.ro-gearbtn:hover, .ro-gearbtn:focus-visible, .ro-gearbtn[aria-expanded="true"] { opacity: 1; background: rgba(255, 255, 255, .25); border-color: rgba(255, 255, 255, .5); }
+.ro-gearbtn .ro-gearicon { display: block; transition: transform .3s; }
+.ro-gearbtn:hover .ro-gearicon, .ro-gearbtn[aria-expanded="true"] .ro-gearicon { transform: rotate(45deg); }
 /* Settings menu under the gear. */
 .ro-settings { position: fixed; z-index: 60; min-width: 220px; background: #fff; border: 1px solid #7f9db9;
   box-shadow: 2px 3px 8px rgba(0, 0, 0, .25); padding: 2px 0; font-size: 11px; }
@@ -213,8 +216,15 @@ body.ro-desktop:has(.ro-desk) { overflow: auto; }
 .ro-bar--hp > span { background: linear-gradient(180deg, #7fe07f, var(--ro-hp)); }
 .ro-bar--sp > span { background: linear-gradient(180deg, #7f9fff, var(--ro-sp)); }
 .ro-bar--exp > span { background: linear-gradient(180deg, #ffe38a, var(--ro-exp)); }
-.ro-basic__menu { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
-.ro-basic__menu > .ro-btn { flex: 1 1 auto; min-width: 0; padding: 0 4px; text-align: center; white-space: nowrap; }
+/* Menu window: window buttons and build commands. */
+.ro-menu__label { margin: 2px 0 2px; font-size: 10px; color: var(--ro-muted, #6b6b6b); text-transform: uppercase; letter-spacing: .04em; }
+.ro-menu__label + .ro-menu__grid { margin-bottom: 4px; }
+.ro-menu__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; }
+.ro-menu__grid > .ro-btn { min-width: 0; padding: 0 4px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ro-menu__grid > .ro-btn[hidden] { display: none; }
+.ro-menu__grid > [data-replay-pick] { grid-column: 1 / -1; }
+.ro-savedwin__io { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 6px 0; }
+.ro-savedwin__io .ro-note { flex: 1 1 100%; margin: 0; }
 
 /* ---------- npc dialog ---------- */
 .ro-npc { min-height: 70px; background: #fff; border: 1px solid #b7bcc6; margin: 6px; font-size: 12px; }

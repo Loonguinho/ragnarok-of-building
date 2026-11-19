@@ -39,7 +39,10 @@ func main() {
 	if key := os.Getenv("DP_API_KEY"); key != "" {
 		dp = divinepride.New(key, "LATAM", env("DP_CACHE", "data/cache/dp"))
 	}
-	srv, err := web.New(web.Options{Log: log, Catalog: cat, Dev: dev, SoundDir: sounds, DP: dp, PasteURL: os.Getenv("PASTE_URL")})
+	// SAVED_FILE keeps saved builds in a file (a local, single-user server
+	// only: every visitor would share it); unset, they stay in the browser.
+	srv, err := web.New(web.Options{Log: log, Catalog: cat, Dev: dev, SoundDir: sounds, DP: dp, PasteURL: os.Getenv("PASTE_URL"),
+		SavedFile: os.Getenv("SAVED_FILE")})
 	if err != nil {
 		log.Error("init", "err", err)
 		os.Exit(1)

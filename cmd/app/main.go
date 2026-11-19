@@ -134,7 +134,9 @@ func run() error {
 	}
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	srv, err := web.New(web.Options{Log: log, Catalog: cat, NoRateLimit: true,
-		SoundDir: filepath.Join(filepath.Dir(catalogPath), "sounds"), PasteURL: os.Getenv("PASTE_URL")})
+		SoundDir: filepath.Join(filepath.Dir(catalogPath), "sounds"), PasteURL: os.Getenv("PASTE_URL"),
+		// Saved builds in a file next to the executable (not in the browser).
+		SavedFile: "builds.json"})
 	if err != nil {
 		return err
 	}

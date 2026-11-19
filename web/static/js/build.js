@@ -224,9 +224,50 @@
     const url = new URL(location.href);
     url.searchParams.set("s", e.id);
     history.replaceState(null, "", url);
-    say(T('Build "%s" salvo neste navegador.', e.name));
+    say(ROSaved.inFile() ? T('Build "%s" salvo.', e.name) : T('Build "%s" salvo neste navegador.', e.name));
     renderSaved();
   }
+  window.addEventListener("ro-saved-error", () => say(T("Não consegui gravar os builds no arquivo builds.json."), true));
+
+  // Replay import from the Menu: pick a .rrf, then the same flow as the start page.
+  const rrfMenu = document.getElementById("rrf-menu");
+  if (rrfMenu && window.ROReplay) {
+    document.addEventListener("click", (e) => { if (e.target.closest("[data-replay-pick]")) rrfMenu.click(); });
+    rrfMenu.addEventListener("change", () => {
+      const file = rrfMenu.files[0];
+      rrfMenu.value = "";
+      ROReplay.upload(file, (html, bad) => {
+        const tmp = document.createElement("div");
+        tmp.innerHTML = html;
+        say(tmp.textContent, bad);
+      });
+    });
+  }
+
+  // Saved builds: export them all to a file, or merge a file back.
+  const savedFile = document.getElementById("saved-import-file");
+  document.addEventListener("click", (e) => {
+    if (!window.ROSaved) return;
+    if (e.target.closest("[data-saved-export]")) {
+      const blob = new Blob([ROSaved.exportJSON()], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "builds-ragnarok-of-building-" + new Date().toISOString().slice(0, 10) + ".json";
+      document.body.append(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    }
+    if (e.target.closest("[data-saved-import]") && savedFile) savedFile.click();
+  });
+  if (savedFile) savedFile.addEventListener("change", async () => {
+    const f = savedFile.files[0];
+    savedFile.value = "";
+    if (!f) return;
+    const n = ROSaved.importJSON(await f.text());
+    if (n < 0) say(T("Este arquivo não é um backup de builds."), true);
+    else say(T("%s build(s) importado(s).", n));
+    renderSaved();
+  });
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); saveBuild(false); }
   });
@@ -256,6 +297,8 @@
       li.append(text, del);
       return li;
     }));
+    const where = document.getElementById("saved-where");
+    if (where) where.textContent = ROSaved.inFile() ? T("Salvos no arquivo builds.json, na pasta do programa.") : T("Salvos neste navegador.");
     const count = document.getElementById("saved-count");
     if (count) count.textContent = list.length ? `(${list.length})` : "";
     const empty = document.getElementById("saved-empty");
@@ -839,7 +882,8 @@
           if (!sel) return;
           body.querySelectorAll("[data-rdmg-char]").forEach((d) => { d.hidden = d.dataset.rdmgChar !== sel.value; });
         });
-        document.getElementById("rdmg-btn")?.classList.remove("is-hidden");
+        const rdBtn = document.getElementById("rdmg-btn");
+        if (rdBtn) rdBtn.hidden = false;
         if (rd.open) {
           rdWin.classList.remove("is-hidden");
           rd.open = false; // open by itself once, right after the import

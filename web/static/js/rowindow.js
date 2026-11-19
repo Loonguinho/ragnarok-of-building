@@ -1,5 +1,9 @@
 // RO window manager: drag by title bar, focus/z-order, close, Alt+<key> toggles,
 // positions remembered per window in localStorage (best-effort).
+//
+// The build editor's windows sit in fixed columns (.ro-desk); with
+// "Flutuantes" on (Alt+W) they float like the client's: dragged by the
+// title bar, positions remembered.
 (() => {
   const KEY = "ro.windows";
   const isMobile = () => window.matchMedia("(max-width: 720px)").matches;
@@ -9,8 +13,11 @@
   const save = (state) => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
   const state = load();
 
+  const LAYOUT = "ro.layout";
+  const desk = () => document.querySelector(".ro-desk");
+  const floating = () => !!desk()?.classList.contains("is-floating");
   // Windows laid out in the build editor's fixed columns stay put.
-  const fixed = (win) => !!win.closest(".ro-desk");
+  const fixed = (win) => !!win.closest(".ro-desk") && !floating();
   const offScreen = (win) => {
     const r = win.getBoundingClientRect();
     return r.bottom < 40 || r.top > window.innerHeight - 40;
@@ -20,8 +27,63 @@
 
   function persist(win) {
     if (!win.id) return;
-    state[win.id] = { left: win.style.left, top: win.style.top, hidden: win.classList.contains("is-hidden") };
+    const prev = state[win.id] || {};
+    state[win.id] = { left: win.style.left, top: win.style.top, hidden: win.classList.contains("is-hidden"), f: prev.f };
+    if (win.closest(".ro-desk")) { // the column layout never moves: keep only the floating spot
+      state[win.id].left = state[win.id].top = "";
+      if (floating() && win.style.left) state[win.id].f = { l: win.style.left, t: win.style.top, w: win.style.width };
+    }
     save(state);
+    if (floating()) fitDesk();
+  }
+
+  // ---- floating layout (build editor) ----
+  const deskWins = () => [...(desk()?.querySelectorAll(".ro-window") || [])];
+  // The page scrolls down to the lowest floating window.
+  function fitDesk() {
+    const d = desk();
+    if (!d) return;
+    let bottom = 0;
+    for (const w of deskWins()) if (!w.classList.contains("is-hidden")) bottom = Math.max(bottom, w.offsetTop + w.offsetHeight);
+    d.style.minHeight = floating() ? bottom + 40 + "px" : "";
+  }
+  // A window opened while floating, with no spot yet: near the top of the view.
+  function place(win) {
+    if (!floating() || win.style.left || !win.closest(".ro-desk")) return;
+    const d = desk(), r = d.getBoundingClientRect();
+    const col = win.closest(".ro-desk__col");
+    win.style.width = (col ? col.getBoundingClientRect().width : 400) + "px";
+    win.style.left = Math.max(0, (col ? col.getBoundingClientRect().left : 40) - r.left) + "px";
+    win.style.top = Math.max(0, 60 - r.top) + "px";
+  }
+  // on: the windows leave the columns where they are (or go back to the
+  // spots saved when restoring); off: back to the columns.
+  function setFloating(on, restore) {
+    const d = desk();
+    if (!d || isMobile()) return;
+    const wins = deskWins();
+    if (on) {
+      const r = d.getBoundingClientRect();
+      const spots = wins.map((w) => {
+        const s = restore && w.id && state[w.id] && state[w.id].f;
+        if (s) return s;
+        if (w.classList.contains("is-hidden")) return null;
+        const b = w.getBoundingClientRect();
+        return { l: b.left - r.left + "px", t: b.top - r.top + "px", w: b.width + "px" };
+      });
+      d.classList.add("is-floating");
+      wins.forEach((w, i) => {
+        const s = spots[i];
+        if (s) { w.style.left = s.l; w.style.top = s.t; w.style.width = s.w; } else { w.style.left = ""; place(w); }
+        if (!restore) persist(w);
+      });
+    } else {
+      d.classList.remove("is-floating");
+      for (const w of wins) { w.style.left = w.style.top = w.style.width = w.style.zIndex = ""; }
+    }
+    try { localStorage.setItem(LAYOUT, on ? "float" : "fixed"); } catch {}
+    document.querySelectorAll("[data-layout-toggle]").forEach((b) => b.setAttribute("aria-pressed", String(on)));
+    fitDesk();
   }
 
   // Like the client: a hidden window opens; a covered window comes to the
@@ -41,6 +103,7 @@
 
   function show(win) {
     win.classList.remove("is-hidden");
+    place(win);
     focus(win);
     persist(win);
     if (fixed(win)) win.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -63,13 +126,16 @@
     });
 
     const bar = win.querySelector(".ro-window__title");
-    if (!bar || win.classList.contains("ro-window--fixed") || fixed(win)) return;
+    if (!bar || win.classList.contains("ro-window--fixed")) return;
     bar.addEventListener("pointerdown", (e) => {
-      if (isMobile() || e.target.closest("button")) return;
+      if (isMobile() || fixed(win) || e.target.closest("button, a")) return;
       const dx = e.clientX - win.offsetLeft, dy = e.clientY - win.offsetTop;
       bar.setPointerCapture(e.pointerId);
+      const inDesk = !!win.closest(".ro-desk");
       const move = (ev) => {
-        const maxX = window.innerWidth - 40, maxY = window.innerHeight - 20;
+        // In the editor the desk scrolls: only keep the title bar reachable.
+        const maxX = (inDesk ? desk().clientWidth : window.innerWidth) - 40;
+        const maxY = inDesk ? Infinity : window.innerHeight - 20;
         win.style.left = Math.min(Math.max(ev.clientX - dx, 0), maxX) + "px";
         win.style.top = Math.min(Math.max(ev.clientY - dy, 0), maxY) + "px";
       };
@@ -83,10 +149,21 @@
     });
   }
 
-  window.ROWin = { show, focus, toggle };
+  window.ROWin = { show, focus, toggle, setFloating, floating };
 
   document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".ro-window").forEach(init);
+    let saved = "fixed";
+    try { saved = localStorage.getItem(LAYOUT) || "fixed"; } catch {}
+    if (desk() && saved === "float") setFloating(true, true);
+    document.addEventListener("click", (e) => {
+      if (e.target.closest("[data-layout-toggle]")) setFloating(!floating(), false);
+    });
+    // Contents change size (recalc, tabs): keep the page tall enough.
+    if (desk() && window.ResizeObserver) {
+      const ro = new ResizeObserver(() => { if (floating()) fitDesk(); });
+      deskWins().forEach((w) => ro.observe(w));
+    }
 
     // Windows swapped in by HTMX (e.g. item info) get the same behavior.
     document.body.addEventListener("htmx:afterSwap", (e) => {
@@ -105,6 +182,7 @@
     // Alt+A / Alt+Q / Alt+S / Alt+E / Alt+V, as in the client.
     document.addEventListener("keydown", (e) => {
       if (!e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.key.toLowerCase() === "w" && desk()) { e.preventDefault(); setFloating(!floating(), false); return; }
       const win = document.querySelector(`.ro-window[data-hotkey="${e.key.toLowerCase()}"]`);
       if (win) { e.preventDefault(); toggle(win); }
     });

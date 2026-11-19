@@ -83,6 +83,18 @@ body.ro-desktop:has(.ro-desk) { overflow: auto; }
 }
 /* In the editor the chat log is the last block of the first column. */
 .ro-desk .ro-chat { position: static; width: auto; max-height: 130px; }
+/* Floating windows (Flutuantes, Alt+W): out of the columns, dragged freely. */
+.ro-desk.is-floating { position: relative; }
+.ro-desk.is-floating .ro-window { position: absolute; }
+.ro-desk.is-floating .ro-window__title { cursor: move; }
+.ro-desk.is-floating .ro-chat { position: fixed; left: 8px; bottom: 8px; width: 360px; z-index: 5; }
+.ro-layoutbtn { padding: 0 2px; border: 0; background: none; font: inherit; font-size: 10px; font-weight: bold;
+  color: var(--ro-title-text); opacity: .55; cursor: pointer; margin-right: 4px; }
+.ro-layoutbtn::before { content: "☐ "; }
+.ro-layoutbtn[aria-pressed="true"] { opacity: 1; }
+.ro-layoutbtn[aria-pressed="true"]::before { content: "☑ "; }
+.ro-layoutbtn:hover { opacity: 1; text-decoration: underline; }
+@media (max-width: 720px) { .ro-layoutbtn { display: none; } }
 .ro-window.is-focused { z-index: 10; }
 .ro-window__title {
   position: relative;

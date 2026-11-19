@@ -298,9 +298,9 @@ var dict = map[string][2]string{
 	"Nenhum build salvo ainda. Aperte <b>Salvar</b> (ou <b>Ctrl+S</b>) para guardar o atual neste navegador.": {
 		"No saved builds yet. Press <b>Save</b> (or <b>Ctrl+S</b>) to keep the current one in this browser.",
 		"Aún no hay builds guardados. Pulsa <b>Guardar</b> (o <b>Ctrl+S</b>) para guardar el actual en este navegador."},
-	"Importar replay": {"Import replay", "Importar replay"},
-	"Builds":          {"Builds", "Builds"},
-	"Trocar a classe": {"Change class", "Cambiar la clase"},
+	"Importar replay":              {"Import replay", "Importar replay"},
+	"Builds":                       {"Builds", "Builds"},
+	"Trocar a classe":              {"Change class", "Cambiar la clase"},
 	"Novo build: escolha a classe": {"New build: pick the class", "Nuevo build: elige la clase"},
 	"O servidor não respondeu. Ele está rodando? Recarregue a página.": {
 		"The server did not answer. Is it running? Reload the page.",
@@ -344,6 +344,10 @@ var dict = map[string][2]string{
 	"O código guarda o build inteiro (classe, atributos, equipamento, habilidades e buffs). Quem abrir o link ou colar o código vê o mesmo build.": {
 		"The code holds the whole build (class, stats, equipment, skills and buffs). Whoever opens the link or pastes the code sees the same build.",
 		"El código guarda el build entero (clase, atributos, equipo, habilidades y buffs). Quien abra el enlace o pegue el código ve el mismo build."},
+	"Flutuantes": {"Floating", "Flotantes"},
+	"Janelas flutuantes: arraste cada uma pela barra de título. Desligado, ficam nas colunas.": {
+		"Floating windows: drag each one by its title bar. Off, they stay in the columns.",
+		"Ventanas flotantes: arrastra cada una por su barra de título. Apagado, quedan en las columnas."},
 	"Grau":                         {"Grade", "Grado"},
 	"Bônus aleatórios":             {"Random options", "Opciones aleatorias"},
 	"Bônus aleatório":              {"Random option", "Opción aleatoria"},

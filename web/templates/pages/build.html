@@ -17,7 +17,7 @@
 <!-- Basic Info (Alt+V) -->
 <section class="ro-window ro-basic" id="win-basic" data-hotkey="v">
   <header class="ro-window__title">{{t "Informações Básicas"}}
-    <nav class="ro-titlelang" aria-label="{{t "Idioma"}}">{{range uiLangs}}<a href="?lang={{.Code}}" hreflang="{{.HTML}}" lang="{{.HTML}}" title="{{.Label}}"{{if eq .Code lang}} class="is-active" aria-current="true"{{end}}>{{.Code | upper}}</a>{{end}}</nav>
+    <nav class="ro-titlelang" aria-label="{{t "Idioma"}}"><button type="button" class="ro-layoutbtn" data-layout-toggle aria-pressed="false" title="{{t "Janelas flutuantes: arraste cada uma pela barra de título. Desligado, ficam nas colunas."}} (Alt+W)">{{t "Flutuantes"}}</button>{{range uiLangs}}<a href="?lang={{.Code}}" hreflang="{{.HTML}}" lang="{{.HTML}}" title="{{.Label}}"{{if eq .Code lang}} class="is-active" aria-current="true"{{end}}>{{.Code | upper}}</a>{{end}}</nav>
   </header>
   <div class="ro-window__body" id="build_basic">{{template "build_basic" .}}</div>
   <!-- Class dropdown (Alt+J), opened from the class name or from Novo -->

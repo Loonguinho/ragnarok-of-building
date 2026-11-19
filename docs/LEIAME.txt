@@ -7,6 +7,10 @@ COMO USAR
 3. O simulador abre no seu navegador. Deixe a janela preta aberta enquanto
    usa; para sair, feche-a.
 
+Na primeira vez, se você não tem o jogo instalado, o programa baixa os dados
+do jogo (catalog.json.gz, uns 4 MB) da página dele no GitHub e guarda nesta
+pasta. Precisa de internet só nessa hora.
+
 USANDO UMA CÓPIA DOS ARQUIVOS DO JOGO (sem procurar o jogo instalado)
 Copie para a pasta do RagnarokOfBuilding.exe:
   - o data.grf do jogo

@@ -24,6 +24,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -79,7 +80,8 @@ func run() error {
 
 	// Where the game data comes from, first match wins: -client; a data.grf
 	// (+ System) copied into this folder; a ready catalog.json.gz here; the
-	// client in RO_CLIENT or the usual install folders.
+	// client in RO_CLIENT or the usual install folders; the catalog attached
+	// to this version's GitHub release (downloaded once into this folder).
 	catalog := catalogPath
 	client := *clientFlag
 	here, _ := os.Getwd()
@@ -97,7 +99,16 @@ func run() error {
 	default:
 		client = setup.FindClient()
 	}
-	if why := needsImport(client, *reimport); catalog == catalogPath && why != "" {
+	why := needsImport(client, *reimport)
+	if catalog == catalogPath && why != "" && client == "" && !*reimport {
+		// No game here: the catalog published with this version.
+		if err := downloadCatalog(catalogURL(), sharedCatalog); err == nil {
+			catalog, why = sharedCatalog, ""
+		} else {
+			fmt.Println("  Não deu para baixar:", err)
+		}
+	}
+	if catalog == catalogPath && why != "" {
 		fmt.Println(why)
 		if client == "" || !setup.IsClient(client) {
 			client = askClient()
@@ -162,6 +173,54 @@ func needsImport(client string, forced bool) string {
 		}
 	}
 	return ""
+}
+
+// Set at release time (-ldflags -X): the version tag and the GitHub
+// repository whose release holds the ready catalog.
+var (
+	version = ""
+	repo    = "Loonguinho/ragnarok-of-building"
+)
+
+// catalogURL is the catalog.json.gz attached to this version's release
+// (or to the latest release, for builds without a version).
+func catalogURL() string {
+	if version != "" {
+		return "https://github.com/" + repo + "/releases/download/" + version + "/" + sharedCatalog
+	}
+	return "https://github.com/" + repo + "/releases/latest/download/" + sharedCatalog
+}
+
+// downloadCatalog fetches the catalog at u into dst, keeping it only if it
+// loads.
+func downloadCatalog(u, dst string) error {
+	fmt.Println("Baixando os dados do jogo da página do programa no GitHub…")
+	c := &http.Client{Timeout: 5 * time.Minute}
+	res, err := c.Get(u)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("HTTP %d (a versão não tem o %s anexado)", res.StatusCode, sharedCatalog)
+	}
+	tmp := dst + ".part"
+	f, err := os.Create(tmp)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(f, io.LimitReader(res.Body, 256<<20))
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		_, err = gamedata.Load(tmp) // keep it only if it reads
+	}
+	if err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	return os.Rename(tmp, dst)
 }
 
 // checkSystem reports the System files the importer needs from a client

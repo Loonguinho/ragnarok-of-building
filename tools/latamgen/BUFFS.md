@@ -1,10 +1,9 @@
 # Class buffs (buffgen)
 
-Buffs with bonuses: 57 · with at least one computed bonus: 42
+Buffs with bonuses: 54 · with at least one computed bonus: 39
 
 Bonuses the simulator does not compute (kept out):
 
-- AbyssChaser · **Strip Shadow** (Strip Shadow): not computed: monster_mres, monster_res
 - AssassinCross · **Venom Imp** (GC_VENOMIMPRESS): not computed: vi
 - AssassinCross · **EDP** (ASC_EDP): not computed: edp
 - DragonKnight · **Determinação** (DK_VIGOR): not computed: flatBasicDmg, vigorBasicRaceDmg
@@ -19,7 +18,7 @@ Bonuses the simulator does not compute (kept out):
 - SoulReaper · **Espírito da Fada** (SP_SOULFAIRY): not computed: vct
 - StarEmperor · **ตัวลอย** (Fusion of Sun, Moon and Star): not computed: forceCri
 - Swordman · **Magnum Break 10** (SM_MAGNUM): not computed: magnumBreakPsedoBonus
-- Taekwondo · **Seven Wind** (Seven Wind): not computed: propertyAtk
+- Taekwondo · **Seven Wind** (Seven Wind): not computed: mildwind, propertyAtk
 - Warlock · **Recogn Spell** (WL_RECOGNIZEDSPELL): not computed: spell_maximize
 - Warlock · **Released** (Released): not computed: releasedSkill
 - Whitesmith · **Adrenaline Lv5** (BS_ADRENALINE): not computed: axe_aspdPercent, axe_hit, axe_skillAspd, mace_aspdPercent, mace_hit, mace_skillAspd, twohandAxe_aspdPercent, twohandAxe_hit, twohandAxe_skillAspd, twohandMace_aspdPercent, twohandMace_hit, twohandMace_skillAspd

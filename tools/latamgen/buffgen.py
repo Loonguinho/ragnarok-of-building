@@ -59,8 +59,11 @@ def script_for(key, v, skill_code):
         return f'bonus2 bIgnoreDefClassRate,Class_All,{v};'
     if key in ('p_pene_race_all', 'm_pene_race_all'):
         return f'bonus2 {"bIgnoreDefRaceRate" if key[0] == "p" else "bIgnoreMdefRaceRate"},RC_All,{v};'
-    code = skill_code(key)
-    if code:  # "+N% damage" of one skill
+    # "+N% damage" of one skill: latam-ro-calc writes those keys as the
+    # skill's name ('Rampage Blast'); lowercase keys (comet, mildwind) are
+    # its own flags, never skill names.
+    code = skill_code(key) if (' ' in key or key[:1].isupper()) else None
+    if code:
         return f'bonus2 bSkillAtk,"{code}",{v};'
     return None
 
@@ -149,8 +152,8 @@ def main():
             for e in array_items(src, m.end() - 1):
                 f = top_fields(e)
                 name = (f.get('name') or '').strip('\'"`')
-                if not name:
-                    continue
+                if not name or (f.get('isDebuff') or '').strip() == 'true':
+                    continue  # target debuffs are not the class's own buffs
                 opts = options(f.get('dropdown') or '')
                 if not any(o[2] for o in opts):
                     continue  # no bonus: a formula state only

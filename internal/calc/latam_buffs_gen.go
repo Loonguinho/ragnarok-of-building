@@ -36,9 +36,6 @@ func init() {
 		{Name: "Attack Stance", Skill: "IG_ATTACK_STANCE", Label: "Attack Stance", Toggle: false, Choices: [][2]string{{"0", "—"}, {"1", "Nv 1"}, {"2", "Nv 2"}, {"3", "Nv 3"}, {"4", "Nv 4"}, {"5", "Nv 5"}}, Scripts: map[int]string{1: "bonus bPAtk,3; bonus bSMatk,3; bonus bDef,-40;", 2: "bonus bPAtk,6; bonus bSMatk,6; bonus bDef,-80;", 3: "bonus bPAtk,9; bonus bSMatk,9; bonus bDef,-120;", 4: "bonus bPAtk,12; bonus bSMatk,12; bonus bDef,-160;", 5: "bonus bPAtk,15; bonus bSMatk,15; bonus bDef,-200;"}},
 		{Name: "Holy Shield", Skill: "IG_HOLY_SHIELD", Label: "Holy Shield", Toggle: false, Choices: [][2]string{{"0", "—"}, {"1", "Nv 1"}, {"2", "Nv 2"}, {"3", "Nv 3"}, {"4", "Nv 4"}, {"5", "Nv 5"}}, Scripts: map[int]string{1: "bonus2 bMagicAtkEle,Ele_Holy,7;", 2: "bonus2 bMagicAtkEle,Ele_Holy,9;", 3: "bonus2 bMagicAtkEle,Ele_Holy,11;", 4: "bonus2 bMagicAtkEle,Ele_Holy,13;", 5: "bonus2 bMagicAtkEle,Ele_Holy,15;"}},
 	})
-	regClassBuffs("JT_INQUISITOR", []ClassBuff{
-		{Name: "Oleum Sanctum", Skill: "IQ_OLEUM_SANCTUM", Label: "Oleum Sanctum 5", Toggle: true, Choices: [][2]string{{"0", "—"}, {"5", "Sim"}}, Scripts: map[int]string{5: "bonus2 bSkillAtk,\"IQ_OLEUM_SANCTUM\",15;"}},
-	})
 	regClassBuffs("JT_KNIGHT_H", []ClassBuff{
 		{Name: "Spear Dynamo", Skill: "LK_CONCENTRATION", Label: "Spear Dynamo 5", Toggle: true, Choices: [][2]string{{"0", "—"}, {"5", "Sim"}}, Scripts: map[int]string{5: "bonus bAtkRate,15; bonus bHit,50;"}},
 	})
@@ -112,15 +109,6 @@ func init() {
 		{Name: "Gentle Touch - Opposite", Skill: "", Label: "GT - Opposite", Toggle: false, Choices: [][2]string{{"0", "—"}, {"1", "Nv 1"}, {"2", "Nv 2"}, {"3", "Nv 3"}, {"4", "Nv 4"}, {"5", "Nv 5"}}, Scripts: map[int]string{1: "bonus bAtk,8; bonus bAtkRate,1; bonus2 bSkillAtk,\"SR_RAMPAGEBLASTER\",30; bonus2 bSkillAtk,\"SR_KNUCKLEARROW\",30;", 2: "bonus bAtk,16; bonus bAtkRate,2; bonus2 bSkillAtk,\"SR_RAMPAGEBLASTER\",30; bonus2 bSkillAtk,\"SR_KNUCKLEARROW\",30;", 3: "bonus bAtk,24; bonus bAtkRate,3; bonus2 bSkillAtk,\"SR_RAMPAGEBLASTER\",30; bonus2 bSkillAtk,\"SR_KNUCKLEARROW\",30;", 4: "bonus bAtk,32; bonus bAtkRate,4; bonus2 bSkillAtk,\"SR_RAMPAGEBLASTER\",30; bonus2 bSkillAtk,\"SR_KNUCKLEARROW\",30;", 5: "bonus bAtk,40; bonus bAtkRate,5; bonus2 bSkillAtk,\"SR_RAMPAGEBLASTER\",30; bonus2 bSkillAtk,\"SR_KNUCKLEARROW\",30;"}},
 		{Name: "Gentle Touch - Alive", Skill: "", Label: "GT - Alive", Toggle: false, Choices: [][2]string{{"0", "—"}, {"1", "Nv 1"}, {"2", "Nv 2"}, {"3", "Nv 3"}, {"4", "Nv 4"}, {"5", "Nv 5"}}, Scripts: map[int]string{1: "bonus bMaxHPrate,2; bonus bDef,20; bonus2 bSkillAtk,\"SR_TIGERCANNON\",30;", 2: "bonus bMaxHPrate,4; bonus bDef,40; bonus2 bSkillAtk,\"SR_TIGERCANNON\",30;", 3: "bonus bMaxHPrate,6; bonus bDef,60; bonus2 bSkillAtk,\"SR_TIGERCANNON\",30;", 4: "bonus bMaxHPrate,8; bonus bDef,80; bonus2 bSkillAtk,\"SR_TIGERCANNON\",30;", 5: "bonus bMaxHPrate,10; bonus bDef,100; bonus2 bSkillAtk,\"SR_TIGERCANNON\",30;"}},
 		{Name: "Total Spirit", Skill: "", Label: "Esferas Espirituais", Toggle: false, Choices: [][2]string{{"0", "—"}, {"1", "1"}, {"2", "2"}, {"3", "3"}, {"4", "4"}, {"5", "5"}, {"6", "6"}, {"10", "10"}, {"15", "15"}}, Scripts: map[int]string{1: "bonus bAtk,3;", 2: "bonus bAtk,6;", 3: "bonus bAtk,9;", 4: "bonus bAtk,12;", 5: "bonus bAtk,15;", 6: "bonus bAtk,18;", 10: "bonus bAtk,30;", 15: "bonus bAtk,45;"}},
-	})
-	regClassBuffs("JT_TAEKWON", []ClassBuff{
-		{Name: "Seven Wind", Skill: "", Label: "Seven Wind", Toggle: false, Choices: [][2]string{{"0", "—"}, {"1", "1 Earth"}, {"2", "2 Wind"}, {"3", "3 Water"}, {"4", "4 Fire"}, {"5", "5 Ghost"}, {"6", "6 Darkness"}, {"7", "7 Holy"}}, Scripts: map[int]string{1: "bonus2 bSkillAtk,\"TK_SEVENWIND\",1;", 2: "bonus2 bSkillAtk,\"TK_SEVENWIND\",1;", 3: "bonus2 bSkillAtk,\"TK_SEVENWIND\",1;", 4: "bonus2 bSkillAtk,\"TK_SEVENWIND\",1;", 5: "bonus2 bSkillAtk,\"TK_SEVENWIND\",1;", 6: "bonus2 bSkillAtk,\"TK_SEVENWIND\",1;", 7: "bonus2 bSkillAtk,\"TK_SEVENWIND\",1;"}},
-	})
-	regClassBuffs("JT_WARLOCK", []ClassBuff{
-		{Name: "Comet Amp", Skill: "", Label: "Comet Amp", Toggle: true, Choices: [][2]string{{"0", "—"}, {"1", "Sim"}}, Scripts: map[int]string{1: "bonus2 bSkillAtk,\"WL_COMET\",50;"}},
-	})
-	regClassBuffs("JT_WARLOCK_H", []ClassBuff{
-		{Name: "Comet Amp", Skill: "", Label: "Comet Amp", Toggle: true, Choices: [][2]string{{"0", "—"}, {"1", "Sim"}}, Scripts: map[int]string{1: "bonus2 bSkillAtk,\"WL_COMET\",50;"}},
 	})
 	regClassBuffs("JT_WINDHAWK", []ClassBuff{
 		{Name: "Calamity Gale", Skill: "WH_CALAMITYGALE", Label: "Calamity Gale", Toggle: true, Choices: [][2]string{{"0", "—"}, {"1", "Sim"}}, Scripts: map[int]string{1: "bonus bLongAtkRate,350;"}},

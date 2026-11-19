@@ -65,6 +65,7 @@ To also reload on **Go** changes, install [Air](https://github.com/air-verse/air
 git clone --depth 1 https://github.com/adsonpleal/latam-ro-calc tmp/latam-ro-calc
 python -I tools/latamgen/latamgen.py      # writes internal/calc/latam_gen.go + tools/latamgen/REPORT.md
 python -I tools/latamgen/buffgen.py       # each class's own buffs -> internal/calc/latam_buffs_gen.go + tools/latamgen/BUFFS.md
+python -I tools/latamgen/tablegen.py      # LATAM class tables (HP/SP, job bonus, ASPD) -> internal/clientimport/latam_tables_gen.go
 go test ./internal/calc
 ```
 

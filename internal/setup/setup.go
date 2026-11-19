@@ -178,6 +178,8 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 		return nil, fmt.Errorf("rAthena: %w", err)
 	}
 	clientimport.MergeRathena(c, db)
+	progress("Aplicando as tabelas do LATAM atual (HP/SP, bônus de classe, ASPD) do latam-ro-calc…")
+	clientimport.ApplyLatamTables(c)
 	progress("Juntando os monstros do LATAM (latam-ro-calc)…")
 	mobs := LatamCalcMonsters(rathenaDir)
 	if err := FetchLatamCalc(context.Background(), mobs, progress); err != nil {

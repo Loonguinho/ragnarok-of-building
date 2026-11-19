@@ -408,6 +408,7 @@
 <nav class="ro-tabs" role="tablist">
   <button class="ro-tab is-active" data-equip-tab="main">{{t "Equip"}}</button>
   <button class="ro-tab" data-equip-tab="shadow">{{t "Sombra"}}</button>
+  <button class="ro-tab" data-equip-tab="costume">{{t "Visual"}}</button>
 </nav>
 <div class="ro-window__body ro-equip ro-equip--real" data-equip-panel="main">
   <div class="ro-equip__col">{{range .Slots}}{{if eq .Side "L"}}{{template "equip_slot" .}}{{end}}{{end}}</div>
@@ -419,7 +420,12 @@
   <div class="ro-equip__sprite" aria-hidden="true"><span>{{t "Sombra"}}</span></div>
   <div class="ro-equip__col">{{range .Shadow}}{{if eq .Side "R"}}{{template "equip_slot" .}}{{end}}{{end}}</div>
 </div>
-{{range (list .Slots .Shadow)}}{{range .}}{{template "slot_editor" .}}{{end}}{{end}}
+<div class="ro-window__body ro-equip ro-equip--real" data-equip-panel="costume" hidden>
+  <div class="ro-equip__col">{{range .Costume}}{{if eq .Side "L"}}{{template "equip_slot" .}}{{end}}{{end}}</div>
+  <div class="ro-equip__sprite" aria-hidden="true"><span>{{t "Visual"}}</span></div>
+  <div class="ro-equip__col">{{range .Costume}}{{if eq .Side "R"}}{{template "equip_slot" .}}{{end}}{{end}}</div>
+</div>
+{{range (list .Slots .Shadow .Costume)}}{{range .}}{{template "slot_editor" .}}{{end}}{{end}}
 {{end}}
 
 {{define "equip_slot"}}

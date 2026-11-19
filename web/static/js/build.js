@@ -21,6 +21,9 @@
   const lang = boot.lang || "pt";
   const SAVE_KEY = "ro.build.last";
   const HEAD = ["Head_Top", "Head_Mid", "Head_Low"];
+  const COSTUME_HEAD = ["Costume_Head_Top", "Costume_Head_Mid", "Costume_Head_Low"];
+  // The head slots a slot shares items with (equipment or costume), or null.
+  const headGroup = (slot) => (HEAD.includes(slot) ? HEAD : COSTUME_HEAD.includes(slot) ? COSTUME_HEAD : null);
 
   build.e = build.e || {};
   build.k = build.k || {};
@@ -507,7 +510,7 @@
     const cur = build.e[slot];
     if (!cur) return;
     for (const [k, v] of Object.entries(build.e)) {
-      if (v.i === cur.i && (HEAD.includes(k) === HEAD.includes(slot))) delete build.e[k];
+      if (v.i === cur.i && headGroup(k) === headGroup(slot)) delete build.e[k];
     }
     delete build.e[slot];
   }
@@ -515,9 +518,10 @@
   function equip(slot, id, locs) {
     unequip(slot);
     const entry = { i: id };
-    if (HEAD.includes(slot)) {
+    const group = headGroup(slot);
+    if (group) {
       // An item covering several head slots occupies all of them.
-      const covered = HEAD.filter((h) => locs.includes(h));
+      const covered = group.filter((h) => locs.includes(h));
       for (const h of covered.length ? covered : [slot]) {
         unequip(h);
         build.e[h] = { ...entry };
@@ -536,7 +540,7 @@
   function eachLinked(slot, fn) {
     const cur = build.e[slot];
     if (!cur) return;
-    const keys = HEAD.includes(slot) ? HEAD.filter((h) => build.e[h] && build.e[h].i === cur.i) : [slot];
+    const keys = headGroup(slot) ? headGroup(slot).filter((h) => build.e[h] && build.e[h].i === cur.i) : [slot];
     keys.forEach((k) => fn(build.e[k]));
   }
 
@@ -612,7 +616,7 @@
     const slot = ap.dataset.optApply, i = Number(ap.dataset.optIndex), id = Number(ap.dataset.optCard);
     const cur = build.e[slot];
     if (!cur) return;
-    const keys = HEAD.includes(slot) ? HEAD.filter((h) => build.e[h] && build.e[h].i === cur.i) : [slot];
+    const keys = headGroup(slot) ? headGroup(slot).filter((h) => build.e[h] && build.e[h].i === cur.i) : [slot];
     keys.forEach((k) => { const eq = build.e[k]; eq.c = eq.c || [0, 0, 0, 0]; eq.c[i] = id; });
     say(T("Carta aplicada."));
     await recalc();

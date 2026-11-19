@@ -27,7 +27,13 @@ func multiHead(it *gamedata.Item) bool {
 			n++
 		}
 	}
-	return n > 1
+	c := 0 // costumes too (upper + middle visuals)
+	for _, l := range it.Locations {
+		if l == CosTop || l == CosMid || l == CosLow {
+			c++
+		}
+	}
+	return n > 1 || c > 1
 }
 
 // applyCombos adds the scripts of every item combo (rAthena item_combos.yml)

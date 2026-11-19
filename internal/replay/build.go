@@ -7,8 +7,8 @@ import (
 	"ragnarok-of-building/internal/gamedata"
 )
 
-// equipBits maps rAthena e_equip_pos bits to build slots (costumes and ammo
-// are not simulated).
+// equipBits maps rAthena e_equip_pos bits to build slots (ammo is not
+// simulated).
 var equipBits = []struct {
 	bit  uint32
 	slot string
@@ -16,6 +16,7 @@ var equipBits = []struct {
 	{0x1, calc.HeadLow}, {0x2, calc.Weapon}, {0x4, calc.Garment}, {0x8, calc.AccLeft},
 	{0x10, calc.Armor}, {0x20, calc.Shield}, {0x40, calc.Shoes}, {0x80, calc.AccRight},
 	{0x100, calc.HeadTop}, {0x200, calc.HeadMid},
+	{0x400, calc.CosTop}, {0x800, calc.CosMid}, {0x1000, calc.CosLow}, {0x2000, calc.CosGarment},
 	{0x10000, calc.ShArmor}, {0x20000, calc.ShWeapon}, {0x40000, calc.ShShield},
 	{0x80000, calc.ShShoes}, {0x100000, calc.ShAccR}, {0x200000, calc.ShAccL},
 }

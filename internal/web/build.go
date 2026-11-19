@@ -39,8 +39,14 @@ var shadowSlots = []slotInfo{
 	{calc.ShAccR, "Brinco Sombrio", "L"}, {calc.ShAccL, "Colar Sombrio", "R"},
 }
 
+// costumeSlots are the Visual tab: each costume holds one enchant stone.
+var costumeSlots = []slotInfo{
+	{calc.CosTop, "Visual Topo", "L"}, {calc.CosMid, "Visual Meio", "R"},
+	{calc.CosLow, "Visual Baixo", "L"}, {calc.CosGarment, "Visual Capa", "R"},
+}
+
 func slotLabel(key string) string {
-	for _, s := range append(slices.Clone(equipSlots), shadowSlots...) {
+	for _, s := range append(append(slices.Clone(equipSlots), shadowSlots...), costumeSlots...) {
 		if s.Key == key {
 			return s.Label
 		}
@@ -101,6 +107,7 @@ type buildView struct {
 	TraitNm  [6]string
 	Slots    []slotView
 	Shadow   []slotView
+	Costume  []slotView // Visual tab
 	Bonuses  []bonusLine
 	Extras   []bonusLine
 	Combos   []comboView   // active item combos and what they add
@@ -214,6 +221,9 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 				for k := range c.Enchants[it.ID] {
 					n = max(n, min(k+1, 4))
 				}
+				if calc.IsCostume(info.Key) {
+					n = 1 // one enchant stone
+				}
 				sv.CardSlots = it.Slots
 				for i := 0; i < n; i++ {
 					var cv *itemView
@@ -232,6 +242,9 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 	}
 	for _, info := range shadowSlots {
 		v.Shadow = append(v.Shadow, mk(info))
+	}
+	for _, info := range costumeSlots {
+		v.Costume = append(v.Costume, mk(info))
 	}
 	for _, kv := range r.SortedBonuses() {
 		v.Bonuses = append(v.Bonuses, bonusLine{Label: bonusLabel(kv[0].(string)), Value: signed(kv[1].(int), kv[0].(string))})

@@ -37,30 +37,38 @@ const (
 
 // Equipment slots, in Equipment window order.
 const (
-	HeadTop   = "Head_Top"
-	HeadMid   = "Head_Mid"
-	HeadLow   = "Head_Low"
-	Armor     = "Armor"
-	Weapon    = "Right_Hand"
-	Shield    = "Left_Hand"
-	Garment   = "Garment"
-	Shoes     = "Shoes"
-	AccRight  = "Right_Accessory"
-	AccLeft   = "Left_Accessory"
-	ShArmor   = "Shadow_Armor"
-	ShWeapon  = "Shadow_Weapon"
-	ShShield  = "Shadow_Shield"
-	ShShoes   = "Shadow_Shoes"
-	ShAccR    = "Shadow_Right_Accessory"
-	ShAccL    = "Shadow_Left_Accessory"
-	maxRefine = 20
+	HeadTop  = "Head_Top"
+	HeadMid  = "Head_Mid"
+	HeadLow  = "Head_Low"
+	Armor    = "Armor"
+	Weapon   = "Right_Hand"
+	Shield   = "Left_Hand"
+	Garment  = "Garment"
+	Shoes    = "Shoes"
+	AccRight = "Right_Accessory"
+	AccLeft  = "Left_Accessory"
+	// Costumes (visual): each holds one enchant stone.
+	CosTop     = "Costume_Head_Top"
+	CosMid     = "Costume_Head_Mid"
+	CosLow     = "Costume_Head_Low"
+	CosGarment = "Costume_Garment"
+	ShArmor    = "Shadow_Armor"
+	ShWeapon   = "Shadow_Weapon"
+	ShShield   = "Shadow_Shield"
+	ShShoes    = "Shadow_Shoes"
+	ShAccR     = "Shadow_Right_Accessory"
+	ShAccL     = "Shadow_Left_Accessory"
+	maxRefine  = 20
 	// MaxRandomOpts is how many random options an item holds (client: 5).
 	MaxRandomOpts = 5
 )
 
 // Slots lists every slot the build supports.
 var Slots = []string{HeadTop, HeadMid, HeadLow, Armor, Weapon, Shield, Garment, Shoes, AccRight, AccLeft,
-	ShArmor, ShWeapon, ShShield, ShShoes, ShAccR, ShAccL}
+	ShArmor, ShWeapon, ShShield, ShShoes, ShAccR, ShAccL, CosTop, CosMid, CosLow, CosGarment}
+
+// IsCostume reports a costume (visual) slot.
+func IsCostume(slot string) bool { return strings.HasPrefix(slot, "Costume_") }
 
 // Equip is one equipped item.
 type Equip struct {
@@ -230,6 +238,17 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 			}
 		}
 		e.Opts = opts
+		// A costume holds one stone, of its own slot.
+		if IsCostume(slot) {
+			e.Refine, e.Grade, e.Opts = 0, 0, nil
+			for i := range e.Cards {
+				if card := c.Items[e.Cards[i]]; i > 0 || card == nil || !CardFits(card, slot) {
+					e.Cards[i] = 0
+				}
+			}
+			b.Equip[slot] = e
+			continue
+		}
 		// The client keeps cards and enchants in the same 4 positions: the
 		// item's card slots first, enchants after them.
 		for i, cd := range e.Cards {
@@ -395,8 +414,22 @@ func Fits(it *gamedata.Item, slot string) bool {
 }
 
 // CardFits reports whether a card can be compounded on an item in a slot.
+// A costume holds only the stones of its slot (their location comes from
+// the client name); other enchants have no location and fit any other item.
 func CardFits(card *gamedata.Item, slot string) bool {
 	if card.Type != "Card" {
+		return false
+	}
+	stone := false
+	for _, l := range card.Locations {
+		if IsCostume(l) {
+			stone = true
+			if l == slot {
+				return true
+			}
+		}
+	}
+	if stone || IsCostume(slot) {
 		return false
 	}
 	if card.SubType == "Enchant" { // enchants have no location: they fit any item
@@ -841,6 +874,8 @@ var eqiSlots = map[string]string{
 	"EQI_ACC_R": AccRight, "EQI_ACC_L": AccLeft,
 	"EQI_SHADOW_ARMOR": ShArmor, "EQI_SHADOW_WEAPON": ShWeapon, "EQI_SHADOW_SHIELD": ShShield,
 	"EQI_SHADOW_SHOES": ShShoes, "EQI_SHADOW_ACC_R": ShAccR, "EQI_SHADOW_ACC_L": ShAccL,
+	"EQI_COSTUME_HEAD_TOP": CosTop, "EQI_COSTUME_HEAD_MID": CosMid, "EQI_COSTUME_HEAD_LOW": CosLow,
+	"EQI_COSTUME_GARMENT": CosGarment,
 }
 
 // slotStates are the refine and enchant grade of every position (0 when

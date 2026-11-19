@@ -155,7 +155,7 @@ func Decode(buf []byte) (s *Snapshot, err error) {
 		case 4601: // worn gear
 			worn = true
 			s.Equipped = append(s.Equipped, readItems(c.data)...)
-		case 4603: // worn costumes and shadow gear (costume slots are not simulated)
+		case 4603: // worn costumes and shadow gear
 			s.Equipped = append(s.Equipped, readItems(c.data)...)
 		case 4510:
 			s.Inventory = append(s.Inventory, readItems(c.data)...)

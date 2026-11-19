@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"ragnarok-of-building/internal/gamedata"
+	"ragnarok-of-building/internal/script"
 )
 
 func TestItemCombos(t *testing.T) {
@@ -25,13 +26,13 @@ func TestItemCombos(t *testing.T) {
 	}}
 	bonus, extra := map[string]int{}, map[string]int{}
 	skipped := 0
-	got, _ := applyCombos(c, &b, nil, map[int]bool{}, nil, nil, bonus, extra, &skipped)
+	got, _ := applyCombos(c, &b, script.Context{}, bonus, extra, &skipped)
 	if len(got) != 1 || bonus["bMaxHP"] != 100 || bonus["bStr"] != 0 {
 		t.Fatalf("one ring: combos %v, bonus %v", got, bonus)
 	}
 	b.Equip[AccLeft] = Equip{Item: 2601}
 	bonus = map[string]int{}
-	got, eff := applyCombos(c, &b, nil, map[int]bool{}, nil, nil, bonus, extra, &skipped)
+	got, eff := applyCombos(c, &b, script.Context{}, bonus, extra, &skipped)
 	if len(got) != 2 || bonus["bStr"] != 5 {
 		t.Fatalf("two rings: combos %v, bonus %v", got, bonus)
 	}

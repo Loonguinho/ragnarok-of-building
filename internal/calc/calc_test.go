@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"ragnarok-of-building/internal/gamedata"
+	"ragnarok-of-building/internal/script"
 )
 
 func TestStatCost(t *testing.T) {
@@ -358,5 +359,41 @@ func TestASPDRenewal(t *testing.T) {
 	// A potion's fixed 9 x 140 / 200 = +6.3 before the %.
 	if got, base := aspd(j, "Knuckle", true, 140, 156, false, 0, 9, 0), aspd(j, "Knuckle", true, 140, 156, false, 0, 0, 0); got-base != 6 {
 		t.Errorf("Fúria Selvagem: %d -> %d, want +6", base, got)
+	}
+}
+
+// Classes as rAthena item scripts see them (eaclass()&EAJL_THIRD &&
+// BaseJob == Job_Knight, Upper, BaseClass).
+func TestClassInfo(t *testing.T) {
+	c, err := gamedata.Load(filepath.Join("..", "..", "data", "gen", "catalog.json.gz"))
+	if err != nil {
+		t.Skip("catalog not generated")
+	}
+	id := map[string]int{}
+	for i, j := range c.Jobs {
+		id[j.Code] = i
+	}
+	for _, tc := range []struct {
+		code                      string
+		baseJob, baseClass, upper int
+		third, fourth             bool
+	}{
+		{"JT_KNIGHT", 7, 1, 0, false, false},
+		{"JT_KNIGHT_H", 7, 1, 1, false, false},
+		{"JT_RUNE_KNIGHT", 7, 1, 0, true, false},
+		{"JT_RUNE_KNIGHT_H", 7, 1, 1, true, false},
+		{"JT_DRAGON_KNIGHT", 7, 1, 1, true, true},
+		{"JT_INQUISITOR", 15, 4, 1, true, true},
+		{"JT_TROUVERE", 20, 3, 1, true, true},
+		{"JT_SUPERNOVICE", 23, 0, 0, false, false},
+		{"JT_HYPER_NOVICE", 23, 0, 0, true, true},
+		{"JT_SHINKIRO", 4211, 25, 0, true, false},
+		{"JT_SPIRIT_HANDLER", 4218, 4218, 0, true, true},
+	} {
+		ea, bj, bc, up := classInfo(c, id[tc.code])
+		if bj != tc.baseJob || bc != tc.baseClass || up != tc.upper ||
+			(ea&script.EAJLThird != 0) != tc.third || (ea&script.EAJLFourth != 0) != tc.fourth {
+			t.Errorf("%s: eaclass %#x BaseJob %d BaseClass %d Upper %d", tc.code, ea, bj, bc, up)
+		}
 	}
 }

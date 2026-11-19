@@ -34,8 +34,7 @@ func multiHead(it *gamedata.Item) bool {
 // whose items are all equipped, cards included. An item listed twice needs
 // two copies (e.g. a pair of rings); an item worn in several slots (upper +
 // middle headgear) counts once. Returns the active sets and what each adds.
-func applyCombos(c *gamedata.Catalog, b *Build, param map[string]int, equipIDs map[int]bool,
-	slotRefine, slotGrade map[string]int, bonus, extra map[string]int, skipped *int) ([][]int, []ComboEffect) {
+func applyCombos(c *gamedata.Catalog, b *Build, ctx script.Context, bonus, extra map[string]int, skipped *int) ([][]int, []ComboEffect) {
 	if len(c.Combos) == 0 {
 		return nil, nil
 	}
@@ -83,8 +82,7 @@ func applyCombos(c *gamedata.Catalog, b *Build, param map[string]int, equipIDs m
 		if !ok {
 			continue
 		}
-		res := script.Eval(cb.Script, script.Context{BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs,
-			SlotRefine: slotRefine, SlotGrade: slotGrade})
+		res := script.Eval(cb.Script, ctx)
 		addAll(bonus, res.Bonus)
 		addAll(extra, res.Extra)
 		*skipped += res.Skipped

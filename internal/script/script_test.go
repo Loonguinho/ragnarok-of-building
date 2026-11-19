@@ -92,3 +92,30 @@ func TestOtherPositions(t *testing.T) {
 		t.Errorf("%v (skipped %d)", r.Bonus, r.Skipped)
 	}
 }
+
+func TestIgnoreDefRace(t *testing.T) {
+	r := Eval(`bonus bIgnoreDefRace,RC_DemiHuman; bonus bIgnoreDefClass,Class_Boss;`, Context{})
+	if r.Extra["bIgnoreDefRaceRate RC_DemiHuman"] != 100 || r.Extra["bIgnoreDefClassRate Class_Boss"] != 100 || r.Skipped != 0 {
+		t.Errorf("%v (skipped %d)", r.Extra, r.Skipped)
+	}
+}
+
+// Class checks of item scripts: eaclass(), BaseJob, Upper, getskilllv, min/max.
+func TestClassAndSkillFunctions(t *testing.T) {
+	ctx := Context{EAClass: 7 | EAJLThird | EAJLUpper, BaseJob: 7, BaseClass: 1, Upper: 1, Skills: map[string]int{"SM_BASH": 10}}
+	r := Eval(`if (eaclass()&EAJL_THIRD && BaseJob == Job_Knight) bonus bStr,1;
+if ((eaclass()&EAJ_UPPERMASK) == EAJ_KNIGHT) bonus bAgi,1;
+if ((eaclass()&EAJ_THIRDMASK) == EAJ_RUNE_KNIGHT) bonus bVit,1;
+if (eaclass()&EAJL_FOURTH) bonus bInt,1;
+if (getskilllv("SM_BASH") == 10) bonus bDex,min(5,getskilllv("SM_BASH"));
+if (Upper == 1 && BaseClass == Job_Swordman) bonus bLuk,max(1,2);`, ctx)
+	want := map[string]int{"bStr": 1, "bAgi": 1, "bVit": 1, "bDex": 5, "bLuk": 2}
+	for k, v := range want {
+		if r.Bonus[k] != v {
+			t.Errorf("%s = %d, want %d (%v)", k, r.Bonus[k], v, r.Bonus)
+		}
+	}
+	if r.Bonus["bInt"] != 0 || r.Skipped != 0 {
+		t.Errorf("bInt %d, skipped %d", r.Bonus["bInt"], r.Skipped)
+	}
+}

@@ -526,6 +526,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		}
 	}
 	slotRefine, slotGrade := slotStates(b)
+	sbase := scriptBase(b, c, param, equipIDs, slotRefine, slotGrade)
 	bonus := map[string]int{}
 	extra := map[string]int{}
 	r.WeaponType = "Fist"
@@ -553,8 +554,8 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			continue
 		}
 		seen[e.Item] = true
-		ctx := script.Context{Refine: e.Refine, Grade: e.Grade, BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs,
-			SlotRefine: slotRefine, SlotGrade: slotGrade}
+		ctx := sbase
+		ctx.Refine, ctx.Grade = e.Refine, e.Grade
 		res := script.Eval(itemScript(it, &r.SkippedScriptEffects), ctx)
 		addAll(bonus, res.Bonus)
 		addAll(extra, res.Extra)
@@ -572,8 +573,9 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		for _, cd := range e.Cards {
 			if ci := c.Items[cd]; cd > 0 && ci != nil {
 				// Cards and enchants read the refine and grade of the item they are in.
-				cr := script.Eval(itemScript(ci, &r.SkippedScriptEffects), script.Context{Refine: e.Refine, Grade: e.Grade, BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs,
-					SlotRefine: slotRefine, SlotGrade: slotGrade})
+				cctx := sbase
+				cctx.Refine, cctx.Grade = e.Refine, e.Grade
+				cr := script.Eval(itemScript(ci, &r.SkippedScriptEffects), cctx)
 				addAll(bonus, cr.Bonus)
 				addAll(extra, cr.Extra)
 				r.SkippedScriptEffects += cr.Skipped
@@ -606,7 +608,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			r.OtherEquipATK += it.Attack
 		}
 	}
-	r.Combos, r.ComboEffects = applyCombos(c, &b, param, equipIDs, slotRefine, slotGrade, bonus, extra, &r.SkippedScriptEffects)
+	r.Combos, r.ComboEffects = applyCombos(c, &b, sbase, bonus, extra, &r.SkippedScriptEffects)
 	var baseJob [6]int
 	for i := range baseJob {
 		baseJob[i] = b.Stats[i] + jb[i]
@@ -850,4 +852,71 @@ func slotStates(b Build) (refine, grade map[string]int) {
 		refine[eqi], grade[eqi] = e.Refine, e.Grade
 	}
 	return refine, grade
+}
+
+// scriptBase is what every item, card and combo script of the build can read:
+// levels, base stats, the class as rAthena sees it, learned skills and the
+// other equipment positions.
+func scriptBase(b Build, c *gamedata.Catalog, param map[string]int, equipIDs map[int]bool, slotRefine, slotGrade map[string]int) script.Context {
+	ctx := script.Context{BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs,
+		SlotRefine: slotRefine, SlotGrade: slotGrade, SlotItem: map[string]int{}, Skills: map[string]int{}}
+	for eqi, slot := range eqiSlots {
+		ctx.SlotItem[eqi] = b.Equip[slot].Item
+	}
+	for id, lv := range b.Skills {
+		if s := c.Skills[id]; s != nil {
+			ctx.Skills[s.Code] = lv
+		}
+	}
+	ctx.EAClass, ctx.BaseJob, ctx.BaseClass, ctx.Upper = classInfo(c, b.Job)
+	return ctx
+}
+
+// classInfo is a job as rAthena scripts see it: eaclass() (class line +
+// EAJL flags), BaseJob (the line's 2nd class: Cavaleiro for a Cavaleiro
+// Rúnico), BaseClass (its 1st class) and Upper (1 transcendent, 2 baby).
+func classInfo(c *gamedata.Catalog, jobID int) (eaclass, baseJob, baseClass, upper int) {
+	j := c.Jobs[jobID]
+	if j == nil {
+		return 0, 0, 0, 0
+	}
+	chain := c.Chain(jobID)
+	// BaseJob: the deepest class of the line that is neither transcendent nor
+	// 3rd/4th (Super Novice for an Hiperaprendiz, Invocador for an Animista).
+	baseJob = chain[0]
+	for _, id := range chain {
+		x := c.Jobs[id]
+		if x == nil || x.Upper || x.Fourth || strings.HasPrefix(x.EquipTier, "Third") || x.EquipTier == "Fourth" || x.Baby {
+			continue
+		}
+		baseJob = id
+	}
+	// BaseClass: the 1st class (Novice for the Super Novice line).
+	baseClass = chain[0]
+	if chain[0] == 0 && len(chain) > 1 { // lines that start as Aprendiz
+		baseClass = chain[1]
+	}
+	if code := strings.TrimSuffix(c.Jobs[baseJob].Code, "_H"); code == "JT_SUPERNOVICE" || code == "JT_NOVICE" {
+		baseClass = 0
+	}
+	if baseJob == 20 { // Bards and Dancers share one rAthena line
+		eaclass = script.EAJLine(19)
+	} else {
+		eaclass = script.EAJLine(baseJob)
+	}
+	switch {
+	case j.Baby:
+		upper = 2
+		eaclass |= script.EAJLBaby
+	case j.Upper:
+		upper = 1
+		eaclass |= script.EAJLUpper
+	}
+	if strings.HasPrefix(j.EquipTier, "Third") || j.EquipTier == "Fourth" || j.Fourth {
+		eaclass |= script.EAJLThird
+	}
+	if j.EquipTier == "Fourth" || (j.Fourth && strings.Contains(j.Code, "SPIRIT_HANDLER")) {
+		eaclass |= script.EAJLFourth
+	}
+	return eaclass, baseJob, baseClass, upper
 }

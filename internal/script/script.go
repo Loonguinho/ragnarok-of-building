@@ -26,6 +26,54 @@ type Context struct {
 	// name (EQI_HAND_R...), for getequiprefinerycnt / getenchantgrade(EQI_x).
 	SlotRefine map[string]int
 	SlotGrade  map[string]int
+	SlotItem   map[string]int // getequipid(EQI_x): the item at a position
+	// The class as rAthena scripts see it: eaclass() (EAJ line | EAJL flags),
+	// BaseJob (the line's 2nd class), BaseClass (its 1st), Upper (1 trans, 2 baby).
+	EAClass, BaseJob, BaseClass, Upper int
+	Skills                             map[string]int // getskilllv("CODE"): learned levels by code
+}
+
+// EAJL flags and EAJ masks of eaclass() (the simulator's encoding, consistent
+// with Context.EAClass: the low 12 bits name the class line).
+const (
+	EAJLUpper    = 0x1000
+	EAJLBaby     = 0x2000
+	EAJLThird    = 0x4000
+	EAJLFourth   = 0x8000
+	eajUpperMask = 0x0fff
+	eajThirdMask = 0x4fff
+)
+
+// EAJLine is the low part of eaclass() for a class line (its 2nd class ID;
+// expanded classes above 4000 are shifted under 0x1000).
+func EAJLine(jobID int) int {
+	if jobID >= 4000 {
+		return jobID - 4000 + 0x100
+	}
+	return jobID
+}
+
+// jobConsts are rAthena's Job_* constants (the client's job IDs).
+var jobConsts = map[string]int{
+	"Job_Novice": 0, "Job_Swordman": 1, "Job_Mage": 2, "Job_Archer": 3, "Job_Acolyte": 4, "Job_Merchant": 5, "Job_Thief": 6,
+	"Job_Knight": 7, "Job_Priest": 8, "Job_Wizard": 9, "Job_Blacksmith": 10, "Job_Hunter": 11, "Job_Assassin": 12,
+	"Job_Crusader": 14, "Job_Monk": 15, "Job_Sage": 16, "Job_Rogue": 17, "Job_Alchemist": 18, "Job_Bard": 19, "Job_Dancer": 20,
+	"Job_Super_Novice": 23, "Job_SuperNovice": 23, "Job_Gunslinger": 24, "Job_Ninja": 25, "Job_Taekwon": 4046,
+	"Job_Star_Gladiator": 4047, "Job_Soul_Linker": 4049, "Job_Kagerou": 4211, "Job_Oboro": 4212, "Job_Rebellion": 4215,
+	"Job_Summoner": 4218,
+}
+
+// eajConsts are the EAJ_* class lines the item scripts compare with.
+var eajConsts = map[string]int{
+	"EAJ_KNIGHT": 7, "EAJ_PRIEST": 8, "EAJ_WIZARD": 9, "EAJ_BLACKSMITH": 10, "EAJ_HUNTER": 11, "EAJ_ASSASSIN": 12,
+	"EAJ_CRUSADER": 14, "EAJ_MONK": 15, "EAJ_SAGE": 16, "EAJ_ROGUE": 17, "EAJ_ALCHEMIST": 18, "EAJ_BARDDANCER": 19,
+	"EAJ_SUPER_NOVICE": 23, "EAJ_GUNSLINGER": 24, "EAJ_NINJA": 25, "EAJ_STAR_GLADIATOR": EAJLine(4047), "EAJ_SOUL_LINKER": EAJLine(4049),
+	"EAJ_RUNE_KNIGHT": 7 | EAJLThird, "EAJ_WARLOCK": 9 | EAJLThird, "EAJ_RANGER": 11 | EAJLThird, "EAJ_ARCH_BISHOP": 8 | EAJLThird,
+	"EAJ_MECHANIC": 10 | EAJLThird, "EAJ_GUILLOTINE_CROSS": 12 | EAJLThird, "EAJ_ROYAL_GUARD": 14 | EAJLThird,
+	"EAJ_SORCERER": 16 | EAJLThird, "EAJ_MINSTRELWANDERER": 19 | EAJLThird, "EAJ_SURA": 15 | EAJLThird,
+	"EAJ_GENETIC": 18 | EAJLThird, "EAJ_SHADOW_CHASER": 17 | EAJLThird,
+	"EAJL_UPPER": EAJLUpper, "EAJL_BABY": EAJLBaby, "EAJL_THIRD": EAJLThird, "EAJL_FOURTH": EAJLFourth,
+	"EAJ_UPPERMASK": eajUpperMask, "EAJ_THIRDMASK": eajThirdMask,
 }
 
 // Result accumulates bonuses: name (bStr, bMaxHPrate, ...) -> value.
@@ -225,6 +273,25 @@ func (p *parser) statement(run bool) {
 		p.pos++
 		p.accept(",")
 		p.bad = false
+		// bIgnoreDefRace,RC_X / bIgnoreDefClass,Class_X: all of that target's
+		// DEF, the 100% of the rate forms the damage engine reads.
+		if rate, ok := map[string]string{"bIgnoreDefRace": "bIgnoreDefRaceRate", "bIgnoreDefClass": "bIgnoreDefClassRate"}[name.s]; ok {
+			arg := p.peek()
+			if arg.kind == 'i' && (strings.HasPrefix(arg.s, "RC_") || strings.HasPrefix(arg.s, "Class_")) {
+				p.pos++
+				if p.accept(";") {
+					if run {
+						p.res.Extra[rate+" "+arg.s] += 100
+					}
+					break
+				}
+				p.skipStatement()
+				if run {
+					p.res.Skipped++
+				}
+				break
+			}
+		}
 		v := p.expr()
 		ok := name.kind == 'i' && !p.bad && p.accept(";")
 		if !ok {
@@ -375,10 +442,28 @@ func (p *parser) or() int {
 }
 
 func (p *parser) and() int {
-	v := p.cmp()
+	v := p.bitOr()
 	for p.accept("&&") {
-		w := p.cmp()
+		w := p.bitOr()
 		v = b2i(v != 0 && w != 0)
+	}
+	return v
+}
+
+// bitOr / bitAnd: "|" and "&", between "&&" and "==" as in C
+// (eaclass()&EAJL_THIRD && BaseJob == Job_Knight).
+func (p *parser) bitOr() int {
+	v := p.bitAnd()
+	for p.accept("|") {
+		v |= p.bitAnd()
+	}
+	return v
+}
+
+func (p *parser) bitAnd() int {
+	v := p.cmp()
+	for p.accept("&") {
+		v &= p.cmp()
 	}
 	return v
 }
@@ -473,6 +558,63 @@ func (p *parser) unary() int {
 			return p.ctx.JobLv
 		case t.s == "Class":
 			return p.ctx.Class
+		case t.s == "BaseJob":
+			return p.ctx.BaseJob
+		case t.s == "BaseClass":
+			return p.ctx.BaseClass
+		case t.s == "Upper":
+			return p.ctx.Upper
+		case t.s == "eaclass":
+			p.rawArgs()
+			return p.ctx.EAClass
+		case strings.HasPrefix(t.s, "Job_"):
+			if v, ok := jobConsts[t.s]; ok {
+				return v
+			}
+		case strings.HasPrefix(t.s, "EAJ"):
+			if v, ok := eajConsts[t.s]; ok {
+				return v
+			}
+		case t.s == "min" || t.s == "max":
+			a := p.args()
+			if len(a) == 0 {
+				p.bad = true
+				return 0
+			}
+			v := a[0]
+			for _, x := range a[1:] {
+				if (t.s == "min") == (x < v) {
+					v = x
+				}
+			}
+			return v
+		case t.s == "pow":
+			a := p.args()
+			if len(a) != 2 || a[1] < 0 {
+				p.bad = true
+				return 0
+			}
+			v := 1
+			for i := 0; i < a[1]; i++ {
+				v *= a[0]
+			}
+			return v
+		case t.s == "getequipid":
+			if a := p.rawArgs(); len(a) == 1 && strings.HasPrefix(a[0], "EQI_") && p.ctx.SlotItem != nil {
+				return p.ctx.SlotItem[a[0]]
+			}
+			p.bad = true
+			return 0
+		case t.s == "vip_status": // no VIP account in the simulator
+			p.rawArgs()
+			return 0
+		case t.s == "getskilllv":
+			arg, ok := p.strArg()
+			if !ok || p.ctx.Skills == nil {
+				p.bad = true
+				return 0
+			}
+			return p.ctx.Skills[arg]
 		case t.s == "getrefine":
 			p.args()
 			return p.ctx.Refine
@@ -539,6 +681,21 @@ func (p *parser) args() []int {
 		p.accept(",")
 	}
 	return out
+}
+
+// strArg reads a one-argument call whose argument is a string or a name:
+// getskilllv("SM_BASH") or getskilllv(SM_BASH).
+func (p *parser) strArg() (string, bool) {
+	if !p.accept("(") {
+		return "", false
+	}
+	t := p.peek()
+	p.pos++
+	if !p.accept(")") {
+		p.bad = true
+		return "", false
+	}
+	return t.s, t.kind == 's' || t.kind == 'i'
 }
 
 // rawArgs returns identifier arguments without evaluating them.

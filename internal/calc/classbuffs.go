@@ -3,6 +3,7 @@ package calc
 import (
 	"slices"
 	"strconv"
+	"strings"
 
 	"ragnarok-of-building/internal/gamedata"
 	"ragnarok-of-building/internal/script"
@@ -59,7 +60,10 @@ func ClassBuffsFor(c *gamedata.Catalog, jobID int) []ClassBuff {
 	}
 	for _, s := range chainSkills(c, chain) {
 		e := s.Effects
-		if e == nil || e.Kind != "buff" || partyBuffSkills[s.Code] {
+		k, own := index[s.Code]
+		// A party buff of the Buffs window stays there, unless the class has
+		// it as its own buff (the Shura's Chakras): then this row replaces it.
+		if e == nil || e.Kind != "buff" || (partyBuffSkills[s.Code] && !own) {
 			continue
 		}
 		cb := ClassBuff{Name: s.Name.Get("en"), Skill: s.Code, Label: s.Name.Get("pt"), Excl: e.Group,
@@ -73,8 +77,18 @@ func ClassBuffsFor(c *gamedata.Catalog, jobID int) []ClassBuff {
 			cb.Choices = append(cb.Choices, [2]string{strconv.Itoa(lv), "Nv. " + strconv.Itoa(lv)})
 		}
 		cb.Toggle = len(lvs) == 1
-		if k, ok := index[s.Code]; ok { // the client's values replace latam-ro-calc's
+		if own { // the client's values replace latam-ro-calc's
 			cb.Key = out[k].Key // same selector as the formula state
+			// Keep latam-ro-calc's skill damage bonuses, which the client
+			// writes in the text ("O dano de Pancada Corporal aumenta em 30%").
+			scripts := map[int]string{}
+			for lv, sc := range cb.Scripts {
+				scripts[lv] = sc
+				if extra := skillAtkParts(out[k].script(lv)); extra != "" {
+					scripts[lv] += " " + extra
+				}
+			}
+			cb.Scripts = scripts
 			out[k] = cb
 			continue
 		}
@@ -255,4 +269,27 @@ func applyClassPassives(b *Build, c *gamedata.Catalog, weapon string, bonus, ext
 			addAll(extra, res.Extra)
 		}
 	}
+}
+
+// skillAtkParts keeps the per-skill damage bonuses of a script.
+func skillAtkParts(src string) string {
+	var out []string
+	for _, st := range strings.Split(src, ";") {
+		if st = strings.TrimSpace(st); strings.HasPrefix(st, "bonus2 bSkillAtk,") {
+			out = append(out, st+";")
+		}
+	}
+	return strings.Join(out, " ")
+}
+
+// OwnBuffSkills are the skills a job has among its own buffs: the Buffs
+// window hides their party rows (one control per buff).
+func OwnBuffSkills(c *gamedata.Catalog, jobID int) map[string]bool {
+	m := map[string]bool{}
+	for _, cb := range ClassBuffsFor(c, jobID) {
+		if cb.Skill != "" {
+			m[cb.Skill] = true
+		}
+	}
+	return m
 }

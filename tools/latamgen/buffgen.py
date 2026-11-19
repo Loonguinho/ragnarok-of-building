@@ -115,6 +115,9 @@ def passive_effect(key, v, skill_code):
 
 # Passive names latam-ro-calc gives differently from the client (per class file).
 PASSIVE_ALIASES = {('Genetic', 'Sword Mastery'): 'GN_TRAINING_SWORD'}
+BUFF_NAME_ALIASES = {
+    'Gentle Touch - Opposite': 'SR_GENTLETOUCH_CHANGE', 'Gentle Touch - Alive': 'SR_GENTLETOUCH_REVITALIZE',
+}
 PASSIVE_NAME_ALIASES = {
     'Musical Lesson': 'BA_MUSICALLESSON', 'Dancing Lesson': 'DC_DANCINGLESSON', 'Wug Teeth': 'RA_TOOTHOFWUG',
     'Adv Book': 'SA_ADVANCEDBOOK', 'Plagiarism': 'RG_PLAGIARISM', 'Iron Hand': 'MO_IRONHAND', 'Dodge': 'MO_DODGE',
@@ -236,7 +239,7 @@ def main():
                             parts.append(sc)
                     if parts:
                         scripts[v] = ' '.join(parts)
-                code = skill_code(name) or ''
+                code = BUFF_NAME_ALIASES.get(name) or skill_code(name) or ''
                 label = (f.get('label') or '').strip('\'"`') or name
                 if missing:
                     report.append(f'- {stem} · **{label}** ({code or name}): not computed: {", ".join(sorted(missing))}')

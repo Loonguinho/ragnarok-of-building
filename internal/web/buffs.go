@@ -34,7 +34,14 @@ func buffGroups(b calc.Build, c *gamedata.Catalog, l string) []buffGroup {
 		}
 	}
 	var out []buffGroup
+	own := map[string]bool{}
+	if c != nil {
+		own = calc.OwnBuffSkills(c, b.Job)
+	}
 	for _, d := range calc.Buffs {
+		if d.Skill != "" && own[d.Skill] {
+			continue // the class has it as its own buff (Próprios)
+		}
 		if len(out) == 0 || out[len(out)-1].Name != d.Group {
 			out = append(out, buffGroup{Name: d.Group, Open: d.Group == "Suporte"})
 		}

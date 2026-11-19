@@ -172,6 +172,26 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 	b.BaseLv = clamp(b.BaseLv, 1, maxBase)
 	b.JobLv = clamp(b.JobLv, 1, maxJob)
 	normalizeBuffs(b)
+	// A party buff the class has as its own (the Shura's Chakras) moves to
+	// the class buff: the Buffs window shows only that one.
+	if len(b.Buffs) > 0 {
+		for _, cb := range ClassBuffsFor(c, b.Job) {
+			if cb.Skill == "" {
+				continue
+			}
+			for _, d := range Buffs {
+				if v := b.Buffs[d.Key]; d.Skill == cb.Skill && v > 0 {
+					delete(b.Buffs, d.Key)
+					if b.Atk.States == nil {
+						b.Atk.States = map[string]int{}
+					}
+					if b.Atk.States[cb.Key] == 0 && cb.validValue(v) {
+						b.Atk.States[cb.Key] = v
+					}
+				}
+			}
+		}
+	}
 	ms := maxStat(j)
 	for i := range b.Stats {
 		b.Stats[i] = clamp(b.Stats[i], 1, ms)

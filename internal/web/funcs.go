@@ -25,6 +25,14 @@ var funcs = template.FuncMap{
 		b, _ := json.Marshal(v)
 		return string(b)
 	},
+	// seq lists a..b (level selectors).
+	"seq": func(a, b int) []int {
+		var out []int
+		for i := a; i <= b; i++ {
+			out = append(out, i)
+		}
+		return out
+	},
 	"pct": func(a, b int) int {
 		if b <= 0 {
 			return 0

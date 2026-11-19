@@ -293,3 +293,28 @@ func OwnBuffSkills(c *gamedata.Catalog, jobID int) map[string]bool {
 	}
 	return m
 }
+
+// StateKeyOf is the state key of a buff or skill name (as ClassBuff.Key).
+func StateKeyOf(name string) string { return stateKey(name) }
+
+// ClassPassiveSkills are the codes of the job's passives that give bonuses
+// (the Buffs window's "Aprenda para ganhar bônus"), in tree order.
+func ClassPassiveSkills(c *gamedata.Catalog, jobID int) []string {
+	have := map[string]bool{}
+	for _, p := range classPassivesFor(c, jobID) {
+		have[p.Skill] = true
+	}
+	var out []string
+	for _, s := range chainSkills(c, c.Chain(jobID)) {
+		if have[s.Code] {
+			out = append(out, s.Code)
+			delete(have, s.Code)
+		}
+	}
+	return out
+}
+
+// ChainSkills are the skills of a job's and its ancestors' trees.
+func ChainSkills(c *gamedata.Catalog, jobID int) []*gamedata.Skill {
+	return chainSkills(c, c.Chain(jobID))
+}

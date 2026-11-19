@@ -145,13 +145,6 @@
   <div class="ro-window__body" id="build_status">{{template "build_status" .}}</div>
 </section>
 {{end}}
-{{with $.V}}
-<!-- Buffs (Alt+U) -->
-<section class="ro-window ro-buffwin is-hidden" id="win-buffs" data-hotkey="u">
-  <header class="ro-window__title">{{t "Buffs e Consumíveis"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
-  <div class="ro-window__body" id="build_buffs">{{template "build_buffs" .}}</div>
-</section>
-{{end}}
 </div>
 <div class="ro-desk__col ro-desk__col--2">
 {{with $.V}}
@@ -178,6 +171,14 @@
 <section class="ro-window ro-bonuswin" id="win-bonus" data-hotkey="b">
   <header class="ro-window__title">{{t "Bônus do Equipamento"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
   <div class="ro-window__body" id="build_bonus">{{template "build_bonus" .}}</div>
+</section>
+{{end}}
+{{with $.V}}
+<!-- Buffs (Alt+U) -->
+<section class="ro-window ro-buffwin is-hidden" id="win-buffs" data-hotkey="u">
+  <header class="ro-window__title">{{t "Buffs e Consumíveis"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
+  <div class="ro-skillwin__bar"><input class="ro-input" type="search" data-fx-search placeholder="{{t "Buscar habilidades e buffs"}}" aria-label="{{t "Buscar habilidades e buffs"}}" autocomplete="off"></div>
+  <div class="ro-window__body" id="build_buffs">{{template "build_buffs" .}}</div>
 </section>
 {{end}}
 </div>
@@ -489,30 +490,51 @@
 </template>
 {{end}}
 
+{{define "buff_control"}}
+{{if .State}}
+  {{if .Toggle}}<span class="ro-yesno" role="group" aria-label="{{.Label}}"><button type="button" class="ro-yesno__b{{if .Value}} is-on{{end}}" data-fx-set="{{.Key}}" data-fx-value="{{.OnValue}}"{{if .Excl}} data-state-excl="{{.Excl}}"{{end}}>{{t "Sim"}}</button><button type="button" class="ro-yesno__b{{if not .Value}} is-on{{end}}" data-fx-set="{{.Key}}" data-fx-value="0">{{t "Não"}}</button></span>
+  {{else}}<select class="ro-select" data-atk-state="{{.Key}}"{{if .Excl}} data-state-excl="{{.Excl}}"{{end}}>{{$v := .ValueStr}}{{range .Choices}}<option value="{{index . 0}}"{{if eq (index . 0) $v}} selected{{end}}>{{t (index . 1)}}</option>{{end}}</select>{{end}}
+{{else if .Choices}}<select class="ro-select" data-buff="{{.Key}}"{{if .Excl}} data-buff-excl="{{.Excl}}"{{end}}>{{$v := .ValueStr}}{{range .Choices}}<option value="{{index . 0}}"{{if eq (index . 0) $v}} selected{{end}}>{{t (index . 1)}}</option>{{end}}</select>
+{{else if .Max}}<input class="ro-input ro-num ro-num--sm" type="number" min="0" max="{{.Max}}" value="{{.Value}}" data-buff="{{.Key}}">
+{{else}}<span class="ro-yesno" role="group" aria-label="{{.Label}}"><button type="button" class="ro-yesno__b{{if .Value}} is-on{{end}}" data-buff-set="{{.Key}}" data-buff-value="1"{{if .Excl}} data-buff-excl="{{.Excl}}"{{end}}>{{t "Sim"}}</button><button type="button" class="ro-yesno__b{{if not .Value}} is-on{{end}}" data-buff-set="{{.Key}}" data-buff-value="0">{{t "Não"}}</button></span>
+{{end}}
+{{end}}
+
+{{define "buff_row"}}
+<div class="ro-fx{{if .Value}} is-on{{end}}" data-fx-row{{if .Excl}} title="{{t "Só um deste tipo por vez (escolher outro desliga este)."}}"{{end}}>
+  {{if .SkillID}}<img class="ro-fx__icon" src="https://static.divine-pride.net/images/skill/{{.SkillID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">{{else}}<span class="ro-fx__icon"></span>{{end}}
+  <span class="ro-fx__name">{{.Label}}</span>
+  {{template "buff_control" .}}
+</div>
+{{end}}
+
 {{define "build_buffs"}}
-{{range .Buffs}}
+{{with .Buffs}}
+{{if .Active}}
+<h4 class="ro-fx__head">{{t "Habilidades e efeitos ativos"}}</h4>
+<div class="ro-fx__grid">{{range .Active}}{{template "buff_row" .}}{{end}}</div>
+{{end}}
+{{if .Passives}}
+<h4 class="ro-fx__head">{{t "Aprenda para ganhar bônus"}} <small>{{t "(o mesmo nível da árvore de habilidades)"}}</small></h4>
+<div class="ro-fx__grid">
+  {{range .Passives}}
+  <div class="ro-fx{{if .Level}} is-on{{end}}" data-fx-row>
+    <img class="ro-fx__icon" src="https://static.divine-pride.net/images/skill/{{.SkillID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">
+    <span class="ro-fx__name">{{.Label}}</span>
+    {{$lv := .Level}}<select class="ro-select" data-learn="{{.SkillID}}" aria-label="{{.Label}}"><option value="0">—</option>{{range $i := seq 1 .Max}}<option value="{{$i}}"{{if eq $i $lv}} selected{{end}}>{{t "Nv."}} {{$i}}</option>{{end}}</select>
+  </div>
+  {{end}}
+</div>
+{{end}}
+<h4 class="ro-fx__head">{{t "Buffs"}}</h4>
+{{range .Groups}}
 <details class="ro-buffs" data-buff-group="{{.Name}}"{{if .Open}} open{{end}}>
   <summary>{{t .Name}}{{if .Active}} <small class="ro-buffs__count">({{.Active}})</small>{{end}}</summary>
-  {{range .Items}}
-  {{if .State}}
-  <label class="ro-buff"{{if .Excl}} title="{{t "Só um deste tipo por vez (escolher outro desliga este)."}}"{{end}}>
-    {{if .Choices}}<span>{{.Label}}</span>
-      <select class="ro-select" data-atk-state="{{.Key}}"{{if .Excl}} data-state-excl="{{.Excl}}"{{end}}>{{$v := .ValueStr}}{{range .Choices}}<option value="{{index . 0}}"{{if eq (index . 0) $v}} selected{{end}}>{{t (index . 1)}}</option>{{end}}</select>
-    {{else}}<input type="checkbox" data-atk-state="{{.Key}}"{{if .Excl}} data-state-excl="{{.Excl}}"{{end}}{{if .Value}} checked{{end}}> <span>{{.Label}}</span>{{end}}
-  </label>
-  {{else}}
-  <label class="ro-buff"{{if .Excl}} title="{{t "Só um deste tipo por vez (escolher outro desliga este)."}}"{{end}}>
-    {{if .Choices}}<span>{{.Label}}</span>
-      <select class="ro-select" data-buff="{{.Key}}"{{if .Excl}} data-buff-excl="{{.Excl}}"{{end}}>{{$v := .ValueStr}}{{range .Choices}}<option value="{{index . 0}}"{{if eq (index . 0) $v}} selected{{end}}>{{t (index . 1)}}</option>{{end}}</select>
-    {{else if .Max}}<span>{{.Label}}</span>
-      <input class="ro-input ro-num ro-num--sm" type="number" min="0" max="{{.Max}}" value="{{.Value}}" data-buff="{{.Key}}">
-    {{else}}<input type="checkbox" data-buff="{{.Key}}"{{if .Excl}} data-buff-excl="{{.Excl}}"{{end}}{{if .Value}} checked{{end}}> <span>{{.Label}}</span>{{end}}
-  </label>
-  {{end}}
-  {{end}}
+  <div class="ro-fx__grid">{{range .Items}}{{template "buff_row" .}}{{end}}</div>
 </details>
 {{end}}
-<p class="ro-note">{{t "Valores do bROWiki e do latam-ro-calc. Os buffs entram nos atributos, no status e no dano; tempo de conjuração, velocidade de movimento e regeneração ficam de fora."}}</p>
+{{end}}
+<p class="ro-note">{{t "Valores das descrições do cliente, do bROWiki e do latam-ro-calc. Os buffs entram nos atributos, no status e no dano; tempo de conjuração, velocidade de movimento e regeneração ficam de fora."}}</p>
 {{end}}
 
 {{define "build_bonus"}}

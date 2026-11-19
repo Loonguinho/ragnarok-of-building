@@ -475,6 +475,23 @@ button.ro-jobcard { font-family: inherit; cursor: pointer; }
 .ro-buffs summary { cursor: pointer; margin: 0 -3px; }
 .ro-buffs[open] summary { margin-bottom: 2px; }
 .ro-buffs__count { color: #1d4fa8; }
+/* Buffs window, latamtools-style rows: icon, name, control. */
+.ro-fx__head { margin: 6px 0 3px; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: #4a5a78;
+  border-bottom: 1px solid #c4c8d0; }
+.ro-fx__head small { text-transform: none; letter-spacing: 0; font-weight: normal; color: #7a869c; }
+.ro-fx__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 2px 8px; margin-bottom: 4px; }
+.ro-fx { display: flex; align-items: center; gap: 4px; min-width: 0; padding: 1px 2px; border-radius: 3px; }
+.ro-fx[hidden] { display: none; }
+.ro-fx.is-on { background: #eef4ff; }
+.ro-fx__icon { flex: none; width: 20px; height: 20px; }
+.ro-fx__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ro-fx .ro-select { max-width: 74px; flex: none; padding-right: 14px; }
+.ro-yesno { display: inline-flex; flex: none; border: 1px solid #9fb0cc; border-radius: 3px; overflow: hidden; }
+.ro-yesno__b { padding: 0 6px; border: 0; background: #f4f6fa; font: inherit; font-size: 10px; cursor: pointer; color: #4a5a78; }
+.ro-yesno__b + .ro-yesno__b { border-left: 1px solid #9fb0cc; }
+.ro-yesno__b.is-on { background: #6aa84f; color: #fff; font-weight: bold; }
+.ro-buffwin .ro-buffs { padding-bottom: 2px; }
+.ro-buffs[hidden], .ro-fx__head[hidden] { display: none; }
 .ro-buff { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 1px 0; }
 .ro-buff:has(input[type=checkbox]) { justify-content: flex-start; }
 .ro-buff .ro-select { max-width: 170px; }

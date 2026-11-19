@@ -105,7 +105,7 @@ type buildView struct {
 	Extras   []bonusLine
 	Combos   []comboView   // active item combos and what they add
 	Families []classFamily // the class picker
-	Buffs    []buffGroup
+	Buffs    buffsView
 	HPPct    int
 	SPPct    int
 	Notes    []string // items removed by normalization (shown in the chat)
@@ -262,7 +262,7 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 		}
 		v.Combos = append(v.Combos, cv)
 	}
-	v.Buffs = buffGroups(b, c, l)
+	v.Buffs = buffsWindow(b, c, l)
 	v.HPPct, v.SPPct = 100, 100
 	v.D = s.damageView(b, r, l)
 	v.D.Table = s.skillTable(b, r, l)

@@ -174,6 +174,8 @@ window.ROSkillTree = (() => {
       levels: () => ({ ...lv }),
       // The current class step's budget follows the job level.
       setGroups: (g) => { groups = g || []; render(); },
+      // Levels changed elsewhere (the Buffs window's passives).
+      setLevels: (l) => { lv = { ...(l || {}) }; render(); },
     };
   }
 

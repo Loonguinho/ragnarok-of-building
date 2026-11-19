@@ -59,6 +59,8 @@
         if (el) el.innerHTML = html;
       }
       restoreEquipTab();
+      if (window.ROFilterFx) window.ROFilterFx();
+      if (skillTree && skillTree.setLevels) skillTree.setLevels(build.k || {});
       if (slotOpen) renderSlotEditor();
       persist();
     } catch (err) {
@@ -696,6 +698,67 @@
     build.bf = bf;
     recalc();
   });
+  // Sim/Não buttons of the Buffs window: class states and on/off buffs.
+  function setState(key, value, excl) {
+    const a = { ...(build.a || {}) };
+    a.st = { ...(a.st || {}) };
+    if (value) a.st[key] = value; else delete a.st[key];
+    if (value && excl) {
+      document.querySelectorAll(`[data-state-excl="${excl}"]`).forEach((o) => {
+        const k = o.dataset.atkState || o.dataset.fxSet;
+        if (k && k !== key) delete a.st[k];
+      });
+    }
+    build.a = a;
+    recalc();
+  }
+  document.addEventListener("click", (e) => {
+    const s = e.target.closest("[data-fx-set]");
+    if (s) { setState(s.dataset.fxSet, Number(s.dataset.fxValue), s.dataset.stateExcl); return; }
+    const b = e.target.closest("[data-buff-set]");
+    if (!b) return;
+    const bf = { ...(build.bf || {}) };
+    const v = Number(b.dataset.buffValue);
+    if (v) bf[b.dataset.buffSet] = v; else delete bf[b.dataset.buffSet];
+    if (v && b.dataset.buffExcl) {
+      document.querySelectorAll(`[data-buff-excl="${b.dataset.buffExcl}"]`).forEach((o) => {
+        const k = o.dataset.buff || o.dataset.buffSet;
+        if (k && k !== b.dataset.buffSet) delete bf[k];
+      });
+    }
+    build.bf = bf;
+    recalc();
+  });
+  // "Aprenda para ganhar bônus": the passive's level is the skill tree's.
+  document.addEventListener("change", (e) => {
+    const f = e.target.closest("[data-learn]");
+    if (!f) return;
+    const k = { ...(build.k || {}) };
+    const v = Number(f.value);
+    if (v) k[f.dataset.learn] = v; else delete k[f.dataset.learn];
+    build.k = k;
+    if (skillTree && skillTree.setLevels) skillTree.setLevels(k);
+    recalc();
+  });
+  // Search in the Buffs window: rows whose name matches (kept across recalcs).
+  const fxSearch = document.querySelector("[data-fx-search]");
+  function filterFx() {
+    const q = (fxSearch?.value || "").trim().toLowerCase();
+    const box = document.getElementById("build_buffs");
+    if (!box) return;
+    box.querySelectorAll("[data-fx-row]").forEach((r) => { r.hidden = !!q && !r.textContent.toLowerCase().includes(q); });
+    box.querySelectorAll("details.ro-buffs").forEach((d) => {
+      const any = [...d.querySelectorAll("[data-fx-row]")].some((r) => !r.hidden);
+      d.hidden = !!q && !any;
+      if (q && any) d.open = true;
+    });
+    box.querySelectorAll(".ro-fx__grid").forEach((g) => {
+      const head = g.previousElementSibling;
+      if (head && head.matches(".ro-fx__head")) head.hidden = !!q && ![...g.querySelectorAll("[data-fx-row]")].some((r) => !r.hidden);
+    });
+  }
+  fxSearch?.addEventListener("input", filterFx);
+  window.ROFilterFx = filterFx;
   // Class states for LATAM formulas (selectors and on/off toggles).
   document.addEventListener("change", (e) => {
     const f = e.target.closest("[data-atk-state]");

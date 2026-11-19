@@ -2,10 +2,19 @@ package web
 
 import (
 	"strconv"
+	"strings"
 
 	"ragnarok-of-building/internal/calc"
 	"ragnarok-of-building/internal/gamedata"
 )
+
+// The Buffs window, laid out like latamtools': the class's active skills
+// and effects, the learned passives that give bonuses, then the buffs.
+type buffsView struct {
+	Active   []buffItem  // class buffs and formula states (data-atk-state)
+	Passives []learnItem // passives with bonuses, at the learned level
+	Groups   []buffGroup // party buffs, consumables, other
+}
 
 type buffGroup struct {
 	Name   string
@@ -16,65 +25,156 @@ type buffGroup struct {
 
 type buffItem struct {
 	Key, Label string
+	SkillID    int         // icon; 0 = none
 	Excl       string      // only one of the same Excl group at a time
-	State      bool        // a class buff: kept in the attack states (data-atk-state)
+	State      bool        // a class buff or formula state: kept in the attack states (data-atk-state)
+	Toggle     bool        // Sim/Não buttons (OnValue is the "Sim" value)
+	OnValue    string
 	Choices    [][2]string // selector; nil = checkbox or number
 	Max        int         // > 0: number input
 	Value      int
 	ValueStr   string
 }
 
-// buffGroups lists the buffs window rows with the build's values. Buffs
-// tied to a skill take its name from the client, in the page's language.
+// learnItem is a passive in "Aprenda para ganhar bônus": its level is the
+// skill tree's.
+type learnItem struct {
+	SkillID, Level, Max int
+	Label               string
+}
+
+func buffsWindow(b calc.Build, c *gamedata.Catalog, l string) buffsView {
+	v := buffsView{Groups: buffGroups(b, c, l)}
+	if c == nil {
+		return v
+	}
+	byCode := map[string]*gamedata.Skill{}
+	byEN := map[string]*gamedata.Skill{}
+	for _, s := range c.Skills {
+		byCode[s.Code] = s
+		byEN[calc.StateKeyOf(s.Name.Get("en"))] = s
+	}
+	seen := map[string]bool{}
+	for _, cb := range calc.ClassBuffsFor(c, b.Job) {
+		seen[cb.Key] = true
+		it := buffItem{Key: cb.Key, Label: cb.Label, State: true, Excl: cb.Excl, Choices: cb.Choices}
+		if s := byCode[cb.Skill]; s != nil {
+			it.SkillID = s.ID
+			if n := s.Name.Get(l); n != "" {
+				it.Label = n
+			}
+		}
+		if cb.Toggle {
+			it.Toggle, it.Choices = true, nil
+			if len(cb.Choices) > 1 {
+				it.OnValue = cb.Choices[1][0]
+			}
+		}
+		v.Active = append(v.Active, stateValue(it, b))
+	}
+	// Formula states (auras, stances... that only change skill formulas).
+	for _, o := range calc.StatesFor(c, b.Job) {
+		if seen[o.Key] {
+			continue
+		}
+		seen[o.Key] = true
+		it := buffItem{Key: o.Key, Label: tr(l, o.Label), State: true, Choices: o.Choices}
+		s := byEN[o.Key]
+		if code, ok := stateSkillAlias[o.Key]; ok {
+			s = byCode[code]
+		}
+		if s == nil {
+			s = prefixSkill(c, b.Job, o.Key)
+		}
+		if s != nil {
+			it.SkillID = s.ID
+			if n := s.Name.Get(l); n != "" {
+				it.Label = n
+			}
+		}
+		if len(o.Choices) == 0 {
+			it.Toggle, it.OnValue = true, "1"
+		} else if len(o.Choices) == 2 { // "—"/"Não" and one value: Sim/Não
+			it.Toggle, it.OnValue, it.Choices = true, o.Choices[1][0], nil
+			if o.Choices[0][0] != "0" {
+				it.OnValue = o.Choices[0][0]
+			}
+		}
+		v.Active = append(v.Active, stateValue(it, b))
+	}
+	for _, code := range calc.ClassPassiveSkills(c, b.Job) {
+		s := byCode[code]
+		if s == nil {
+			continue
+		}
+		v.Passives = append(v.Passives, learnItem{SkillID: s.ID, Level: b.Skills[s.ID], Max: s.MaxLv, Label: s.Name.Get(l)})
+	}
+	return v
+}
+
+func stateValue(it buffItem, b calc.Build) buffItem {
+	it.Value = b.Atk.States[it.Key]
+	it.ValueStr = strconv.Itoa(it.Value)
+	return it
+}
+
+// buffGroups lists the party buffs, consumables and other rows with the
+// build's values. Buffs tied to a skill take its name from the client.
 func buffGroups(b calc.Build, c *gamedata.Catalog, l string) []buffGroup {
 	skills := map[string]*gamedata.Skill{}
+	own := map[string]bool{}
 	if c != nil {
 		for _, s := range c.Skills {
 			skills[s.Code] = s
 		}
-	}
-	var out []buffGroup
-	own := map[string]bool{}
-	if c != nil {
 		own = calc.OwnBuffSkills(c, b.Job)
 	}
+	var out []buffGroup
 	for _, d := range calc.Buffs {
 		if d.Skill != "" && own[d.Skill] {
-			continue // the class has it as its own buff (Próprios)
+			continue // the class has it as its own buff (active skills above)
 		}
 		if len(out) == 0 || out[len(out)-1].Name != d.Group {
 			out = append(out, buffGroup{Name: d.Group, Open: d.Group == "Suporte"})
 		}
 		label := tr(l, d.Label)
-		if s := skills[d.Skill]; s != nil && s.Name.Get(l) != "" {
-			label = s.Name.Get(l)
+		var sid int
+		if s := skills[d.Skill]; s != nil {
+			sid = s.ID
+			if s.Name.Get(l) != "" {
+				label = s.Name.Get(l)
+			}
 		}
 		v := b.Buffs[d.Key]
 		g := &out[len(out)-1]
-		g.Items = append(g.Items, buffItem{Key: d.Key, Label: label, Excl: d.Excl, Choices: d.Choices, Max: d.Max, Value: v, ValueStr: strconv.Itoa(v)})
+		g.Items = append(g.Items, buffItem{Key: d.Key, Label: label, SkillID: sid, Excl: d.Excl, Choices: d.Choices, Max: d.Max, Value: v, ValueStr: strconv.Itoa(v)})
 		if v > 0 {
 			g.Active++
 			g.Open = true
 		}
-		if d.Group == "Próprios" && d.Key == "concentration" && c != nil {
-			// The class's own buffs (generated from latam-ro-calc) join this group.
-			for _, cb := range calc.ClassBuffsFor(c, b.Job) {
-				label := cb.Label
-				if s := skills[cb.Skill]; s != nil && s.Name.Get(l) != "" {
-					label = s.Name.Get(l)
-				}
-				v := b.Atk.States[cb.Key]
-				it := buffItem{Key: cb.Key, Label: label, State: true, Excl: cb.Excl, Value: v, ValueStr: strconv.Itoa(v)}
-				if !cb.Toggle {
-					it.Choices = cb.Choices
-				}
-				g.Items = append(g.Items, it)
-				if v > 0 {
-					g.Active++
-					g.Open = true
-				}
-			}
-		}
 	}
 	return out
+}
+
+// stateSkillAlias: formula states whose latam-ro-calc name is not the
+// client's English skill name.
+var stateSkillAlias = map[string]string{"s_judge": "IQ_JUDGE"}
+
+// prefixSkill finds the class-tree skill whose English name starts like the
+// state's ("Third Exor Flame" -> "Third Exorcism Flame"): at least 8 letters.
+func prefixSkill(c *gamedata.Catalog, job int, key string) *gamedata.Skill {
+	want := strings.TrimPrefix(key, "s_")
+	var best *gamedata.Skill
+	bestN := 7
+	for _, s := range calc.ChainSkills(c, job) {
+		have := strings.TrimPrefix(calc.StateKeyOf(s.Name.Get("en")), "s_")
+		n := 0
+		for n < len(want) && n < len(have) && want[n] == have[n] {
+			n++
+		}
+		if n > bestN {
+			best, bestN = s, n
+		}
+	}
+	return best
 }

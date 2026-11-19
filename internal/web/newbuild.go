@@ -116,15 +116,24 @@ func (s *Server) handleImport(w http.ResponseWriter, r *http.Request) {
 	if j := s.opt.Catalog.Jobs[b.Job]; j != nil {
 		jobName = j.Name.Get(lang(r))
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
+	out := map[string]any{
 		"code":  encodeBuild(b),
 		"notes": notes,
 		"summary": map[string]any{
 			"job": jobName, "base": b.BaseLv, "joblv": b.JobLv,
 			"items": len(b.Equip), "skills": len(b.Skills),
 		},
-	})
+	}
+	// The damage window, only when the recording has damage dealt to monsters.
+	if dv := replayDamageView(snap, s.opt.Catalog, lang(r)); dv != nil {
+		if html, err := s.fragmentString(lang(r), "build", "replay_damage", dv); err == nil {
+			out["damage"] = html
+		} else {
+			s.opt.Log.Warn("replay damage window", "err", err)
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(out)
 }
 
 // listedTiers are the class tiers offered in class lists: 3rd and 4th

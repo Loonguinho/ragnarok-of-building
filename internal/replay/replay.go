@@ -58,7 +58,8 @@ type Snapshot struct {
 	Traits     map[int]int // allocated POW..CRT (0-5); only those the recording carried
 	Equipped   []Item
 	Inventory  []Item
-	Skills     map[int]int // learned skill ID -> level
+	Skills     map[int]int    // learned skill ID -> level
+	Damage     *DamageSummary // damage dealt to monsters; nil when none
 }
 
 type chunk struct {
@@ -199,6 +200,9 @@ func Decode(buf []byte) (s *Snapshot, err error) {
 	}
 	for _, p := range stream {
 		handle(p)
+	}
+	if s.Damage = summarizeDamage(uint32(u32(session, 1010)), stream); s.Damage != nil {
+		s.Damage.DurationMs = u32(replayData, 970)
 	}
 	return s, nil
 }

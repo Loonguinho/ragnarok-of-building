@@ -64,6 +64,11 @@
         const s = data.summary;
         const notes = [T("Replay importado: %s, Lv %s/%s, %s equipamento(s), %s habilidade(s).", s.job, s.base, s.joblv, s.items, s.skills), ...(data.notes || [])];
         try { sessionStorage.setItem("ro.import.notes", JSON.stringify(notes)); } catch {}
+        // The replay damage window: kept for this tab until the next import.
+        try {
+          if (data.damage) sessionStorage.setItem("ro.import.damage", JSON.stringify({ html: data.damage, open: true }));
+          else sessionStorage.removeItem("ro.import.damage");
+        } catch {}
         location.href = "/build?b=" + encodeURIComponent(data.code);
       } catch (e) {
         show(T("Falha ao enviar o arquivo."), true);

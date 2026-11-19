@@ -184,6 +184,12 @@
 </div>
 <div class="ro-desk__col ro-desk__col--3">
 {{with $.V}}
+<!-- Replay damage: only shown after importing a replay with damage (build.js) -->
+<section class="ro-window ro-rdmgwin is-hidden" id="win-rdmg" data-no-show-all>
+  <header class="ro-window__title">{{t "Resumo de dano do replay"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
+  <div class="ro-window__body" id="rdmg-body"></div>
+</section>
+
 <!-- Target / Damage (Alt+D) -->
 <section class="ro-window ro-dmgwin" id="win-damage" data-hotkey="d">
   <header class="ro-window__title">{{t "Alvo / Dano"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
@@ -328,6 +334,7 @@
   <button class="ro-btn" data-toggle="win-bonus" title="Alt+B">{{t "Bônus"}}</button>
   <button class="ro-btn" data-toggle="win-damage" title="Alt+D">{{t "Dano"}}</button>
   <button class="ro-btn" data-toggle="win-buffs" title="Alt+U">Buffs</button>
+  <button class="ro-btn is-hidden" data-toggle="win-rdmg" id="rdmg-btn" title="{{t "Resumo de dano do replay"}}">{{t "Replay"}}</button>
   <button class="ro-btn" data-toggle="win-optimize" title="Alt+O">{{t "Otimizar"}}</button>
 </div>
 <div class="ro-basic__menu">
@@ -512,6 +519,51 @@
   <span class="ro-fx__name">{{.Label}}</span>
   {{template "buff_control" .}}
 </div>
+{{end}}
+
+{{define "replay_damage"}}
+<p class="ro-rdmg__head">{{if .Player}}<b>{{.Player}}</b>{{end}}{{if .Recorded}} · {{.Recorded}}{{end}}{{if .Duration}} · {{.Duration}}{{end}}</p>
+<div class="ro-rdmg__totals">
+  <div><small>{{t "Dano total"}}</small><b>{{.Total}}</b></div>
+  {{if .DPS}}<div><small>{{t "Dano por segundo"}}</small><b>{{.DPS}}</b></div>{{end}}
+  <div><small>{{t "Golpes"}}</small><b>{{.Hits}}</b></div>
+  <div><small>{{t "Abates"}}</small><b>{{.Kills}}</b></div>
+</div>
+<h4 class="ro-fx__head">{{t "Habilidades"}} <small>{{t "(do maior dano para o menor)"}}</small></h4>
+<table class="ro-table ro-rdmg__table">
+  <thead><tr><th>{{t "Habilidade"}}</th><th class="num">{{t "Dano"}}</th><th>%</th><th class="num">{{t "Golpes"}}</th><th class="num">{{t "Média"}}</th><th class="num">{{t "Máximo"}}</th></tr></thead>
+  <tbody>
+  {{range .Skills}}
+  <tr><td class="ro-rdmg__name">{{if .ID}}<img class="ro-fx__icon" src="https://static.divine-pride.net/images/skill/{{.ID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">{{else}}<span class="ro-fx__icon"></span>{{end}} {{.Name}}</td><td class="num">{{.Total}}</td>
+    <td class="ro-rdmg__pct"><span class="ro-rdmg__bar"><i style="width:{{printf "%.1f" .Pct}}%"></i></span> {{.PctS}}</td>
+    <td class="num">{{.Hits}}</td><td class="num">{{.Avg}}</td><td class="num">{{.Max}}</td></tr>
+  {{end}}
+  </tbody>
+</table>
+<h4 class="ro-fx__head">{{t "Monstros"}} <small>{{t "(abates: mortos / atingidos)"}}</small></h4>
+{{range .Monsters}}
+<details class="ro-rdmg__mob">
+  <summary>
+    <img class="ro-rdmg__mobimg" src="https://static.divine-pride.net/images/mobs/png/{{.ID}}.png" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+    <span class="ro-rdmg__name">{{.Name}}</span>
+    <span class="num"><b>{{.Total}}</b></span>
+    <span class="ro-rdmg__pct"><span class="ro-rdmg__bar"><i style="width:{{printf "%.1f" .Pct}}%"></i></span> {{.PctS}}</span>
+    <span class="num">{{t "Abates"}} {{.Kills}}/{{.Count}}</span>
+    <span class="num">{{.Hits}} {{t "golpes"}}</span>
+  </summary>
+  <table class="ro-table ro-rdmg__table">
+    <thead><tr><th>{{t "Habilidade"}}</th><th class="num">{{t "Dano"}}</th><th>%</th><th class="num">{{t "Golpes"}}</th><th class="num">{{t "Média"}}</th><th class="num">{{t "Máximo"}}</th></tr></thead>
+    <tbody>
+    {{range .Skills}}
+    <tr><td class="ro-rdmg__name">{{if .ID}}<img class="ro-fx__icon" src="https://static.divine-pride.net/images/skill/{{.ID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">{{else}}<span class="ro-fx__icon"></span>{{end}} {{.Name}}</td><td class="num">{{.Total}}</td>
+      <td class="ro-rdmg__pct"><span class="ro-rdmg__bar"><i style="width:{{printf "%.1f" .Pct}}%"></i></span> {{.PctS}}</td>
+      <td class="num">{{.Hits}}</td><td class="num">{{.Avg}}</td><td class="num">{{.Max}}</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</details>
+{{end}}
+<p class="ro-note">{{t "Dano que o personagem gravado causou em monstros durante o replay. Golpes de habilidades com vários impactos (meteoros) contam um a um. O jogo não marca críticos no replay."}}</p>
 {{end}}
 
 {{define "build_buffs"}}

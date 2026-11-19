@@ -827,6 +827,18 @@
     persist();
     // Messages from a replay import on the start screen.
     try {
+      // Replay damage window: only when the imported replay had damage.
+      const rd = JSON.parse(sessionStorage.getItem("ro.import.damage") || "null");
+      const rdWin = document.getElementById("win-rdmg");
+      if (rd && rd.html && rdWin) {
+        document.getElementById("rdmg-body").innerHTML = rd.html;
+        document.getElementById("rdmg-btn")?.classList.remove("is-hidden");
+        if (rd.open) {
+          rdWin.classList.remove("is-hidden");
+          rd.open = false; // open by itself once, right after the import
+          sessionStorage.setItem("ro.import.damage", JSON.stringify(rd));
+        }
+      }
       const notes = JSON.parse(sessionStorage.getItem("ro.import.notes") || "[]");
       sessionStorage.removeItem("ro.import.notes");
       notes.forEach((n, i) => say(n, i > 0));

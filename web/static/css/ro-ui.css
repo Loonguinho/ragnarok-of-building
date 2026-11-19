@@ -544,3 +544,25 @@ button.ro-jobcard { font-family: inherit; cursor: pointer; }
 .ro-optrow__gain { color: #1b7a2e; }
 
 .ro-fx__gives { display: block; color: var(--ro-muted, #6b6b6b); font-size: 0.85em; line-height: 1.2; }
+
+/* Replay damage window */
+.ro-rdmgwin .ro-window__body { max-height: 70vh; overflow: auto; }
+.ro-rdmg__head { margin: 0 0 6px; }
+.ro-rdmg__totals { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; }
+.ro-rdmg__totals div { display: flex; flex-direction: column; }
+.ro-rdmg__totals small { color: var(--ro-muted, #6b6b6b); }
+.ro-rdmg__table { width: 100%; border-collapse: collapse; font-size: 0.92em; }
+.ro-rdmg__table th, .ro-rdmg__table td { padding: 2px 4px; text-align: left; white-space: nowrap; }
+.ro-rdmg__table .num, .ro-rdmg__mob .num { text-align: right; font-variant-numeric: tabular-nums; }
+.ro-rdmg__name { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ro-rdmg__pct { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ro-rdmg__bar { display: inline-block; width: 60px; height: 6px; background: rgba(0, 0, 0, 0.12); vertical-align: middle; border-radius: 3px; overflow: hidden; }
+.ro-rdmg__bar i { display: block; height: 100%; background: #4a7fc1; }
+.ro-rdmg__mob { margin: 2px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.08); }
+.ro-rdmg__mob summary { display: grid; grid-template-columns: 28px 1fr auto auto auto auto; gap: 6px; align-items: center; cursor: pointer; padding: 2px 0; }
+.ro-rdmg__mobimg { width: 28px; height: 28px; object-fit: contain; }
+.ro-rdmg__mob .ro-rdmg__table { margin: 2px 0 6px 34px; width: calc(100% - 34px); }
+@media (max-width: 560px) {
+  .ro-rdmg__mob summary { grid-template-columns: 28px 1fr auto; }
+  .ro-rdmg__mob summary .ro-rdmg__pct, .ro-rdmg__mob summary .num:last-child { display: none; }
+}

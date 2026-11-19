@@ -420,10 +420,20 @@ button.ro-jobcard { font-family: inherit; cursor: pointer; }
 .ro-jobcard { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 3px; }
 .ro-jobicon { flex: none; image-rendering: pixelated; }
 .ro-linkbtn { display: inline-flex; align-items: center; gap: 4px; }
-.ro-jobcard.is-current { border-color: #1d4fa8; box-shadow: 0 0 0 2px #9fc0f5 inset; font-weight: bold; }
-.ro-desk .ro-classpick__body { max-height: 60vh; }
 .ro-linkbtn { padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; text-align: left; }
 .ro-linkbtn:hover b { text-decoration: underline; }
+/* Class dropdown under the class name. */
+.ro-classdd { position: fixed; z-index: 60; width: 240px; overflow-y: auto; background: #fff;
+  border: 1px solid #7f9db9; box-shadow: 2px 3px 8px rgba(0, 0, 0, .25); padding: 2px 0; }
+.ro-classdd[hidden] { display: none; }
+.ro-classdd__hint { margin: 2px 6px 4px; font-weight: bold; color: var(--ro-title-text); }
+.ro-classdd__hint[hidden] { display: none; }
+.ro-classdd__fam { position: sticky; top: -2px; padding: 2px 6px; font-size: 11px; font-weight: bold;
+  color: var(--ro-title-text); background: #e8edf6; border-bottom: 1px solid #c4c8d0; }
+.ro-classdd__job { display: flex; align-items: center; gap: 6px; width: 100%; padding: 1px 6px 1px 10px;
+  border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.ro-classdd__job:hover, .ro-classdd__job:focus { background: #dce8fb; outline: none; }
+.ro-classdd__job.is-current { font-weight: bold; background: #fff4cf; }
 @media (max-width: 720px) { .ro-import, .ro-classpick { width: 100%; } }
 
 .ro-dmg__states { margin-top: 3px; padding-top: 3px; border-top: 1px dashed #c4c8d0; }

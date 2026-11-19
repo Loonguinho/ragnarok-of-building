@@ -314,39 +314,65 @@
         loadSkills(job);
         say(T("Classe alterada. Habilidades resetadas."));
         recalc();
+        document.querySelectorAll("#class-dd [data-pick-job]").forEach((b) => b.classList.toggle("is-current", Number(b.dataset.pickJob) === job));
       }
-      window.ROWin.toggle(document.getElementById("win-class"));
+      closeClassPicker();
     }
   });
 
-  // ---- class picker ----
-  // Opened from the class name (change the class) or from Novo (blank build).
+  // ---- class dropdown ----
+  // Opens under the class name in Basic Info: to change the class, or (from
+  // Novo) to start a blank build of the chosen one.
   let classPickerNew = false;
+  const classDD = document.getElementById("class-dd");
+  if (classDD) document.body.append(classDD); // out of the window, which would clip it
   function openClassPicker(blank) {
+    if (!classDD) return;
     classPickerNew = blank;
-    const win = document.getElementById("win-class");
-    if (!win) return;
-    win.querySelector("[data-class-title]").textContent = blank ? T("Novo build: escolha a classe") : T("Classe");
-    win.querySelector("[data-class-hint]").textContent = blank
-      ? T("Um build em branco da classe escolhida, nos níveis máximos dela.")
-      : T("Escolha a classe. Níveis, atributos e equipamento ficam; as habilidades são resetadas.");
-    window.ROWin.show(win);
+    const hint = classDD.querySelector("[data-class-hint]");
+    hint.textContent = blank ? T("Novo build: escolha a classe") : "";
+    hint.hidden = !blank;
+    const btn = document.querySelector("[data-class-dd]");
+    const r = (btn || document.getElementById("win-basic")).getBoundingClientRect();
+    classDD.style.left = Math.max(4, Math.min(r.left, innerWidth - 260)) + "px";
+    classDD.style.top = r.bottom + 2 + "px";
+    classDD.style.maxHeight = Math.max(160, innerHeight - r.bottom - 12) + "px";
+    classDD.hidden = false;
+    btn?.setAttribute("aria-expanded", "true");
+    const cur = classDD.querySelector(".is-current") || classDD.querySelector("[data-pick-job]");
+    cur?.scrollIntoView({ block: "center" });
+    cur?.focus({ preventScroll: true });
+  }
+  function closeClassPicker() {
+    if (!classDD || classDD.hidden) return;
+    classDD.hidden = true;
+    document.querySelector("[data-class-dd]")?.setAttribute("aria-expanded", "false");
   }
   document.addEventListener("click", (e) => {
-    if (e.target.closest('[data-toggle="win-class"]')) openClassPickerMode(false);
-  }, true);
+    if (e.target.closest("[data-class-dd]")) {
+      if (classDD.hidden) openClassPicker(false); else closeClassPicker();
+      return;
+    }
+    if (!e.target.closest("#class-dd") && !e.target.closest("[data-new-build]")) closeClassPicker();
+  });
   document.addEventListener("keydown", (e) => {
-    if (e.altKey && e.key.toLowerCase() === "j") openClassPickerMode(false);
-  }, true);
-  // Back to "change the class" (texts too) when opened from the name or Alt+J.
-  function openClassPickerMode(blank) {
-    if (classPickerNew === blank) return;
-    classPickerNew = blank;
-    const win = document.getElementById("win-class");
-    if (!win) return;
-    win.querySelector("[data-class-title]").textContent = T("Classe");
-    win.querySelector("[data-class-hint]").textContent = T("Escolha a classe. Níveis, atributos e equipamento ficam; as habilidades são resetadas.");
-  }
+    if (!classDD) return;
+    if (e.altKey && e.key.toLowerCase() === "j") {
+      e.preventDefault();
+      if (classDD.hidden) openClassPicker(false); else closeClassPicker();
+      return;
+    }
+    if (classDD.hidden) return;
+    if (e.key === "Escape") { closeClassPicker(); document.querySelector("[data-class-dd]")?.focus(); return; }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { // move between classes
+      e.preventDefault();
+      const all = [...classDD.querySelectorAll("[data-pick-job]")];
+      const k = all.indexOf(document.activeElement);
+      const next = all[Math.max(0, Math.min(all.length - 1, k + (e.key === "ArrowDown" ? 1 : -1)))];
+      next?.focus();
+    }
+  });
+  document.querySelector(".ro-desk")?.addEventListener("scroll", closeClassPicker, true);
 
   // ---- equipment window ----
   let equipTab = "main";

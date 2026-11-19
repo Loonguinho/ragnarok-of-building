@@ -20,22 +20,13 @@
     <nav class="ro-titlelang" aria-label="{{t "Idioma"}}">{{range uiLangs}}<a href="?lang={{.Code}}" hreflang="{{.HTML}}" lang="{{.HTML}}" title="{{.Label}}"{{if eq .Code lang}} class="is-active" aria-current="true"{{end}}>{{.Code | upper}}</a>{{end}}</nav>
   </header>
   <div class="ro-window__body" id="build_basic">{{template "build_basic" .}}</div>
-</section>
-{{end}}
-{{with $.V}}
-<!-- Class picker (Alt+J): changes the build's class, or starts a blank one -->
-<section class="ro-window ro-classwin is-hidden" id="win-class" data-hotkey="j">
-  <header class="ro-window__title"><span data-class-title>{{t "Classe"}}</span> <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
-  <div class="ro-window__body ro-classpick__body">
-    <p class="ro-note" data-class-hint>{{t "Escolha a classe. Níveis, atributos e equipamento ficam; as habilidades são resetadas."}}</p>
+  <!-- Class dropdown (Alt+J), opened from the class name or from Novo -->
+  <div class="ro-classdd" id="class-dd" role="listbox" aria-label="{{t "Classe"}}" hidden>
+    <p class="ro-classdd__hint" data-class-hint></p>
     {{$job := .Build.Job}}
     {{range .Families}}
-    <div class="ro-family">
-      <h4>{{.Name}}</h4>
-      <div class="ro-family__jobs">
-        {{range .Jobs}}<button type="button" class="ro-jobcard{{if eq .ID $job}} is-current{{end}}" data-pick-job="{{.ID}}"><img class="ro-jobicon" src="https://static.divine-pride.net/images/jobs/icon_jobs_{{.ID}}.png" alt="" width="25" height="25" onerror="this.style.visibility='hidden'"><span>{{.Name}}</span></button>{{end}}
-      </div>
-    </div>
+    <div class="ro-classdd__fam">{{.Name}}</div>
+    {{range .Jobs}}<button type="button" role="option" class="ro-classdd__job{{if eq .ID $job}} is-current{{end}}" data-pick-job="{{.ID}}"><img class="ro-jobicon" src="https://static.divine-pride.net/images/jobs/icon_jobs_{{.ID}}.png" alt="" width="25" height="25" onerror="this.style.visibility='hidden'"><span>{{.Name}}</span></button>{{end}}
     {{end}}
   </div>
 </section>
@@ -271,7 +262,7 @@
 {{end}}
 
 {{define "build_basic"}}
-<div class="ro-basic__name"><button class="ro-linkbtn" data-toggle="win-class" title="{{t "Trocar a classe"}} (Alt+J)"><img class="ro-jobicon" src="https://static.divine-pride.net/images/jobs/icon_jobs_{{.Build.Job}}.png" alt="" width="25" height="25" onerror="this.style.visibility='hidden'"><b>{{.JobName}}</b> ▾</button></div>
+<div class="ro-basic__name"><button class="ro-linkbtn" data-class-dd aria-haspopup="listbox" title="{{t "Trocar a classe"}} (Alt+J)"><img class="ro-jobicon" src="https://static.divine-pride.net/images/jobs/icon_jobs_{{.Build.Job}}.png" alt="" width="25" height="25" onerror="this.style.visibility='hidden'"><b>{{.JobName}}</b> ▾</button></div>
 <div class="ro-basic__lv">Base Lv. {{.Build.BaseLv}} {{t "· Classe Lv."}} {{.Build.JobLv}}</div>
 <div class="ro-bar ro-bar--hp"><span style="width:100%"></span><em>HP {{.R.HP}} / {{.R.HP}}</em></div>
 <div class="ro-bar ro-bar--sp"><span style="width:100%"></span><em>SP {{.R.SP}} / {{.R.SP}}</em></div>

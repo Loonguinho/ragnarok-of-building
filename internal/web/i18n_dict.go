@@ -301,13 +301,7 @@ var dict = map[string][2]string{
 	"Importar replay": {"Import replay", "Importar replay"},
 	"Builds":          {"Builds", "Builds"},
 	"Trocar a classe": {"Change class", "Cambiar la clase"},
-	"Escolha a classe. Níveis, atributos e equipamento ficam; as habilidades são resetadas.": {
-		"Pick the class. Levels, stats and equipment stay; skills are reset.",
-		"Elige la clase. Niveles, atributos y equipo se mantienen; las habilidades se reinician."},
 	"Novo build: escolha a classe": {"New build: pick the class", "Nuevo build: elige la clase"},
-	"Um build em branco da classe escolhida, nos níveis máximos dela.": {
-		"A blank build of the chosen class, at its max levels.",
-		"Un build en blanco de la clase elegida, en sus niveles máximos."},
 	"O servidor não respondeu. Ele está rodando? Recarregue a página.": {
 		"The server did not answer. Is it running? Reload the page.",
 		"El servidor no respondió. ¿Está en ejecución? Recarga la página."},

@@ -81,4 +81,12 @@ func TestHiddenJobs(t *testing.T) {
 	if h := s.hiddenJobs("pt", 4054); h[4054] {
 		t.Error("the build's own class must stay listed")
 	}
+	// Only 3rd and 4th classes are listed (plus the build's own).
+	c.Jobs[7].EquipTier, c.Jobs[4060].EquipTier, c.Jobs[4054].EquipTier = "Normal", "Third_Upper", "Third"
+	if h := s.hiddenJobs("pt", 0); !h[7] || h[4060] {
+		t.Errorf("hidden %v: want the 2nd class 7 hidden, 4060 listed", h)
+	}
+	if h := s.hiddenJobs("pt", 7); h[7] {
+		t.Error("a 2nd class build keeps its class listed")
+	}
 }

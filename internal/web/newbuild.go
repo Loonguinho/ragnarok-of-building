@@ -127,10 +127,16 @@ func (s *Server) handleImport(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// hiddenJobs are the classes left out of class lists: when two playable
-// classes share a name (a 3rd job and its transcendent version, e.g.
-// JT_RUNE_KNIGHT and JT_RUNE_KNIGHT_H), only the transcendent one is
-// listed, unless the other is the build's own class (current).
+// listedTiers are the class tiers offered in class lists: 3rd and 4th
+// classes (endgame builds); the others only show when the build is one.
+var listedTiers = map[string]bool{"Third": true, "Third_Upper": true, "Fourth": true}
+
+// hiddenJobs are the classes left out of class lists, unless one is the
+// build's own class (current):
+//   - classes below the 3rd (first, second, transcendent, baby 3rd ...);
+//   - when two classes share a name (a 3rd job and its transcendent
+//     version, e.g. JT_RUNE_KNIGHT and JT_RUNE_KNIGHT_H), the
+//     non-transcendent one.
 func (s *Server) hiddenJobs(l string, current int) map[int]bool {
 	byName := map[string][]*gamedata.Job{}
 	for _, j := range s.opt.Catalog.Jobs {
@@ -140,6 +146,11 @@ func (s *Server) hiddenJobs(l string, current int) map[int]bool {
 		byName[j.Name.Get(l)] = append(byName[j.Name.Get(l)], j)
 	}
 	hidden := map[int]bool{}
+	for _, j := range s.opt.Catalog.Jobs {
+		if j.EquipTier != "" && !listedTiers[j.EquipTier] && !j.Fourth && j.ID != current { // Fourth: 4th classes rAthena files as Normal (Spirit Handler)
+			hidden[j.ID] = true
+		}
+	}
 	for _, js := range byName {
 		if len(js) < 2 {
 			continue

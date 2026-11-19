@@ -11,6 +11,9 @@
 //	RagnarokOfBuilding.exe -import    # rebuild the catalog now
 //	RagnarokOfBuilding.exe -client D:\RO -port 8090
 //
+// A catalog.json.gz placed next to the executable (one someone already
+// built) is used instead, so no client is needed.
+//
 // Its files (.env, data\) live next to the executable.
 package main
 
@@ -42,6 +45,9 @@ import (
 const (
 	catalogPath = `data/gen/catalog.json.gz`
 	rathenaDir  = `data/rathena`
+	// sharedCatalog is a ready catalog someone passed along: dropped next
+	// to the executable, it is used as is (no client needed).
+	sharedCatalog = `catalog.json.gz`
 )
 
 func main() {
@@ -70,11 +76,15 @@ func run() error {
 	fmt.Println("Ragnarok of Building — simulador de builds do RO LATAM")
 	fmt.Println()
 
+	catalog := catalogPath
 	client := *clientFlag
-	if client == "" {
+	if _, err := os.Stat(sharedCatalog); err == nil && !*reimport && client == "" {
+		fmt.Println("Usando os dados do jogo do arquivo", sharedCatalog, "desta pasta.")
+		catalog = sharedCatalog
+	} else if client == "" {
 		client = setup.FindClient()
 	}
-	if why := needsImport(client, *reimport); why != "" {
+	if why := needsImport(client, *reimport); catalog == catalogPath && why != "" {
 		fmt.Println(why)
 		if client == "" || !setup.IsClient(client) {
 			client = askClient()
@@ -84,7 +94,7 @@ func run() error {
 		}
 	}
 
-	cat, err := gamedata.Load(catalogPath)
+	cat, err := gamedata.Load(catalog)
 	if err != nil {
 		return fmt.Errorf("catálogo do jogo: %w (rode de novo com -import)", err)
 	}
@@ -146,6 +156,8 @@ func needsImport(client string, forced bool) string {
 func askClient() string {
 	fmt.Println()
 	fmt.Println(`Não achei o cliente do RO LATAM nas pastas de sempre (ex.: C:\Gravity\Ragnarok).`)
+	fmt.Println("Se alguém te passou o arquivo " + sharedCatalog + ", feche esta janela, coloque o arquivo")
+	fmt.Println("na mesma pasta do RagnarokOfBuilding.exe e abra de novo.")
 	in := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("Cole aqui a pasta do jogo (a que tem o data.grf) e aperte Enter: ")

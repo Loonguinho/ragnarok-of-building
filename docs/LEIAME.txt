@@ -7,12 +7,14 @@ COMO USAR
 3. O simulador abre no seu navegador. Deixe a janela preta aberta enquanto
    usa; para sair, feche-a.
 
-SE ALGUÉM TE PASSOU O ARQUIVO catalog.json.gz
-Coloque o catalog.json.gz na mesma pasta do RagnarokOfBuilding.exe e abra o
-programa: ele usa esse arquivo e não precisa do jogo instalado nem de internet.
-Quando sair uma atualização do jogo, peça o arquivo novo e substitua.
+USANDO UMA CÓPIA DOS ARQUIVOS DO JOGO (sem procurar o jogo instalado)
+Copie para a pasta do RagnarokOfBuilding.exe:
+  - o data.grf do jogo
+  - a pasta System do jogo (inteira, com as subpastas english e spanish)
+Ao abrir, o programa lê os dados desses arquivos. Depois de uma atualização
+do jogo, copie os dois de novo: ele percebe e relê sozinho.
 
-SEM O ARQUIVO (lendo o seu próprio jogo)
+SEM A CÓPIA (lendo o jogo instalado)
 - O programa procura o RO LATAM instalado (ex.: C:\Gravity\Ragnarok) e lê os
   dados do jogo (itens, habilidades, classes, monstros) direto do seu cliente.
   Se não achar, ele pergunta a pasta do jogo: cole o caminho da pasta que tem

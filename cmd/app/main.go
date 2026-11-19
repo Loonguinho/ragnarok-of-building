@@ -11,8 +11,9 @@
 //	RagnarokOfBuilding.exe -import    # rebuild the catalog now
 //	RagnarokOfBuilding.exe -client D:\RO -port 8090
 //
-// A catalog.json.gz placed next to the executable (one someone already
-// built) is used instead, so no client is needed.
+// The client can also be a copy: a data.grf and the System folder copied
+// next to the executable are read instead of the installed game. A ready
+// catalog.json.gz placed there is used as is.
 //
 // Its files (.env, data\) live next to the executable.
 package main
@@ -76,12 +77,24 @@ func run() error {
 	fmt.Println("Ragnarok of Building — simulador de builds do RO LATAM")
 	fmt.Println()
 
+	// Where the game data comes from, first match wins: -client; a data.grf
+	// (+ System) copied into this folder; a ready catalog.json.gz here; the
+	// client in RO_CLIENT or the usual install folders.
 	catalog := catalogPath
 	client := *clientFlag
-	if _, err := os.Stat(sharedCatalog); err == nil && !*reimport && client == "" {
+	here, _ := os.Getwd()
+	switch {
+	case client != "":
+	case setup.IsClient(here):
+		fmt.Println("Usando o data.grf desta pasta.")
+		if err := checkSystem(here); err != nil {
+			return err
+		}
+		client = here
+	case !*reimport && exists(sharedCatalog):
 		fmt.Println("Usando os dados do jogo do arquivo", sharedCatalog, "desta pasta.")
 		catalog = sharedCatalog
-	} else if client == "" {
+	default:
 		client = setup.FindClient()
 	}
 	if why := needsImport(client, *reimport); catalog == catalogPath && why != "" {
@@ -151,13 +164,35 @@ func needsImport(client string, forced bool) string {
 	return ""
 }
 
+// checkSystem reports the System files the importer needs from a client
+// folder (item names and descriptions in each language), so a data.grf
+// copied without them gets a clear message.
+func checkSystem(dir string) error {
+	var missing []string
+	for _, f := range []string{`System\iteminfo_new.lub`, `System\english\iteminfo_new.lub`, `System\spanish\iteminfo_new.lub`} {
+		if !exists(filepath.Join(dir, f)) {
+			missing = append(missing, f)
+		}
+	}
+	if missing == nil {
+		return nil
+	}
+	return fmt.Errorf("falta(m) %s nesta pasta.\n"+
+		"Copie a pasta System do jogo (ex.: C:\\Gravity\\Ragnarok\\System) para cá, ao lado do data.grf", strings.Join(missing, ", "))
+}
+
+func exists(p string) bool {
+	_, err := os.Stat(p)
+	return err == nil
+}
+
 // askClient asks for the client folder until one has a data.grf, and
 // remembers it in .env.
 func askClient() string {
 	fmt.Println()
 	fmt.Println(`Não achei o cliente do RO LATAM nas pastas de sempre (ex.: C:\Gravity\Ragnarok).`)
-	fmt.Println("Se alguém te passou o arquivo " + sharedCatalog + ", feche esta janela, coloque o arquivo")
-	fmt.Println("na mesma pasta do RagnarokOfBuilding.exe e abra de novo.")
+	fmt.Println("Ou feche esta janela, copie o data.grf e a pasta System do jogo para a pasta")
+	fmt.Println("do RagnarokOfBuilding.exe e abra de novo.")
 	in := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("Cole aqui a pasta do jogo (a que tem o data.grf) e aperte Enter: ")

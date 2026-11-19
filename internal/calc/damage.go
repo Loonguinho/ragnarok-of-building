@@ -241,6 +241,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 			dmg += mastery
 			step("ATQ de maestria", "%+d = %d", mastery, dmg)
 		}
+		dmg = classFinalAtk(b, r, c, m, dmg, step)
 
 		if crit {
 			if cr := float64(bn["bCritAtkRate"]) * critDmgPart; cr != 0 {

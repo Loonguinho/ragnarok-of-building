@@ -69,7 +69,52 @@
     }
   }
 
+  // ---- build sharing ----
+  const shareLink = () => location.origin + "/build?b=" + code;
+  async function copyText(text, done) {
+    try {
+      await navigator.clipboard.writeText(text);
+      say(done);
+    } catch {
+      prompt(T("Copie:"), text);
+    }
+  }
+  // A plain-text summary for Discord or a forum post, from what the editor shows.
+  function shareText() {
+    const q = (sel) => (document.querySelector(sel)?.textContent || "").replace(/\s+/g, " ").trim();
+    const names = ["STR", "AGI", "VIT", "INT", "DEX", "LUK"], traits = ["POW", "STA", "WIS", "SPL", "CON", "CRT"];
+    const stats = names.map((n, i) => `${n} ${build.s[i]}`).join(" · ");
+    const tr = (build.t || []).some((v) => v > 0) ? "\n" + traits.map((n, i) => `${n} ${build.t[i]}`).join(" · ") : "";
+    const gear = [...document.querySelectorAll("#build_equip [data-slot][aria-label]")]
+      .map((el) => {
+        const [slot, ...name] = el.getAttribute("aria-label").split(": ");
+        const eq = build.e[el.dataset.slot] || {};
+        const grade = ["", " [D]", " [C]", " [B]", " [A]"][eq.g || 0] || "";
+        return `- ${slot}: ${eq.r ? "+" + eq.r + " " : ""}${name.join(": ")}${grade}`;
+      });
+    return [`**${q(".ro-basic__name b")}** · ${T("Nv.")} ${build.b}/${build.jl}`, stats + tr,
+      ...(gear.length ? ["", ...gear] : []), "", shareLink()].join("\n");
+  }
+  function refreshShare() {
+    const f = document.querySelector("[data-share-code]");
+    if (f) f.value = code;
+  }
+  refreshShare();
+  document.addEventListener("submit", (e) => {
+    const f = e.target.closest("[data-share-import]");
+    if (!f) return;
+    e.preventDefault();
+    const v = (f.elements.code.value || "").trim();
+    const m = v.match(/[?&]b=([A-Za-z0-9_-]+)/);
+    const c = m ? m[1] : v.replace(/[^A-Za-z0-9_-]/g, "");
+    if (!c) { say(T("Cole um link ou código de build."), true); return; }
+    const into = f.elements.to.value === "this" && saved;
+    if (into && !confirm(T('Substituir o build "%s" pelo importado? Ele só muda de vez quando você salvar.', saved.name))) return;
+    location.href = "/build?b=" + c + (into ? "&s=" + encodeURIComponent(saved.id) : "");
+  });
+
   function persist() {
+    refreshShare();
     const url = new URL(location.href);
     url.searchParams.set("b", code);
     url.searchParams.delete("new");
@@ -128,7 +173,7 @@
   let saved = window.ROSaved ? ROSaved.get(new URLSearchParams(location.search).get("s") || "") : null;
   function saveBuild(ask) {
     if (!window.ROSaved || !ROSaved.available()) {
-      say(T("Este navegador não permite salvar (modo anônimo?). Use Copiar link para guardar o build."), true);
+      say(T("Este navegador não permite salvar (modo anônimo?). Use Compartilhar para guardar o build."), true);
       return;
     }
     let name = saved ? saved.name : "";
@@ -210,14 +255,12 @@
   });
   document.addEventListener("click", async (e) => {
     if (e.target.closest("[data-save-build]")) saveBuild(true);
-    if (e.target.closest("[data-copy-link]")) {
-      const link = location.origin + "/build?b=" + code;
-      try {
-        await navigator.clipboard.writeText(link);
-        say(T("Link do build copiado!"));
-      } catch {
-        prompt(T("Copie o link do build:"), link);
-      }
+    if (e.target.closest("[data-share-copy]")) copyText(code, T("Código copiado!"));
+    if (e.target.closest("[data-share-go]")) {
+      const as = document.querySelector("[data-share-as]").value;
+      if (as === "code") copyText(code, T("Código copiado!"));
+      else if (as === "text") copyText(shareText(), T("Texto do build copiado! Cole no Discord ou no fórum."));
+      else copyText(shareLink(), T("Link do build copiado!"));
     }
     if (e.target.closest("[data-new-build]")) {
       if (!confirm(T("Começar um build novo? Salve o atual antes (Ctrl+S) se quiser guardá-lo."))) return;

@@ -56,6 +56,46 @@
 </section>
 {{end}}
 {{with $.V}}
+<!-- Build sharing (Alt+L), like Path of Building's -->
+<section class="ro-window ro-sharewin is-hidden" id="win-share" data-hotkey="l">
+  <header class="ro-window__title">{{t "Compartilhar Build"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
+  <div class="ro-window__body">
+    <fieldset class="ro-fieldset">
+      <legend>{{t "Compartilhar"}}</legend>
+      <div class="ro-sharewin__row">
+        <label for="share-code">{{t "Código"}}:</label>
+        <input class="ro-input" id="share-code" type="text" readonly data-share-code>
+        <button class="ro-btn" type="button" data-share-copy>{{t "Copiar"}}</button>
+      </div>
+      <div class="ro-sharewin__row">
+        <select class="ro-select" data-share-as aria-label="{{t "Formato"}}">
+          <option value="link">{{t "Link do simulador"}}</option>
+          <option value="code">{{t "Só o código"}}</option>
+          <option value="text">{{t "Texto (Discord / fórum)"}}</option>
+        </select>
+        <button class="ro-btn" type="button" data-share-go>{{t "Compartilhar"}}</button>
+      </div>
+      <p class="ro-note">{{t "O código guarda o build inteiro (classe, atributos, equipamento, habilidades e buffs). Quem abrir o link ou colar o código vê o mesmo build."}}</p>
+    </fieldset>
+    <fieldset class="ro-fieldset">
+      <legend>{{t "Importar"}}</legend>
+      <form data-share-import>
+        <label class="ro-sharewin__label" for="share-import">{{t "Para importar um build, cole o link ou o código aqui:"}}</label>
+        <input class="ro-input" id="share-import" type="text" name="code" autocomplete="off">
+        <div class="ro-sharewin__row">
+          <select class="ro-select" name="to" aria-label="{{t "Importar para"}}">
+            <option value="this">{{t "Importar para este build"}}</option>
+            <option value="new">{{t "Importar como build novo"}}</option>
+          </select>
+          <button class="ro-btn" type="submit">{{t "Importar"}}</button>
+        </div>
+      </form>
+      <p class="ro-note"><a href="/new">{{t "Importar replay"}}</a> {{t "(arquivo .rrf do jogo)"}}</p>
+    </fieldset>
+  </div>
+</section>
+{{end}}
+{{with $.V}}
 <!-- Status (Alt+A) -->
 <section class="ro-window ro-statuswin" id="win-status" data-hotkey="a">
   <header class="ro-window__title">{{t "Atributos"}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
@@ -247,7 +287,7 @@
 </div>
 <div class="ro-basic__menu">
   <button class="ro-btn" data-save-build title="{{t "Salvar neste navegador (Ctrl+S)"}}">{{t "Salvar"}}</button>
-  <button class="ro-btn" data-copy-link title="{{t "Copiar o link para compartilhar"}}">{{t "Copiar link"}}</button>
+  <button class="ro-btn" data-toggle="win-share" title="{{t "Compartilhar ou importar um build"}} (Alt+L)">{{t "Compartilhar"}}</button>
   <button class="ro-btn" data-new-build>{{t "Novo"}}</button>
   <button class="ro-btn" data-toggle="win-saved" title="Alt+C">{{t "Builds"}}</button>
 </div>

@@ -116,8 +116,6 @@ var dict = map[string][2]string{
 	"Bônus":                           {"Bonus", "Bonos"},
 	"Salvar":                          {"Save", "Guardar"},
 	"Salvar neste navegador (Ctrl+S)": {"Save in this browser (Ctrl+S)", "Guardar en este navegador (Ctrl+S)"},
-	"Copiar link":                     {"Copy link", "Copiar link"},
-	"Copiar o link para compartilhar": {"Copy the link to share", "Copiar el enlace para compartir"},
 	"Novo":                            {"New", "Nuevo"},
 	"Início":                          {"Home", "Inicio"},
 	"Pontos de atributo:":             {"Stat points:", "Puntos de atributo:"},
@@ -129,15 +127,14 @@ var dict = map[string][2]string{
 	"Erro ao calcular: ":                      {"Calculation error: ", "Error al calcular: "},
 	"Nome do build:":                          {"Build name:", "Nombre del build:"},
 	"Sem nome":                                {"Untitled", "Sin nombre"},
-	"Este navegador não permite salvar (modo anônimo?). Use Copiar link para guardar o build.": {
-		"This browser doesn't allow saving (private mode?). Use Copy link to keep the build.",
-		"Este navegador no permite guardar (¿modo incógnito?). Usa Copiar enlace para conservar el build."},
+	"Este navegador não permite salvar (modo anônimo?). Use Compartilhar para guardar o build.": {
+		"This browser doesn't allow saving (private mode?). Use Share to keep the build.",
+		"Este navegador no permite guardar (¿modo incógnito?). Usa Compartir para conservar el build."},
 	"Não foi possível salvar: o armazenamento do navegador está cheio ou bloqueado.": {
 		"Couldn't save: the browser storage is full or blocked.",
 		"No se pudo guardar: el almacenamiento del navegador está lleno o bloqueado."},
 	`Build "%s" salvo neste navegador.`: {`Build "%s" saved in this browser.`, `Build "%s" guardado en este navegador.`},
 	"Link do build copiado!":            {"Build link copied!", "¡Enlace del build copiado!"},
-	"Copie o link do build:":            {"Copy the build link:", "Copia el enlace del build:"},
 	"Começar um build novo? Salve o atual antes (Ctrl+S) se quiser guardá-lo.": {
 		"Start a new build? Save the current one first (Ctrl+S) if you want to keep it.",
 		"¿Empezar un build nuevo? Guarda el actual antes (Ctrl+S) si quieres conservarlo."},
@@ -314,6 +311,35 @@ var dict = map[string][2]string{
 	"O servidor não respondeu. Ele está rodando? Recarregue a página.": {
 		"The server did not answer. Is it running? Reload the page.",
 		"El servidor no respondió. ¿Está en ejecución? Recarga la página."},
+	"Compartilhar Build":                {"Build Sharing", "Compartir Build"},
+	"Compartilhar":                      {"Share", "Compartir"},
+	"Compartilhar ou importar um build": {"Share or import a build", "Compartir o importar un build"},
+	"Código":                            {"Code", "Código"},
+	"Formato":                           {"Format", "Formato"},
+	"Link do simulador":                 {"Simulator link", "Enlace del simulador"},
+	"Só o código":                       {"Code only", "Solo el código"},
+	"Texto (Discord / fórum)":           {"Text (Discord / forum)", "Texto (Discord / foro)"},
+	"Importar":                          {"Import", "Importar"},
+	"Importar para":                     {"Import to", "Importar a"},
+	"Importar para este build":          {"Import to this build", "Importar a este build"},
+	"Importar como build novo":          {"Import as a new build", "Importar como build nuevo"},
+	"(arquivo .rrf do jogo)":            {"(the game's .rrf file)", "(archivo .rrf del juego)"},
+	"Código copiado!":                   {"Code copied!", "¡Código copiado!"},
+	"Copiar":                            {"Copy", "Copiar"},
+	"Copie:":                            {"Copy:", "Copia:"},
+	"Cole um link ou código de build.":  {"Paste a build link or code.", "Pega un enlace o código de build."},
+	"Para importar um build, cole o link ou o código aqui:": {
+		"To import a build, paste its link or code here:",
+		"Para importar un build, pega el enlace o el código aquí:"},
+	"Texto do build copiado! Cole no Discord ou no fórum.": {
+		"Build text copied! Paste it on Discord or a forum.",
+		"¡Texto del build copiado! Pégalo en Discord o en el foro."},
+	"Substituir o build \"%s\" pelo importado? Ele só muda de vez quando você salvar.": {
+		"Replace the build \"%s\" with the imported one? It only changes for good when you save.",
+		"¿Reemplazar el build \"%s\" por el importado? Solo cambia del todo al guardar."},
+	"O código guarda o build inteiro (classe, atributos, equipamento, habilidades e buffs). Quem abrir o link ou colar o código vê o mesmo build.": {
+		"The code holds the whole build (class, stats, equipment, skills and buffs). Whoever opens the link or pastes the code sees the same build.",
+		"El código guarda el build entero (clase, atributos, equipo, habilidades y buffs). Quien abra el enlace o pegue el código ve el mismo build."},
 	"Grau":                         {"Grade", "Grado"},
 	"Bônus aleatórios":             {"Random options", "Opciones aleatorias"},
 	"Bônus aleatório":              {"Random option", "Opción aleatoria"},

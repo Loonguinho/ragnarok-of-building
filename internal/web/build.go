@@ -2,6 +2,7 @@ package web
 
 import (
 	"bytes"
+	"compress/flate"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -47,19 +48,36 @@ func slotLabel(key string) string {
 	return key
 }
 
-// decodeBuild reads a share code (base64url JSON).
+// Share codes are base64url of the build JSON, deflated and prefixed with
+// "z" (like Path of Building's codes, so links stay short). Codes without
+// the prefix are the older plain JSON ones (they always start with "ey").
+const codeDeflate = "z"
+
+// decodeBuild reads a share code, compressed or not.
 func decodeBuild(code string) (calc.Build, bool) {
 	var b calc.Build
-	raw, err := base64.RawURLEncoding.DecodeString(code)
+	z := strings.HasPrefix(code, codeDeflate)
+	raw, err := base64.RawURLEncoding.DecodeString(strings.TrimPrefix(code, codeDeflate))
 	if err != nil || len(raw) > maxBuildBody {
 		return b, false
+	}
+	if z {
+		// Read at most maxBuildBody+1 bytes: a bigger build is refused.
+		raw, err = io.ReadAll(io.LimitReader(flate.NewReader(bytes.NewReader(raw)), maxBuildBody+1))
+		if err != nil || len(raw) > maxBuildBody {
+			return b, false
+		}
 	}
 	return b, json.Unmarshal(raw, &b) == nil
 }
 
 func encodeBuild(b calc.Build) string {
 	raw, _ := json.Marshal(b)
-	return base64.RawURLEncoding.EncodeToString(raw)
+	var buf bytes.Buffer
+	w, _ := flate.NewWriter(&buf, flate.BestCompression)
+	w.Write(raw)
+	w.Close()
+	return codeDeflate + base64.RawURLEncoding.EncodeToString(buf.Bytes())
 }
 
 func defaultBuild(c *gamedata.Catalog) calc.Build {

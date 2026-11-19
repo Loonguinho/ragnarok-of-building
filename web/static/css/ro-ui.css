@@ -548,6 +548,7 @@ button.ro-jobcard { font-family: inherit; cursor: pointer; }
 /* Replay damage window */
 .ro-rdmgwin .ro-window__body { max-height: 70vh; overflow: auto; }
 .ro-rdmg__head { margin: 0 0 6px; }
+.ro-rdmg__who { max-width: 100%; font-weight: bold; }
 .ro-rdmg__totals { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; }
 .ro-rdmg__totals div { display: flex; flex-direction: column; }
 .ro-rdmg__totals small { color: var(--ro-muted, #6b6b6b); }

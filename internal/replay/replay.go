@@ -34,6 +34,7 @@ const (
 	ctSession        = 3
 	ctItems          = 8
 	ctInitialPackets = 14
+	ctInitialObjects = 15 // 0x0857: objects in view when the recording started
 )
 
 // Item is one item record from the snapshot.
@@ -58,8 +59,10 @@ type Snapshot struct {
 	Traits     map[int]int // allocated POW..CRT (0-5); only those the recording carried
 	Equipped   []Item
 	Inventory  []Item
-	Skills     map[int]int    // learned skill ID -> level
-	Damage     *DamageSummary // damage dealt to monsters; nil when none
+	Skills     map[int]int // learned skill ID -> level
+	// Damage dealt to monsters by each character in the recording (the
+	// recording one first); empty when none.
+	Damage []*DamageSummary
 }
 
 type chunk struct {
@@ -99,7 +102,7 @@ func Decode(buf []byte) (s *Snapshot, err error) {
 	if tableOffset+containerCount*descriptorBytes > len(buf) {
 		return nil, errors.New("replay: truncated container table")
 	}
-	var session, items, initial, replayData []chunk
+	var session, items, initial, replayData, objects []chunk
 	var stream [][]byte
 	for i := 0; i < containerCount; i++ {
 		d := buf[tableOffset+i*descriptorBytes:]
@@ -128,6 +131,8 @@ func Decode(buf []byte) (s *Snapshot, err error) {
 			initial = generic(body, declared, k1, k2)
 		case ctReplayData:
 			replayData = generic(body, declared, k1, k2)
+		case ctInitialObjects:
+			objects = generic(body, declared, k1, k2)
 		}
 	}
 
@@ -201,8 +206,16 @@ func Decode(buf []byte) (s *Snapshot, err error) {
 	for _, p := range stream {
 		handle(p)
 	}
-	if s.Damage = summarizeDamage(uint32(u32(session, 1010)), stream); s.Damage != nil {
-		s.Damage.DurationMs = u32(replayData, 970)
+	var first [][]byte
+	for _, c := range append(initial, objects...) {
+		first = append(first, c.data)
+	}
+	s.Damage = summarizeDamage(uint32(u32(session, 1010)), s.Player, first, stream)
+	for _, d := range s.Damage {
+		d.DurationMs = u32(replayData, 970)
+		if d.Self {
+			d.Job = s.Job
+		}
 	}
 	return s, nil
 }

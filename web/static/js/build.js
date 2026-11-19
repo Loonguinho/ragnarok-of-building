@@ -831,7 +831,14 @@
       const rd = JSON.parse(sessionStorage.getItem("ro.import.damage") || "null");
       const rdWin = document.getElementById("win-rdmg");
       if (rd && rd.html && rdWin) {
-        document.getElementById("rdmg-body").innerHTML = rd.html;
+        const body = document.getElementById("rdmg-body");
+        body.innerHTML = rd.html;
+        // Character selector: one block per character in the replay.
+        body.addEventListener("change", (e) => {
+          const sel = e.target.closest("[data-rdmg-select]");
+          if (!sel) return;
+          body.querySelectorAll("[data-rdmg-char]").forEach((d) => { d.hidden = d.dataset.rdmgChar !== sel.value; });
+        });
         document.getElementById("rdmg-btn")?.classList.remove("is-hidden");
         if (rd.open) {
           rdWin.classList.remove("is-hidden");

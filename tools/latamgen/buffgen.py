@@ -68,6 +68,58 @@ def script_for(key, v, skill_code):
     return None
 
 
+# latam-ro-calc weapon type names -> rAthena SubType (the simulator's WeaponType).
+WEAPON = {'dagger': 'Dagger', 'sword': '1hSword', 'twohandSword': '2hSword', 'spear': '1hSpear',
+          'twohandSpear': '2hSpear', 'axe': '1hAxe', 'twohandAxe': '2hAxe', 'mace': 'Mace', 'twohandMace': '2hMace',
+          'rod': 'Staff', 'twohandRod': '2hStaff', 'staff': 'Staff', 'twohandStaff': '2hStaff', 'bow': 'Bow',
+          'knuckle': 'Knuckle', 'fist': 'Knuckle', 'none': 'Fist', 'instrument': 'Musical', 'whip': 'Whip',
+          'book': 'Book', 'katar': 'Katar', 'pistol': 'Revolver', 'rifle': 'Rifle', 'gatlingGun': 'Gatling',
+          'shotgun': 'Shotgun', 'grenadeLauncher': 'Grenade', 'huuma': 'Huuma'}
+WEAPON_LOWER = {k.lower(): v for k, v in WEAPON.items()}
+
+
+def passive_effect(key, v, skill_code):
+    """(weapon condition, script) for a passive's bonus key, or None.
+
+    x_<weapon>_atk / x_atk: mastery ATK (added after the ATK multipliers);
+    x_race_<race>_atk, x_element_<ele>_atk: mastery ATK against a target;
+    x_<weapon>_<bonus>, <weapon>_<bonus>, <bonus>_<Weapon>: only with that weapon."""
+    m = re.fullmatch(r'x_race_(\w+?)_atk', key)
+    if m and m.group(1) in RACES:
+        return '', f'bonus2 bMasteryAtkRace,RC_{RACES[m.group(1)]},{v};'
+    m = re.fullmatch(r'x_(?:element_(\w+?)_atk|atk_element_(\w+))', key)
+    if m and (m.group(1) or m.group(2)) in ELES:
+        return '', f'bonus2 bMasteryAtkEle,Ele_{ELES[m.group(1) or m.group(2)]},{v};'
+    if key == 'x_atk':
+        return '', f'bonus bMasteryAtk,{v};'
+    m = re.fullmatch(r'x_(\w+?)_(\w+)', key)
+    if m and m.group(1) in WEAPON:
+        if m.group(2) == 'atk':
+            return WEAPON[m.group(1)], f'bonus bMasteryAtk,{v};'
+        sc = script_for(m.group(2), v, skill_code)
+        return (WEAPON[m.group(1)], sc) if sc else None
+    m = re.fullmatch(r'([a-zA-Z]+)_(\w+)', key)
+    if m and m.group(1) in WEAPON and not key.startswith(('p_', 'm_')):
+        sc = script_for(m.group(2), v, skill_code)
+        return (WEAPON[m.group(1)], sc) if sc else None
+    m = re.fullmatch(r'(\w+)_([A-Z]\w*)', key)
+    if m and m.group(2).lower() in WEAPON_LOWER:
+        sc = script_for(m.group(1), v, skill_code)
+        return (WEAPON_LOWER[m.group(2).lower()], sc) if sc else None
+    m = re.fullmatch(r'(atk|matk)Percent_race_(\w+)', key)
+    if m and m.group(2) in RACES:
+        return '', f'bonus2 {"bAddRace" if m.group(1) == "atk" else "bMagicAddRace"},RC_{RACES[m.group(2)]},{v};'
+    sc = script_for(key, v, skill_code)
+    return ('', sc) if sc else None
+
+
+# Passive names latam-ro-calc gives differently from the client (per class file).
+PASSIVE_ALIASES = {('Genetic', 'Sword Mastery'): 'GN_TRAINING_SWORD'}
+PASSIVE_NAME_ALIASES = {
+    'Musical Lesson': 'BA_MUSICALLESSON', 'Dancing Lesson': 'DC_DANCINGLESSON', 'Wug Teeth': 'RA_TOOTHOFWUG',
+    'Adv Book': 'SA_ADVANCEDBOOK', 'Plagiarism': 'RG_PLAGIARISM', 'Iron Hand': 'MO_IRONHAND', 'Dodge': 'MO_DODGE',
+}
+
 NUM = re.compile(r'[-\d\s+*/().]+')
 
 
@@ -138,7 +190,21 @@ def main():
     def skill_code(name):
         return SKILL_ALIASES.get(name) or by_en.get(norm(name))
 
+    by_code = {j['code']: j for j in jobs.values()}
+
+    def tree_codes(jcodes):
+        """Codes of the skills in the classes' trees (and their ancestors')."""
+        out = set()
+        for jc in jcodes:
+            j, seen = by_code.get(jc), set()
+            while j and j['id'] not in seen:
+                seen.add(j['id'])
+                out.update(skills[str(i)]['code'] for i in j['tree'].values() if str(i) in skills)
+                j = jobs.get(str(j['parent']))
+        return out
+
     gen, report, total, kept = [], [], 0, 0
+    preport, ptotal, pkept = [], 0, 0
     for path in sorted(glob.glob(os.path.join(JOBS, '*.ts'))):
         stem = os.path.basename(path)[:-3]
         if stem.endswith('.spec') or stem.startswith('_') or '.' in stem:
@@ -186,6 +252,63 @@ def main():
         if defs:
             for jc in codes:
                 gen.append(f'\tregClassBuffs({go_str(jc)}, []ClassBuff{{\n' + '\n'.join(defs) + '\n\t})')
+
+        # Passives: applied from the level the build learned the skill at.
+        pdefs = []
+        for m in re.finditer(r'PassiveSkillModel\[\]\s*=\s*\[', src):
+            for e in array_items(src, m.end() - 1):
+                f = top_fields(e)
+                name = (f.get('name') or '').strip('\'"`')
+                if not name:
+                    continue
+                opts = options(f.get('dropdown') or '')
+                if not any(o[2] for o in opts):
+                    continue
+                ptotal += 1
+                # A passive counts at the level the build learned it: only
+                # skills of the class's own tree.
+                tree = tree_codes(codes)
+                code = PASSIVE_ALIASES.get((stem, name)) or PASSIVE_NAME_ALIASES.get(name) or SKILL_ALIASES.get(name)
+                if not code:
+                    found = [s['code'] for s in skills.values() if s['code'] in tree and norm(s['name'].get('en')) == norm(name)]
+                    code = found[0] if found else None
+                label = (f.get('label') or '').strip('\'"`') or name
+                if not code or code not in tree:
+                    preport.append(f'- {stem} · **{label}**: not a skill of the class tree in the client (passive skipped)')
+                    continue
+                mastery = (f.get('isMasteryAtk') or '').strip() == 'true'
+                levels, missing = {}, set()
+                for v, lab, pairs, var, val in opts:
+                    effs = []
+                    for k, expr in pairs:
+                        n = ev(expr, var, val)
+                        if n is None:
+                            missing.add(k)
+                            continue
+                        if n == 0:
+                            continue
+                        eff = ('', f'bonus bMasteryAtk,{n};') if (mastery and k == 'atk') else passive_effect(k, n, skill_code)
+                        if eff is None:
+                            missing.add(k)
+                        else:
+                            effs.append(eff)
+                    if effs:
+                        levels[v] = effs
+                if missing:
+                    preport.append(f'- {stem} · **{label}** ({code}): not computed: {", ".join(sorted(missing))}')
+                if not levels:
+                    continue
+                pkept += 1
+                lv = ', '.join(
+                    f'{v}: {{' + ', '.join(f'{{{go_str(w)}, {go_str(s)}}}' for w, s in effs) + '}'
+                    for v, effs in sorted(levels.items()))
+                pdefs.append(f'\t\t{{Name: {go_str(name)}, Skill: {go_str(code)}, Levels: map[int][][2]string{{{lv}}}}},')
+        if pdefs:
+            for jc in codes:
+                gen.append(f'\tregClassPassives({go_str(jc)}, []ClassPassive{{\n' + '\n'.join(pdefs) + '\n\t})')
+        overrides = re.findall(r'override (getMasteryAtk|setAdditionalBonus)\(', src)
+        if overrides:
+            preport.append(f'- {stem}: hand-written {", ".join(sorted(set(overrides)))} in latam-ro-calc (class rules not generated)')
     with open(OUT, 'w', encoding='utf-8', newline='\n') as fh:
         fh.write('// Code generated by tools/latamgen/buffgen.py from latam-ro-calc (MIT); DO NOT EDIT.\n\n')
         fh.write('package calc\n\nfunc init() {\n' + '\n'.join(gen) + '\n}\n')
@@ -193,7 +316,8 @@ def main():
         fh.write('# Class buffs (buffgen)\n\n')
         fh.write(f'Buffs with bonuses: {total} · with at least one computed bonus: {kept}\n\n')
         fh.write('Bonuses the simulator does not compute (kept out):\n\n' + '\n'.join(report) + '\n')
-    print(f'class buffs: {kept} of {total} -> {OUT}')
+        fh.write(f'\n## Passives\n\nPassives with bonuses: {ptotal} · generated: {pkept}\n\n' + '\n'.join(preport) + '\n')
+    print(f'class buffs: {kept} of {total}, passives: {pkept} of {ptotal} -> {OUT}')
 
 
 if __name__ == '__main__':

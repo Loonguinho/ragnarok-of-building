@@ -571,6 +571,10 @@ var known = map[string]bool{
 	"bPAtk": true, "bSMatk": true, "bRes": true, "bMRes": true, "bHPlus": true, "bCRate": true,
 	"bVariableCastrate": true, "bFixedCastrate": true, "bFixedCast": true, "bDelayrate": true,
 	"bHPrecovRate": true, "bSPrecovRate": true, "bUseSPrate": true, "bSpeedRate": true, "bSpeedAddRate": true,
+	// The simulator's own: mastery ATK of class passives (not an rAthena bonus;
+	// the generated passives write it, the damage engine adds it after the ATK
+	// multipliers).
+	"bMasteryAtk": true,
 }
 
 // Known reports whether a bonus name is applied by the calculator.

@@ -3502,6 +3502,7 @@ func init() {
 		Element:       "Neutral",
 		IgnoreDef:     true,
 		IgnoreSoftDef: true,
+		Hit100:        true,
 		Melee:         meleeAlways,
 		Partial:       "flatDamage, currentSpFn",
 	})
@@ -3514,6 +3515,7 @@ func init() {
 		Element:       "Neutral",
 		IgnoreDef:     true,
 		IgnoreSoftDef: true,
+		Hit100:        true,
 		Melee:         meleeAlways,
 		Partial:       "flatDamage, currentSpFn",
 	})
@@ -3717,6 +3719,7 @@ func init() {
 			_ = v_baseLevel
 			return ((500 * v_skillLevel) * (v_baseLevel / 100))
 		},
+		Hit100:  true,
 		Partial: "finalDmgFormula, currentHpFn, currentSpFn",
 	})
 	regJob("JT_SURA_H", &SkillFormula{
@@ -3729,6 +3732,7 @@ func init() {
 			_ = v_baseLevel
 			return ((500 * v_skillLevel) * (v_baseLevel / 100))
 		},
+		Hit100:  true,
 		Partial: "finalDmgFormula, currentHpFn, currentSpFn",
 	})
 	regJob("JT_SURA", &SkillFormula{
@@ -3742,6 +3746,7 @@ func init() {
 			_ = v_baseLevel
 			return ((800 * v_skillLevel) * (v_baseLevel / 100))
 		},
+		Hit100:  true,
 		Partial: "finalDmgFormula, currentHpFn, currentSpFn",
 	})
 	regJob("JT_SURA_H", &SkillFormula{
@@ -3755,6 +3760,7 @@ func init() {
 			_ = v_baseLevel
 			return ((800 * v_skillLevel) * (v_baseLevel / 100))
 		},
+		Hit100:  true,
 		Partial: "finalDmgFormula, currentHpFn, currentSpFn",
 	})
 	regJob("JT_THIEF", &SkillFormula{

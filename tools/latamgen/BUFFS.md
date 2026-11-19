@@ -25,3 +25,48 @@ Bonuses the simulator does not compute (kept out):
 - Whitesmith · **Power Thrust Lv5** (BS_OVERTHRUST): not computed: flatDmg
 - Whitesmith · **Weapon Perfect Lv5** (BS_WEAPONPERFECT): not computed: ignore_size_penalty
 - Whitesmith · **P.Maximize Lv5** (Power Maximize): not computed: weapon_maximize
+
+## Passives
+
+Passives with bonuses: 39 · generated: 31
+
+- AbyssChaser: hand-written setAdditionalBonus in latam-ro-calc (class rules not generated)
+- ArchBishop: hand-written getMasteryAtk in latam-ro-calc (class rules not generated)
+- ArchMage: hand-written setAdditionalBonus in latam-ro-calc (class rules not generated)
+- AssassinCross · **Adv Katar** (ASC_KATAR): not computed: advKatar
+- AssassinCross · **Lefthand Mastery** (AS_LEFT): not computed: weapon_left
+- AssassinCross: hand-written getMasteryAtk in latam-ro-calc (class rules not generated)
+- Cardinal: hand-written setAdditionalBonus in latam-ro-calc (class rules not generated)
+- Doram · **Power of Sea** (SU_POWEROFSEA): not computed: healPercent
+- DragonKnight: hand-written setAdditionalBonus in latam-ro-calc (class rules not generated)
+- ElementalMaster: hand-written setAdditionalBonus in latam-ro-calc (class rules not generated)
+- Genetic · **Cart Remodeling** (GN_REMODELING_CART): not computed: weight
+- Genetic: hand-written getMasteryAtk in latam-ro-calc (class rules not generated)
+- ImperialGuard: hand-written setAdditionalBonus in latam-ro-calc (class rules not generated)
+- Inquisitor: hand-written setAdditionalBonus in latam-ro-calc (class rules not generated)
+- Kagerou: hand-written getMasteryAtk, setAdditionalBonus in latam-ro-calc (class rules not generated)
+- Mechanic · **Fire Earth Research** (NC_RESEARCHFE): not computed: x_sofDef
+- Mechanic: hand-written getMasteryAtk, setAdditionalBonus in latam-ro-calc (class rules not generated)
+- Minstrel: hand-written getMasteryAtk in latam-ro-calc (class rules not generated)
+- NightWatch: hand-written setAdditionalBonus in latam-ro-calc (class rules not generated)
+- Oboro: hand-written getMasteryAtk, setAdditionalBonus in latam-ro-calc (class rules not generated)
+- Ranger · **Wug Teeth** (RA_TOOTHOFWUG): not computed: wug_atk
+- Ranger: hand-written getMasteryAtk in latam-ro-calc (class rules not generated)
+- Rebellion · **Single Action** (GS_SINGLEACTION): not computed: skillAspd
+- RoyalGuard: hand-written getMasteryAtk, setAdditionalBonus in latam-ro-calc (class rules not generated)
+- RuneKnight: hand-written getMasteryAtk, setAdditionalBonus in latam-ro-calc (class rules not generated)
+- Scholar · **Adv Book**: not a skill of the class tree in the client (passive skipped)
+- Scholar: hand-written getMasteryAtk, setAdditionalBonus in latam-ro-calc (class rules not generated)
+- ShadowCross: hand-written setAdditionalBonus in latam-ro-calc (class rules not generated)
+- SkyEmperor: hand-written setAdditionalBonus in latam-ro-calc (class rules not generated)
+- Sniper · **Steel Crow** (HT_STEELCROW): not computed: falconDmg
+- Sorcerer: hand-written setAdditionalBonus in latam-ro-calc (class rules not generated)
+- SuperNovice: hand-written getMasteryAtk in latam-ro-calc (class rules not generated)
+- Sura: hand-written getMasteryAtk in latam-ro-calc (class rules not generated)
+- Taekwondo: hand-written getMasteryAtk in latam-ro-calc (class rules not generated)
+- Troubadour: hand-written setAdditionalBonus in latam-ro-calc (class rules not generated)
+- Trouvere: hand-written setAdditionalBonus in latam-ro-calc (class rules not generated)
+- Wanderer: hand-written setAdditionalBonus in latam-ro-calc (class rules not generated)
+- Warlock · **Radius** (WL_RADIUS): not computed: fctPercent
+- Whitesmith · **Skin Tempering** (BS_SKINTEMPER): not computed: x_resist_fire, x_resist_neutral
+- Windhawk: hand-written setAdditionalBonus in latam-ro-calc (class rules not generated)

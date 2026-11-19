@@ -170,3 +170,69 @@ func TestClassBuffApplies(t *testing.T) {
 		t.Errorf("Tempering 10: P.ATK bonus %d -> %d, want +15", plain.Bonuses["bPAtk"], r.Bonuses["bPAtk"])
 	}
 }
+
+// Every generated passive effect gives bonuses the calculator reads.
+func TestClassPassiveScripts(t *testing.T) {
+	names := map[string]bool{"bAddSize": true, "bIgnoreDefClassRate": true, "bMagicAddRace": true, "bSkillAtk": true,
+		"bMasteryAtk": true, "bMasteryAtkRace": true, "bMasteryAtkEle": true, "bMaxHP": true, "bMaxSP": true}
+	for k := range buffBonusNames {
+		names[k] = true
+	}
+	n := 0
+	for job, ps := range latamClassPassives {
+		for _, p := range ps {
+			for lv, effs := range p.Levels {
+				for _, e := range effs {
+					n++
+					res := script.Eval(e[1], script.Context{})
+					if res.Skipped > 0 || len(res.Bonus)+len(res.Extra) == 0 {
+						t.Errorf("%s %s Nv%d: %q gives nothing", job, p.Name, lv, e[1])
+					}
+					for k := range res.Bonus {
+						if !names[k] {
+							t.Errorf("%s %s: %s is not read by the calculator", job, p.Name, k)
+						}
+					}
+					for k := range res.Extra {
+						if !names[strings.Fields(k)[0]] {
+							t.Errorf("%s %s: %s is not read by the calculator", job, p.Name, k)
+						}
+					}
+				}
+			}
+		}
+	}
+	if n == 0 {
+		t.Fatal("no passives generated")
+	}
+}
+
+// Perícia com Espada 10 learned: +40 mastery ATK with a sword, none with a spear.
+func TestSwordMasteryPassive(t *testing.T) {
+	c, err := gamedata.Load(filepath.Join("..", "..", "data", "gen", "catalog.json.gz"))
+	if err != nil {
+		t.Skip("catalog not generated")
+	}
+	var job, sm int
+	for id, j := range c.Jobs {
+		if j.Code == "JT_KNIGHT" {
+			job = id
+		}
+	}
+	for id, s := range c.Skills {
+		if s.Code == "SM_SWORD" {
+			sm = id
+		}
+	}
+	b := Build{Job: job, BaseLv: 99, JobLv: 50, Skills: map[int]int{sm: 10}}
+	bonus, extra := map[string]int{}, map[string]int{}
+	applyClassPassives(&b, c, "1hSword", bonus, extra)
+	if bonus["bMasteryAtk"] != 40 {
+		t.Errorf("sword: mastery %d, want 40 (%v)", bonus["bMasteryAtk"], bonus)
+	}
+	bonus = map[string]int{}
+	applyClassPassives(&b, c, "1hSpear", bonus, extra)
+	if bonus["bMasteryAtk"] != 0 {
+		t.Errorf("spear: mastery %d, want 0", bonus["bMasteryAtk"])
+	}
+}

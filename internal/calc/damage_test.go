@@ -131,9 +131,31 @@ func TestHitAndCritChance(t *testing.T) {
 	m.Stats[LUK] = 20              // -4% crit
 	d := Damage(Build{}, r, dmgCatalog(), m, Attack{})
 	if d.HitChance != 39 {
-		t.Errorf("hit = %d, want 39", d.HitChance)
+		t.Errorf("hit = %v, want 39", d.HitChance)
 	}
 	if d.CritChance < 25.9 || d.CritChance > 26.1 {
 		t.Errorf("crit chance = %v, want 26", d.CritChance)
+	}
+}
+
+// Perfect hit is rolled before the flee check; katars double CRIT; skills
+// marked Hit100 never miss; Olhos de Águia adds hidden hit.
+func TestHitDetails(t *testing.T) {
+	m := target(0, 0, 10) // flee 111
+	c := dmgCatalog()
+	r := baseResult()
+	r.HIT = 150 // 39%
+	r.PerfectHit = 10
+	if d := Damage(Build{}, r, c, m, Attack{}); d.HitChance < 45.09 || d.HitChance > 45.11 {
+		t.Errorf("perfect hit 10%% + 90%% x 39%% = 45.1%%, got %v", d.HitChance)
+	}
+	r.PerfectHit = 0
+	f := &SkillFormula{Code: "X", Hit100: true, CritRate: 1, CritDmg: 1, Ratio: func(FormulaInput) float64 { return 100 }}
+	if d := Damage(Build{}, r, c, m, Attack{SkillCode: "X", Formula: f}); d.HitChance != 100 {
+		t.Errorf("Hit100 skill: %v", d.HitChance)
+	}
+	c.Skills = map[int]*gamedata.Skill{43: {ID: 43, Code: "AC_VULTURE"}}
+	if d := Damage(Build{Skills: map[int]int{43: 10}}, r, c, m, Attack{}); d.HitChance != 49 {
+		t.Errorf("Olhos de Águia 10: 39%% + 10 = 49%%, got %v", d.HitChance)
 	}
 }

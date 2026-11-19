@@ -96,3 +96,67 @@ func applyClassBuffs(b *Build, c *gamedata.Catalog, bonus, extra map[string]int)
 		addAll(extra, res.Extra)
 	}
 }
+
+// ClassPassive is a class passive (Perícia com Espada, Treino com Espadas...)
+// generated from latam-ro-calc: it counts at the level the build learned
+// the skill. Each effect is {weapon type ("" = any), rAthena script}.
+type ClassPassive struct {
+	Name   string
+	Skill  string // client skill code
+	Levels map[int][][2]string
+}
+
+var latamClassPassives = map[string][]ClassPassive{}
+
+func regClassPassives(job string, ps []ClassPassive) {
+	latamClassPassives[job] = append(latamClassPassives[job], ps...)
+}
+
+// classPassivesFor lists a job's passives and its ancestors' (the job's own
+// definition of a skill wins).
+func classPassivesFor(c *gamedata.Catalog, jobID int) []ClassPassive {
+	var out []ClassPassive
+	seen := map[string]bool{}
+	chain := c.Chain(jobID)
+	for i := len(chain) - 1; i >= 0; i-- {
+		j := c.Jobs[chain[i]]
+		if j == nil {
+			continue
+		}
+		for _, p := range latamClassPassives[j.Code] {
+			if !seen[p.Skill] {
+				seen[p.Skill] = true
+				out = append(out, p)
+			}
+		}
+	}
+	return out
+}
+
+// applyClassPassives adds the learned passives' bonuses for the weapon in
+// hand. A level the table lacks uses the highest one below it.
+func applyClassPassives(b *Build, c *gamedata.Catalog, weapon string, bonus, extra map[string]int) {
+	for _, p := range classPassivesFor(c, b.Job) {
+		lv := learnedLv(*b, c, p.Skill)
+		if lv <= 0 {
+			continue
+		}
+		effs, best := p.Levels[lv], 0
+		if effs == nil {
+			for l := range p.Levels {
+				if l <= lv && l > best {
+					best = l
+				}
+			}
+			effs = p.Levels[best]
+		}
+		for _, e := range effs {
+			if e[0] != "" && e[0] != weapon {
+				continue
+			}
+			res := script.Eval(e[1], script.Context{BaseLv: b.BaseLv, JobLv: b.JobLv, Class: b.Job})
+			addAll(bonus, res.Bonus)
+			addAll(extra, res.Extra)
+		}
+	}
+}

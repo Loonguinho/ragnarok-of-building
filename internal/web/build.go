@@ -519,6 +519,7 @@ var bonusLabels = map[string]string{
 	"bVariableCastrate": "Conjuração variável", "bFixedCastrate": "Conjuração fixa", "bFixedCast": "Conjuração fixa (ms)",
 	"bDelayrate": "Pós-conjuração", "bHPrecovRate": "Recuperação de HP", "bSPrecovRate": "Recuperação de SP",
 	"bUseSPrate": "Consumo de SP", "bSpeedRate": "Velocidade", "bSpeedAddRate": "Velocidade",
+	"bMasteryAtk": "ATQ de maestria",
 }
 
 func bonusLabel(k string) string {
@@ -563,6 +564,10 @@ func extraLabel(k string, c *gamedata.Catalog, l string) string {
 		return arg
 	}
 	switch parts[0] {
+	case "bMasteryAtkRace":
+		return T("ATQ de maestria vs ") + name(raceNames)
+	case "bMasteryAtkEle":
+		return T("ATQ de maestria vs ") + name(eleNames)
 	case "bAddRace":
 		return T("Dano físico vs ") + name(raceNames)
 	case "bMagicAddRace":

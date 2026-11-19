@@ -83,7 +83,7 @@ func TestMagicPipeline(t *testing.T) {
 	c := dmgCatalog()
 	d := Damage(Build{}, r, c, m, Attack{SkillCode: "X", Formula: f})
 	if d.Avg != 12000 || d.Min != 11200 || d.Max != 12800 || d.HitChance != 100 || d.Crit != 0 {
-		t.Errorf("magic min/avg/max %d/%d/%d hit %d crit %d", d.Min, d.Avg, d.Max, d.HitChance, d.Crit)
+		t.Errorf("magic min/avg/max %d/%d/%d hit %v crit %d", d.Min, d.Avg, d.Max, d.HitChance, d.Crit)
 	}
 	// MDEF 100 + soft MDEF (10+0)/4=2: 12000 x (1100/2000) = 6600 - 2 = 6598.
 	m2 := target(0, 0, 10)

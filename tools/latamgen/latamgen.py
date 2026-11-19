@@ -288,7 +288,7 @@ def build_literal(code, name, f, fctx=None, rctx=None):
         if f.get(key):
             parts.append(f'{field}: {float(f[key])}')
     for key, field in (('forceCri', 'ForceCrit'), ('isIgnoreDef', 'IgnoreDef'), ('isIgnoreSDef', 'IgnoreSoftDef'),
-                       ('isIgnoreRes', 'IgnoreRes')):
+                       ('isIgnoreRes', 'IgnoreRes'), ('isHit100', 'Hit100')):
         if f.get(key, '').strip() == 'true':
             parts.append(f'{field}: true')
     mel = f.get('isMelee', '').strip()

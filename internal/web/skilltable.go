@@ -14,6 +14,8 @@ type skillRow struct {
 	Hits       int
 	Avg, Crit  int64
 	Expected   float64
+	HitChance  float64 // % of non-critical uses that land
+	CritChance float64 // % of critical uses
 	HitsToKill int
 	Selected   bool
 	FromDesc   bool // the % comes from the skill description, not a formula
@@ -50,7 +52,7 @@ func (s *Server) skillTable(b calc.Build, r calc.Result, l string) []skillRow {
 			continue
 		}
 		row := skillRow{ID: id, Level: nb.Atk.Level, Name: tr(l, "Ataque básico"), Hits: d.Hits,
-			Avg: int64(d.Dmg.Avg), Crit: int64(d.Dmg.Crit), Expected: d.Dmg.Expected, HitsToKill: d.Dmg.HitsToKill,
+			Avg: int64(d.Dmg.Avg), Crit: int64(d.Dmg.Crit), Expected: d.Dmg.Expected, HitChance: d.Dmg.HitChance, CritChance: d.Dmg.CritChance, HitsToKill: d.Dmg.HitsToKill,
 			Selected: id == b.Atk.Skill, FromDesc: d.RatioSource == "descrição"}
 		if sk := c.Skills[id]; sk != nil {
 			row.Name = sk.Name.Get(l)

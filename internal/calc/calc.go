@@ -136,6 +136,7 @@ type Result struct {
 	ShieldRefine     int
 	Ranged           bool
 	CritTenths       int    // CRIT in 1/10 % (rAthena cri), for crit chance
+	PerfectHit       int    // % of attacks that ignore the target's flee
 	st, tr           [6]int // final stats/traits (for the damage formula)
 	MATKMin, MATKMax int
 	EquipMATK        int
@@ -577,8 +578,9 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		baseJob[i] = b.Stats[i] + jb[i]
 	}
 	applyBuffs(&b, baseJob, bonus, extra)
-	applyClassBuffs(&b, c, bonus, extra) // the class's own buffs (Buffs window, Próprios)
-	LatamPassives(b, c, r.WeaponType, bonus) // class passives (e.g. War Book Mastery)
+	applyClassBuffs(&b, c, bonus, extra)                  // the class's own buffs (Buffs window, Próprios)
+	LatamPassives(b, c, r.WeaponType, bonus)              // hand-written passives (War Book Mastery)
+	applyClassPassives(&b, c, r.WeaponType, bonus, extra) // the class passives generated from latam-ro-calc
 	r.Bonuses = bonus
 	r.Extra = extra
 	r.HardDEF += refineDef / 100
@@ -640,7 +642,13 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	r.FLEE = lv + st[AGI] + st[LUK]/5 + 100 + 2*tr[CON] + bonus["bFlee"]
 	r.FLEE2 = (st[LUK]+10)/10 + bonus["bFlee2"]
 	r.CritTenths = lv/10 + 10 + st[LUK]*3 + 10*bonus["bCritical"]
+	if r.WeaponType == "Katar" { // status_calc_bl: katars double CRIT (after every bonus)
+		r.CritTenths *= 2
+	}
 	r.CRIT = float64(r.CritTenths) / 10
+	// Perfect hit: rolled before the target's flee (is_attack_hitting). SOR ÷ 10
+	// follows latam-ro-calc's LATAM measurements; items add bPerfectHitRate.
+	r.PerfectHit = st[LUK]/10 + bonus["bPerfectHitRate"] + bonus["bPerfectHitAddRate"]
 	r.SoftDEF = int(float64(lv+st[VIT])/2+float64(st[AGI])/5) + bonus["bDef2"]
 	r.SoftMDEF = int(float64(st[INT])+float64(lv)/4+float64(st[DEX]+st[VIT])/5) + bonus["bMdef2"]
 	r.HardDEF += bonus["bDef"]

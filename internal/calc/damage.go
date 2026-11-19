@@ -27,9 +27,9 @@ type Step struct {
 
 // DamageResult is the damage of one attack against one monster.
 type DamageResult struct {
-	Min, Avg, Max int64 // per use, normal (non-critical) hits
-	Crit          int64 // critical hit, 0 if the attack cannot crit
-	HitChance     int   // % (5-100)
+	Min, Avg, Max int64   // per use, normal (non-critical) hits
+	Crit          int64   // critical hit, 0 if the attack cannot crit
+	HitChance     float64 // % of non-critical attacks that land (perfect hit included)
 	CritChance    float64
 	Expected      float64 // average per use counting misses and crits
 	HitsToKill    int     // uses to kill at the average normal damage
@@ -190,6 +190,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	}
 
 	bn := r.Bonuses
+	mastery := int64(bn["bMasteryAtk"] + sum("bMasteryAtkRace", "RC_"+m.Race, "RC_All") + sum("bMasteryAtkEle", "Ele_"+m.Element, "Ele_All"))
 	one := func(weapon int64, crit, rec bool) int64 {
 		step := func(label, format string, args ...any) {
 			if rec {
@@ -222,6 +223,13 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		if r.PATK != 0 {
 			dmg = int64(math.Floor(float64(dmg) * float64(100+r.PATK) / 100))
 			step("P.ATQ", "× %d%% = %d", 100+r.PATK, dmg)
+		}
+
+		// Mastery ATK (class passives): added after the ATK multipliers, untouched
+		// by size, element and card modifiers (latam-ro-calc's calcTotalAtk).
+		if mastery != 0 {
+			dmg += mastery
+			step("ATQ de maestria", "%+d = %d", mastery, dmg)
 		}
 
 		if crit {
@@ -292,11 +300,12 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	d.Avg = one(int64((wmin+wmax)/2), false, true)
 
 	// Hit and critical chances (is_attack_hitting / is_attack_critical, renewal).
-	mobFlee := m.Level + m.Stats[AGI] + 100
-	d.HitChance = clamp(r.HIT-mobFlee, 5, 100)
+	d.HitChance = hitChance(b, r, c, m, f)
 	if canCrit {
 		d.Crit = one(int64(wmax), true, false) // criticals use max weapon variance
-		d.CritChance = math.Max(0, float64(r.CritTenths-m.Stats[LUK]*2)/10) * critRate
+		// bCriticalAddRace adds whole CRIT points against a race.
+		cri := r.CritTenths + 10*sum("bCriticalAddRace", "RC_"+m.Race, "RC_All") - m.Stats[LUK]*2
+		d.CritChance = math.Max(0, float64(cri)/10) * critRate
 		if f != nil && f.ForceCrit {
 			d.CritChance = 100
 		}
@@ -315,4 +324,33 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		d.Notes = append(d.Notes, "Efeitos de equipamento não simulados (procs, efeitos condicionais) não entram no dano.")
 	}
 	return d
+}
+
+// hitChance is the % of non-critical attacks that land (rAthena
+// is_attack_hitting, renewal): HIT − the target's flee, plus the hidden
+// hit of Olhos de Águia and Pesquisa de Armas, capped to 5..100; perfect
+// hit is rolled first and skips the flee check. (Treino com Espadas' +3 per
+// level comes as HIT from the class passives.)
+func hitChance(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, f *SkillFormula) float64 {
+	if f != nil && f.Hit100 {
+		return 100
+	}
+	mobFlee := m.Level + m.Stats[AGI] + 100
+	rate := r.HIT - mobFlee + learnedLv(b, c, "AC_VULTURE")
+	if lv := learnedLv(b, c, "BS_WEAPONRESEARCH"); lv > 0 {
+		rate += rate * 2 * lv / 100
+	}
+	rolled := float64(clamp(rate, 5, 100))
+	perfect := float64(clamp(r.PerfectHit, 0, 100))
+	return perfect + (100-perfect)*rolled/100
+}
+
+// learnedLv is the level the build has in a skill (by client code).
+func learnedLv(b Build, c *gamedata.Catalog, code string) int {
+	for id, lv := range b.Skills {
+		if sk := c.Skills[id]; sk != nil && sk.Code == code {
+			return lv
+		}
+	}
+	return 0
 }

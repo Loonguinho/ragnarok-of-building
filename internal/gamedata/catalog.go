@@ -82,6 +82,15 @@ type Item struct {
 	// description (clientimport.DescScript) and the lines it skipped.
 	DescScript  string `json:"dscript,omitempty"`
 	DescSkipped int    `json:"dskip,omitempty"`
+	// latam-ro-calc's script (item.json, MIT): bonus key -> lines in its own
+	// notation. LatamName is the item's English name there, for EQUIP[...]
+	// conditions.
+	// LatamKeys are the bonuses (Bonus names / Extra keys) where the LATAM
+	// script wins over the rAthena one (calc.DecideLatamKeys); Latam is
+	// kept only for those items.
+	Latam     map[string][]string `json:"lt,omitempty"`
+	LatamName string              `json:"ltn,omitempty"`
+	LatamKeys []string            `json:"ltk,omitempty"`
 	// Who can equip it (rAthena Jobs/Classes); empty means everyone.
 	EquipJobs    []string `json:"jobs,omitempty"`
 	EquipClasses []string `json:"classes,omitempty"`

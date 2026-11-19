@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"ragnarok-of-building/internal/calc"
 	"ragnarok-of-building/internal/clientimport"
 	"ragnarok-of-building/internal/gamedata"
 	"ragnarok-of-building/internal/grf"
@@ -205,6 +206,13 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 	}
 	progress("Lendo os bônus das descrições dos itens exclusivos do LATAM…")
 	clientimport.DescBonuses(c)
+	progress("Lendo os scripts de itens do LATAM (latam-ro-calc)…")
+	if n, err := clientimport.LatamItemScripts(filepath.Join(filepath.Dir(mobs), "item.json"), c); err != nil {
+		progress("Scripts de itens do latam-ro-calc não lidos: " + err.Error())
+	} else {
+		k := calc.DecideLatamKeys(c, clientimport.DescReader(c))
+		progress(fmt.Sprintf("Scripts LATAM: %d itens lidos, %d com bônus corrigidos pela descrição.", n, k))
+	}
 	progress("Lendo os efeitos de buffs e passivas nas descrições das habilidades…")
 	clientimport.SkillDescEffects(c)
 	c.ApplyLatamLimits()

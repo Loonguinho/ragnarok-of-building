@@ -565,6 +565,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	}
 	slotRefine, slotGrade := slotStates(b)
 	sbase := scriptBase(b, c, param, equipIDs, slotRefine, slotGrade)
+	lenv := newLatamEnv(b, c) // LATAM item scripts (latamitem.go)
 	bonus := map[string]int{}
 	extra := map[string]int{}
 	r.WeaponType = "Fist"
@@ -595,6 +596,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		ctx := sbase
 		ctx.Refine, ctx.Grade = e.Refine, e.Grade
 		res := script.Eval(itemScript(it, &r.SkippedScriptEffects), ctx)
+		lenv.overLatam(it, e.Item, slot, true, e.Refine, &res)
 		addAll(bonus, res.Bonus)
 		addAll(extra, res.Extra)
 		r.SkippedScriptEffects += res.Skipped
@@ -614,6 +616,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 				cctx := sbase
 				cctx.Refine, cctx.Grade = e.Refine, e.Grade
 				cr := script.Eval(itemScript(ci, &r.SkippedScriptEffects), cctx)
+				lenv.overLatam(ci, cd, slot, false, e.Refine, &cr)
 				addAll(bonus, cr.Bonus)
 				addAll(extra, cr.Extra)
 				r.SkippedScriptEffects += cr.Skipped

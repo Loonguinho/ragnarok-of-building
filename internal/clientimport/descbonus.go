@@ -29,20 +29,7 @@ import (
 // rAthena already has. The calc uses DescScript only for items actually
 // equipped or slotted, so consumables' text never counts.
 func DescBonuses(c *gamedata.Catalog) (scripts, combos int) {
-	names := map[string][]int{}
-	for id, it := range c.Items {
-		n := strings.ToLower(reSlots.ReplaceAllString(it.Name.Get("pt"), ""))
-		names[n] = append(names[n], id)
-	}
-	for _, ids := range names {
-		slices.Sort(ids)
-	}
-	skills := map[string]string{}
-	for _, sk := range c.Skills {
-		if n := strings.ToLower(sk.Name.Get("pt")); n != "" {
-			skills[n] = sk.Code
-		}
-	}
+	names, skills := descMaps(c)
 	key := func(ids []int) string {
 		s := slices.Clone(ids)
 		slices.Sort(s)
@@ -115,6 +102,7 @@ var descFixed = map[string][2]string{
 	"dano físico":    {"", "bAtkRate"}, "dano mágico": {"", "bMatkRate"},
 	"dano físico à distância": {"", "bLongAtkRate"}, "dano físico corpo a corpo": {"", "bShortAtkRate"},
 	"dano crítico": {"", "bCritAtkRate"}, "efetividade de cura": {"", "bHealPower"},
+	"cura recebida":                           {"", "bHealPower2"},
 	"custo de sp das habilidades":             {"", "bUseSPrate"},
 	"dano mágico de todas as propriedades":    {"", "bMagicAtkEle Ele_All"},
 	"resistência a todas as propriedades":     {"", "bSubEle Ele_All"},
@@ -140,6 +128,39 @@ var descSize = map[string]string{"pequeno": "Size_Small", "médio": "Size_Medium
 type DescCombo struct {
 	Items  []int
 	Script string
+}
+
+// descMaps are the lowercase PT item names (-> ids) and skill names (->
+// codes) that descriptions refer to.
+func descMaps(c *gamedata.Catalog) (map[string][]int, map[string]string) {
+	names := map[string][]int{}
+	for id, it := range c.Items {
+		n := strings.ToLower(reSlots.ReplaceAllString(it.Name.Get("pt"), ""))
+		names[n] = append(names[n], id)
+	}
+	for _, ids := range names {
+		slices.Sort(ids)
+	}
+	skills := map[string]string{}
+	for _, sk := range c.Skills {
+		if n := strings.ToLower(sk.Name.Get("pt")); n != "" {
+			skills[n] = sk.Code
+		}
+	}
+	return names, skills
+}
+
+// DescReader reads any item's description as DescScript does (for items
+// that have an rAthena script too): the script and the lines skipped.
+func DescReader(c *gamedata.Catalog) func(id int, it *gamedata.Item) (string, int) {
+	names, skills := descMaps(c)
+	return func(id int, it *gamedata.Item) (string, int) {
+		if it.Script == "" {
+			return it.DescScript, it.DescSkipped
+		}
+		s, _, skipped := DescScript(id, it.Desc["pt"], names, skills)
+		return s, skipped
+	}
 }
 
 // DescScript translates a PT description. names maps lowercase item names

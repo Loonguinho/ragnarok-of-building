@@ -508,7 +508,7 @@
 
 {{define "buff_row"}}
 <div class="ro-fx{{if .Value}} is-on{{end}}" data-fx-row{{if .Excl}} title="{{t "Só um deste tipo por vez (escolher outro desliga este)."}}"{{end}}>
-  {{if .SkillID}}<img class="ro-fx__icon" src="https://static.divine-pride.net/images/skill/{{.SkillID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">{{else}}<span class="ro-fx__icon"></span>{{end}}
+  {{if .SkillID}}<img class="ro-fx__icon" src="https://static.divine-pride.net/images/skill/{{.SkillID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">{{else if .ItemID}}<img class="ro-fx__icon" src="https://static.divine-pride.net/images/items/item/{{.ItemID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'" data-tip-item="{{.ItemID}}">{{else}}<span class="ro-fx__icon"></span>{{end}}
   <span class="ro-fx__name">{{.Label}}</span>
   {{template "buff_control" .}}
 </div>

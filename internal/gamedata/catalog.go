@@ -95,6 +95,9 @@ type Item struct {
 	// ("chance__<key>" lines), for items whose rAthena script has no
 	// autobonus.
 	LatamProcs map[string][]string `json:"ltp,omitempty"`
+	// LatamUse: a consumable's bonuses while its status lasts
+	// (latam-ro-calc item.json, consumables only).
+	LatamUse map[string][]string `json:"ltu,omitempty"`
 	// Who can equip it (rAthena Jobs/Classes); empty means everyone.
 	EquipJobs    []string `json:"jobs,omitempty"`
 	EquipClasses []string `json:"classes,omitempty"`

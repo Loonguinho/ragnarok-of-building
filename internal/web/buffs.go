@@ -27,6 +27,7 @@ type buffGroup struct {
 type buffItem struct {
 	Key, Label string
 	SkillID    int    // icon; 0 = none
+	ItemID     int    // item icon (consumables)
 	Excl       string // only one of the same Excl group at a time
 	State      bool   // a class buff or formula state: kept in the attack states (data-atk-state)
 	Toggle     bool   // Sim/Não buttons (OnValue is the "Sim" value)
@@ -183,6 +184,23 @@ func buffGroups(b calc.Build, c *gamedata.Catalog, l string) []buffGroup {
 		if v > 0 {
 			g.Active++
 			g.Open = true
+		}
+	}
+	if c != nil {
+		for i := range out {
+			if out[i].Name != "Consumíveis" {
+				continue
+			}
+			g := &out[i]
+			for _, it := range calc.Consumables(c) {
+				key := calc.ConsumableKey(it.ID)
+				v := b.Buffs[key]
+				g.Items = append(g.Items, buffItem{Key: key, Label: it.Name.Get(l), ItemID: it.ID, Value: v, ValueStr: strconv.Itoa(v)})
+				if v > 0 {
+					g.Active++
+					g.Open = true
+				}
+			}
 		}
 	}
 	return out

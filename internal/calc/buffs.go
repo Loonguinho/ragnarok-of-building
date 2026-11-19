@@ -280,12 +280,14 @@ var Buffs = []BuffDef{
 	}},
 
 	// ---- Consumíveis ----
-	{Key: "food_str", Label: "Comida de FOR", Group: "Consumíveis", Choices: amounts(5, 10, 15, 20), Script: statFood("bStr")},
-	{Key: "food_agi", Label: "Comida de AGI", Group: "Consumíveis", Choices: amounts(5, 10, 15, 20), Script: statFood("bAgi")},
-	{Key: "food_vit", Label: "Comida de VIT", Group: "Consumíveis", Choices: amounts(5, 10, 15, 20), Script: statFood("bVit")},
-	{Key: "food_int", Label: "Comida de INT", Group: "Consumíveis", Choices: amounts(5, 10, 15, 20), Script: statFood("bInt")},
-	{Key: "food_dex", Label: "Comida de DES", Group: "Consumíveis", Choices: amounts(5, 10, 15, 20), Script: statFood("bDex")},
-	{Key: "food_luk", Label: "Comida de SOR", Group: "Consumíveis", Choices: amounts(5, 10, 15, 20), Script: statFood("bLuk")},
+	// Stat foods on LATAM (latam-ro-calc food-stat-list.ts): the biscuit
+	// sticks (+15, a _CASH status) and the dishes (+20) add up.
+	{Key: "food_str", Label: "Comida de FOR", Group: "Consumíveis", Choices: foods("Palitos de FOR", "Churrasco de Selvagem"), Script: statFood("bStr")},
+	{Key: "food_agi", Label: "Comida de AGI", Group: "Consumíveis", Choices: foods("Palitos de AGI", "Cozido de Drosera"), Script: statFood("bAgi")},
+	{Key: "food_vit", Label: "Comida de VIT", Group: "Consumíveis", Choices: foods("Palitos de VIT", "Carne ao Vinho"), Script: statFood("bVit")},
+	{Key: "food_int", Label: "Comida de INT", Group: "Consumíveis", Choices: foods("Palitos de INT", "Coquetel Uivante"), Script: statFood("bInt")},
+	{Key: "food_dex", Label: "Comida de DES", Group: "Consumíveis", Choices: foods("Palitos de DES", "Chá Gelado de Siroma"), Script: statFood("bDex")},
+	{Key: "food_luk", Label: "Comida de SOR", Group: "Consumíveis", Choices: foods("Palitos de SOR", "Macarrão com Petite"), Script: statFood("bLuk")},
 	// ASPD potions: a fixed bonus × AGI ÷ 200 (rAthena SC_ASPDPOTION*, in
 	// status_calc_aspd's fixed group), LATAM values 4/6/9 (latam-ro-calc
 	// aspd-potion-list.ts). The stored values stay 10/15/20 (older builds).
@@ -300,6 +302,10 @@ var Buffs = []BuffDef{
 	{Key: "x_smatk", Label: "S.ATQM", Group: "Outros", Max: 999, Script: func(v int, _ [6]int) string { return fmt.Sprintf("bonus bSMatk,%d;", v) }},
 	{Key: "x_physrate", Label: "Dano físico %", Group: "Outros", Max: 999, Script: func(v int, _ [6]int) string { return fmt.Sprintf("bonus bAtkRate,%d;", v) }},
 	{Key: "x_magicrate", Label: "Dano mágico %", Group: "Outros", Max: 999, Script: func(v int, _ [6]int) string { return fmt.Sprintf("bonus bMatkRate,%d;", v) }},
+}
+
+func foods(stick, dish string) [][2]string {
+	return [][2]string{{"0", "—"}, {"15", stick + " (+15)"}, {"20", dish + " (+20)"}, {"35", stick + " + " + dish + " (+35)"}}
 }
 
 func statFood(name string) func(int, [6]int) string {
@@ -348,7 +354,7 @@ func (d *BuffDef) valid(v int) bool {
 // exclusive group (the first in display order).
 func normalizeBuffs(b *Build) {
 	for k, v := range b.Buffs {
-		if strings.HasPrefix(k, ItemEffectPrefix) {
+		if strings.HasPrefix(k, ItemEffectPrefix) || strings.HasPrefix(k, ConsumablePrefix) {
 			if v <= 0 {
 				delete(b.Buffs, k)
 			} else {

@@ -11,6 +11,9 @@ import (
 
 var reLatamSlots = regexp.MustCompile(`\s*\[\d+\]$`)
 
+// latamConsumable is latam-ro-calc's ItemTypeId.CONSUMABLE.
+const latamConsumable = 3
+
 // LatamItemScripts copies latam-ro-calc's item scripts (item.json, MIT) to
 // the catalog's items (Item.Latam), with the English name its EQUIP[...]
 // conditions match on. Only bonus lines are kept (lists of strings): the
@@ -23,6 +26,7 @@ func LatamItemScripts(path string, c *gamedata.Catalog) (int, error) {
 	}
 	var items map[string]struct {
 		ID     int                        `json:"id"`
+		Type   int                        `json:"itemTypeId"`
 		Name   string                     `json:"name"`
 		Script map[string]json.RawMessage `json:"script"`
 	}
@@ -50,6 +54,10 @@ func LatamItemScripts(path string, c *gamedata.Catalog) (int, error) {
 				continue
 			}
 			script[k] = lines
+		}
+		if len(script) > 0 && li.Type == latamConsumable {
+			it.LatamUse = script
+			continue
 		}
 		if len(script) > 0 {
 			it.Latam = script

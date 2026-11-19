@@ -667,6 +667,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	}
 	applyBuffs(&b, baseJob, bonus, extra)
 	applyClassBuffs(&b, c, bonus, extra)                  // the class's own buffs (Buffs window, Próprios)
+	applyConsumables(&b, c, lenv, bonus, extra)           // consumables (Buffs window, Consumíveis)
 	LatamPassives(b, c, r.WeaponType, bonus, extra)       // hand-written class rules (latam_class.go)
 	applyClassPassives(&b, c, r.WeaponType, bonus, extra) // the class passives generated from latam-ro-calc
 	r.Bonuses = bonus

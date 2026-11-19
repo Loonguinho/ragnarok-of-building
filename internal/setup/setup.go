@@ -5,6 +5,7 @@ package setup
 
 import (
 	"context"
+	"errors"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -108,7 +109,28 @@ func FetchRathena(ctx context.Context, dir string, progress Progress) error {
 	return os.WriteFile(filepath.Join(dir, "COMMIT"), []byte(RathenaCommit+"\n"), 0o644)
 }
 
+// download fetches url into dst, retrying a few times: home connections
+// often drop one request (e.g. "connection reset by the remote host").
 func download(ctx context.Context, c *http.Client, url, dst string) error {
+	var err error
+	for try := 0; try < 4; try++ {
+		if try > 0 {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(time.Duration(try) * 2 * time.Second):
+			}
+		}
+		if err = downloadOnce(ctx, c, url, dst); err == nil || errors.Is(err, errNotFound) {
+			return err
+		}
+	}
+	return err
+}
+
+var errNotFound = errors.New("HTTP 404")
+
+func downloadOnce(ctx context.Context, c *http.Client, url, dst string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
@@ -118,6 +140,9 @@ func download(ctx context.Context, c *http.Client, url, dst string) error {
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return errNotFound
+	}
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("HTTP %d", resp.StatusCode)
 	}

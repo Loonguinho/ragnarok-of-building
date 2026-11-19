@@ -114,7 +114,17 @@ func run() error {
 			client = askClient()
 		}
 		if err := importCatalog(client); err != nil {
-			return err
+			// The client could not be read (no internet for rAthena, a
+			// broken copy...): the catalog published with this version.
+			fmt.Println("  Não deu para ler o jogo:", err)
+			if exists(sharedCatalog) {
+				catalog = sharedCatalog
+			} else if derr := downloadCatalog(catalogURL(), sharedCatalog); derr == nil {
+				catalog = sharedCatalog
+			} else {
+				return err
+			}
+			fmt.Println("Usando os dados do jogo publicados com esta versão.")
 		}
 	}
 

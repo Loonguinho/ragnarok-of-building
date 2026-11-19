@@ -228,7 +228,7 @@ var dict = map[string][2]string{
 		"faltan las tablas de rAthena: ejecuta go run ./cmd/fetchrathena y el import"},
 	"%s exige nível base %s":                    {"%s requires base level %s", "%s requiere nivel base %s"},
 	"pontos de atributo insuficientes":          {"not enough stat points", "puntos de atributo insuficientes"},
-	"pontos de habilidade insuficientes até %s": {"not enough skill points up to %s", "puntos de habilidad insuficientes hasta %s"},
+	"pontos de habilidade insuficientes a partir de %s": {"not enough skill points from %s on", "puntos de habilidad insuficientes desde %s"},
 	"pontos de traço insuficientes":             {"not enough trait points", "puntos de rasgo insuficientes"},
 
 	// ---- buffs window ----

@@ -416,3 +416,27 @@ func TestCostumeStones(t *testing.T) {
 		}
 	}
 }
+
+// A later class step's points can go to an earlier step's skills, never the
+// other way (pc_calc_skilltree_normalize_job).
+func TestSkillPointsBackward(t *testing.T) {
+	c := novice()
+	c.Jobs[0].Tree = map[int]int{0: 1}
+	c.Jobs[0].Parent = -1
+	c.Jobs[1] = &gamedata.Job{ID: 1, Parent: 0, MaxJobLv: 10, Tree: map[int]int{0: 1, 1: 2}}
+	c.Skills = map[int]*gamedata.Skill{1: {ID: 1, MaxLv: 20}, 2: {ID: 2, MaxLv: 20}}
+	// 9 + 9 points; the novice skill takes 12 (3 of them from job 1).
+	b := Build{Job: 1, BaseLv: 1, JobLv: 10, Skills: map[int]int{1: 12, 2: 6}}
+	if gi := SkillPointCheck(b, c); gi != -1 {
+		t.Errorf("points spent backward flagged at step %d", gi)
+	}
+	// Job 1's skill can't use the novice's points: 10 > 9.
+	b.Skills = map[int]int{1: 2, 2: 10}
+	if gi := SkillPointCheck(b, c); gi != 1 {
+		t.Errorf("job 1 skills over its points: step %d, want 1", gi)
+	}
+	b.Skills = map[int]int{1: 12, 2: 7} // 19 > 18
+	if gi := SkillPointCheck(b, c); gi != 0 {
+		t.Errorf("total over budget: step %d, want 0", gi)
+	}
+}

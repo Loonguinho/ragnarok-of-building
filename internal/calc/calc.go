@@ -358,8 +358,8 @@ func normalizeSkills(b *Build, c *gamedata.Catalog) {
 	}
 }
 
-// SkillPointCheck returns the first class step whose cumulative skill points
-// exceed the budget (renewal: leftovers carry forward), or -1 if all fit.
+// SkillPointCheck returns the class step whose skills, with the later steps',
+// need more points than those steps give, or -1 if all fit.
 func SkillPointCheck(b Build, c *gamedata.Catalog) int {
 	groups := c.SkillBudgets(b.Job, b.JobLv)
 	for _, g := range groups {
@@ -375,10 +375,15 @@ func SkillPointCheck(b Build, c *gamedata.Catalog) int {
 			used[gi] += lv
 		}
 	}
+	// A point earned in a class step can be spent on that step's skills or an
+	// earlier step's (a Knight still raises Swordman skills), never a later
+	// one: the skills from each step on must fit the points from that step on
+	// (pc_calc_skilltree_normalize_job). The deepest step that fails is the
+	// one to report.
 	u, budget := 0, 0
-	for i, g := range groups {
+	for i := len(groups) - 1; i >= 0; i-- {
 		u += used[i]
-		budget += g.Budget
+		budget += groups[i].Budget
 		if u > budget {
 			return i
 		}
@@ -755,7 +760,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	}
 	if gi := SkillPointCheck(b, c); gi >= 0 {
 		g := c.SkillBudgets(b.Job, b.JobLv)[gi]
-		r.Warnings = append(r.Warnings, "pontos de habilidade insuficientes até "+c.Jobs[g.Jobs[len(g.Jobs)-1]].Name.Get("pt"))
+		r.Warnings = append(r.Warnings, "pontos de habilidade insuficientes a partir de "+c.Jobs[g.Jobs[len(g.Jobs)-1]].Name.Get("pt"))
 	}
 	if r.TraitPoints < 0 {
 		r.Warnings = append(r.Warnings, "pontos de traço insuficientes")

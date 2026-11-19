@@ -20,12 +20,14 @@ window.ROSkillTree = (() => {
       }
       return used;
     }
-    // Leftover points carry forward, never backward: every prefix must fit.
+    // A class step's points can go to its own or an earlier step's skills,
+    // never a later one's: the skills from each step on must fit the points
+    // from that step on (a Knight still raises Swordman skills).
     function fits(levels) {
       if (groups.some((g) => g.budget < 0)) return true;
       const used = usedPerGroup(levels);
       let u = 0, b = 0;
-      for (let i = 0; i < groups.length; i++) {
+      for (let i = groups.length - 1; i >= 0; i--) {
         u += used[i]; b += groups[i].budget;
         if (u > b) return false;
       }

@@ -302,3 +302,38 @@ func TestEnchantReadsItemAndTraits(t *testing.T) {
 			r.Stats[LUK].Bonus, r.Stats[DEX].Bonus, r.Stats[AGI].Bonus)
 	}
 }
+
+// Transcendent and primary 4th classes get rAthena's 52 extra status
+// points; the others only the level table.
+func TestTranscendentStatPoints(t *testing.T) {
+	c := novice()
+	b := Build{Job: 0, BaseLv: 3, JobLv: 1, Stats: [6]int{1, 1, 1, 1, 1, 1}}
+	Normalize(&b, c)
+	if r := Compute(b, c); r.Points != 54 {
+		t.Errorf("normal class: %d points, want 54", r.Points)
+	}
+	c.Jobs[0].Upper = true
+	if r := Compute(b, c); r.Points != 54+52 {
+		t.Errorf("transcendent class: %d points, want %d", r.Points, 54+52)
+	}
+}
+
+func TestMaxStatByClass(t *testing.T) {
+	for _, tc := range []struct {
+		job  gamedata.Job
+		want int
+	}{
+		{gamedata.Job{Code: "JT_KNIGHT", EquipTier: "Normal"}, 99},
+		{gamedata.Job{Code: "JT_KNIGHT_H", EquipTier: "Upper"}, 99},
+		{gamedata.Job{Code: "JT_BABY_KNIGHT", EquipTier: "Baby", Baby: true}, 80},
+		{gamedata.Job{Code: "JT_BABY_RUNE_KNIGHT", EquipTier: "Third_Baby", Baby: true}, 117},
+		{gamedata.Job{Code: "JT_RUNE_KNIGHT_H", EquipTier: "Third_Upper"}, 130},
+		{gamedata.Job{Code: "JT_DRAGON_KNIGHT", EquipTier: "Fourth", Fourth: true}, 130},
+		{gamedata.Job{Code: "JT_KAGEROU", EquipTier: "Normal"}, 130},
+		{gamedata.Job{Code: "JT_SPIRIT_HANDLER", EquipTier: "Normal", Fourth: true}, 130},
+	} {
+		if got := maxStat(&tc.job); got != tc.want {
+			t.Errorf("%s: max %d, want %d", tc.job.Code, got, tc.want)
+		}
+	}
+}

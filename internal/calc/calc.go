@@ -377,13 +377,41 @@ func CardFits(card *gamedata.Item, slot string) bool {
 	return false
 }
 
+// maxStat is the highest base stat a class can reach (rAthena's
+// conf/battle/player.conf, pc_maxparameter): 99 for first, second and
+// transcendent classes, 80 for their baby versions, 117 for baby 3rd
+// classes and 130 for 3rd and 4th classes and the expanded ones
+// (Kagerou/Oboro, Rebellion, Summoner and later).
 func maxStat(j *gamedata.Job) int {
-	// rAthena renewal defaults: max_parameter/third/fourth 130, baby 117.
-	if j != nil && j.Baby {
+	if j == nil {
+		return 130
+	}
+	switch j.EquipTier {
+	case "Normal", "Upper":
+		switch strings.TrimSuffix(strings.TrimPrefix(j.Code, "JT_"), "_H") {
+		case "KAGEROU", "OBORO", "REBELLION", "DO_SUMMONER", "SPIRIT_HANDLER":
+			return 130
+		}
+		if j.Fourth { // 4th classes rAthena files as Normal
+			return 130
+		}
+		return 99
+	case "Baby":
+		return 80
+	case "Third_Baby":
 		return 117
+	case "":
+		if j.Baby {
+			return 117
+		}
 	}
 	return 130
 }
+
+// TranscendentStatPoints are the extra status points of transcendent
+// classes and primary 4th classes (rAthena transcendent_status_points;
+// pc_resetstate adds them on top of the level table).
+const TranscendentStatPoints = 52
 
 // StatCost is PC_STATUS_POINT_COST (renewal): points to raise a stat from x to x+1.
 func StatCost(x int) int {
@@ -418,6 +446,9 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 
 	// Points.
 	total := at(c.StatPoints, b.BaseLv)
+	if j.Upper { // JOBL_UPPER or primary 4th (Job.Upper)
+		total += TranscendentStatPoints
+	}
 	used := 0
 	for _, v := range b.Stats {
 		used += StatSpent(v)

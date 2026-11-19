@@ -57,7 +57,7 @@ func buffGroups(b calc.Build, c *gamedata.Catalog, l string) []buffGroup {
 					label = s.Name.Get(l)
 				}
 				v := b.Atk.States[cb.Key]
-				it := buffItem{Key: cb.Key, Label: label, State: true, Value: v, ValueStr: strconv.Itoa(v)}
+				it := buffItem{Key: cb.Key, Label: label, State: true, Excl: cb.Excl, Value: v, ValueStr: strconv.Itoa(v)}
 				if !cb.Toggle {
 					it.Choices = cb.Choices
 				}

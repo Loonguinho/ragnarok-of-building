@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"slices"
 	"strconv"
 
 	"ragnarok-of-building/internal/gamedata"
@@ -17,6 +18,7 @@ type ClassBuff struct {
 	Skill   string // client skill code, "" when unknown
 	Label   string // latam-ro-calc's label (the client name wins when Skill is set)
 	Toggle  bool   // on/off: the one option is the "on" value
+	Excl    string // buffs that cannot be on together share it
 	Choices [][2]string
 	Scripts map[int]string // value -> rAthena script
 }
@@ -31,10 +33,14 @@ func regClassBuffs(job string, bs []ClassBuff) {
 }
 
 // ClassBuffsFor lists the own buffs of a job and its ancestors (the job's
-// own first wins when two classes share a buff).
+// own first wins when two classes share a buff). Buffs whose client
+// description has a level table (Skill.Effects) use those LATAM values; the
+// latam-ro-calc ones fill in the rest. Party buffs of the Buffs window are
+// left out (they are there already).
 func ClassBuffsFor(c *gamedata.Catalog, jobID int) []ClassBuff {
 	var out []ClassBuff
 	seen := map[string]bool{}
+	index := map[string]int{} // skill code -> position in out
 	chain := c.Chain(jobID)
 	for i := len(chain) - 1; i >= 0; i-- {
 		j := c.Jobs[chain[i]]
@@ -44,12 +50,79 @@ func ClassBuffsFor(c *gamedata.Catalog, jobID int) []ClassBuff {
 		for _, b := range latamClassBuffs[j.Code] {
 			if !seen[b.Key] {
 				seen[b.Key] = true
+				if b.Skill != "" {
+					index[b.Skill] = len(out)
+				}
 				out = append(out, b)
+			}
+		}
+	}
+	for _, s := range chainSkills(c, chain) {
+		e := s.Effects
+		if e == nil || e.Kind != "buff" || partyBuffSkills[s.Code] {
+			continue
+		}
+		cb := ClassBuff{Name: s.Name.Get("en"), Skill: s.Code, Label: s.Name.Get("pt"), Excl: e.Group,
+			Choices: [][2]string{{"0", "—"}}, Scripts: e.Levels}
+		lvs := make([]int, 0, len(e.Levels))
+		for lv := range e.Levels {
+			lvs = append(lvs, lv)
+		}
+		slices.Sort(lvs)
+		for _, lv := range lvs {
+			cb.Choices = append(cb.Choices, [2]string{strconv.Itoa(lv), "Nv. " + strconv.Itoa(lv)})
+		}
+		cb.Toggle = len(lvs) == 1
+		if k, ok := index[s.Code]; ok { // the client's values replace latam-ro-calc's
+			cb.Key = out[k].Key // same selector as the formula state
+			out[k] = cb
+			continue
+		}
+		cb.Key = stateKey(cb.Name)
+		if seen[cb.Key] {
+			continue
+		}
+		seen[cb.Key] = true
+		out = append(out, cb)
+	}
+	return out
+}
+
+// chainSkills are the skills of the job chain's skill trees.
+func chainSkills(c *gamedata.Catalog, chain []int) []*gamedata.Skill {
+	var out []*gamedata.Skill
+	seen := map[int]bool{}
+	for i := len(chain) - 1; i >= 0; i-- {
+		j := c.Jobs[chain[i]]
+		if j == nil {
+			continue
+		}
+		pos := make([]int, 0, len(j.Tree))
+		for p := range j.Tree {
+			pos = append(pos, p)
+		}
+		slices.Sort(pos)
+		for _, p := range pos {
+			id := j.Tree[p]
+			if s := c.Skills[id]; s != nil && !seen[id] {
+				seen[id] = true
+				out = append(out, s)
 			}
 		}
 	}
 	return out
 }
+
+// partyBuffSkills are the skills of the Buffs window's own rows.
+var partyBuffSkills = func() map[string]bool {
+	m := map[string]bool{}
+	for _, d := range Buffs {
+		if d.Skill != "" {
+			m[d.Skill] = true
+		}
+	}
+	return m
+}()
 
 // script returns the bonuses of value v (a toggle's checkbox sends 1).
 func (b *ClassBuff) script(v int) string {
@@ -113,10 +186,11 @@ func regClassPassives(job string, ps []ClassPassive) {
 }
 
 // classPassivesFor lists a job's passives and its ancestors' (the job's own
-// definition of a skill wins).
+// definition of a skill wins). A passive whose client description has a
+// level table uses it (LATAM values) instead of latam-ro-calc's.
 func classPassivesFor(c *gamedata.Catalog, jobID int) []ClassPassive {
 	var out []ClassPassive
-	seen := map[string]bool{}
+	index := map[string]int{}
 	chain := c.Chain(jobID)
 	for i := len(chain) - 1; i >= 0; i-- {
 		j := c.Jobs[chain[i]]
@@ -124,10 +198,32 @@ func classPassivesFor(c *gamedata.Catalog, jobID int) []ClassPassive {
 			continue
 		}
 		for _, p := range latamClassPassives[j.Code] {
-			if !seen[p.Skill] {
-				seen[p.Skill] = true
+			if _, ok := index[p.Skill]; !ok {
+				index[p.Skill] = len(out)
 				out = append(out, p)
 			}
+		}
+	}
+	for _, s := range chainSkills(c, chain) {
+		e := s.Effects
+		if e == nil || e.Kind != "passive" {
+			continue
+		}
+		p := ClassPassive{Name: s.Name.Get("en"), Skill: s.Code, Levels: map[int][][2]string{}}
+		for lv, sc := range e.Levels {
+			if len(e.Weapons) == 0 {
+				p.Levels[lv] = [][2]string{{"", sc}}
+				continue
+			}
+			for _, w := range e.Weapons {
+				p.Levels[lv] = append(p.Levels[lv], [2]string{w, sc})
+			}
+		}
+		if k, ok := index[s.Code]; ok {
+			out[k] = p
+		} else {
+			index[s.Code] = len(out)
+			out = append(out, p)
 		}
 	}
 	return out

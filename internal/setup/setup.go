@@ -202,6 +202,8 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 	}
 	progress("Lendo os bônus das descrições dos itens exclusivos do LATAM…")
 	clientimport.DescBonuses(c)
+	progress("Lendo os efeitos de buffs e passivas nas descrições das habilidades…")
+	clientimport.SkillDescEffects(c)
 	c.ApplyLatamLimits()
 	progress("Copiando os sons da interface…")
 	if _, err := ExtractSounds(clientDir, filepath.Join(filepath.Dir(out), "sounds")); err != nil {

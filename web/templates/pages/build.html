@@ -495,10 +495,10 @@
   <summary>{{t .Name}}{{if .Active}} <small class="ro-buffs__count">({{.Active}})</small>{{end}}</summary>
   {{range .Items}}
   {{if .State}}
-  <label class="ro-buff">
+  <label class="ro-buff"{{if .Excl}} title="{{t "Só um deste tipo por vez (escolher outro desliga este)."}}"{{end}}>
     {{if .Choices}}<span>{{.Label}}</span>
-      <select class="ro-select" data-atk-state="{{.Key}}">{{$v := .ValueStr}}{{range .Choices}}<option value="{{index . 0}}"{{if eq (index . 0) $v}} selected{{end}}>{{t (index . 1)}}</option>{{end}}</select>
-    {{else}}<input type="checkbox" data-atk-state="{{.Key}}"{{if .Value}} checked{{end}}> <span>{{.Label}}</span>{{end}}
+      <select class="ro-select" data-atk-state="{{.Key}}"{{if .Excl}} data-state-excl="{{.Excl}}"{{end}}>{{$v := .ValueStr}}{{range .Choices}}<option value="{{index . 0}}"{{if eq (index . 0) $v}} selected{{end}}>{{t (index . 1)}}</option>{{end}}</select>
+    {{else}}<input type="checkbox" data-atk-state="{{.Key}}"{{if .Excl}} data-state-excl="{{.Excl}}"{{end}}{{if .Value}} checked{{end}}> <span>{{.Label}}</span>{{end}}
   </label>
   {{else}}
   <label class="ro-buff"{{if .Excl}} title="{{t "Só um deste tipo por vez (escolher outro desliga este)."}}"{{end}}>

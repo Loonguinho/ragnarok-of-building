@@ -236,3 +236,59 @@ func TestSwordMasteryPassive(t *testing.T) {
 		t.Errorf("spear: mastery %d, want 0", bonus["bMasteryAtk"])
 	}
 }
+
+// Inquisidor: the Mantras come from the client description (LATAM values,
+// Mantra da Energia ASPD +5) and exclude each other; Caminhos da Fé counts
+// with knuckles at the learned level.
+func TestInquisitorFromClientDescriptions(t *testing.T) {
+	c, err := gamedata.Load(filepath.Join("..", "..", "data", "gen", "catalog.json.gz"))
+	if err != nil {
+		t.Skip("catalog not generated")
+	}
+	var job int
+	for id, j := range c.Jobs {
+		if j.Code == "JT_INQUISITOR" {
+			job = id
+		}
+	}
+	skill := map[string]int{}
+	for id, s := range c.Skills {
+		skill[s.Code] = id
+	}
+	bufs := map[string]ClassBuff{}
+	for _, cb := range ClassBuffsFor(c, job) {
+		bufs[cb.Skill] = cb
+	}
+	for code, want := range map[string]string{
+		"IQ_POWERFUL_FAITH": "bonus bAtk,30; bonus bPAtk,15;",
+		"IQ_FIRM_FAITH":     "bonus bMaxHPrate,10; bonus bRes,40;",
+		"IQ_SINCERE_FAITH":  "bonus bAspd,5; bonus bPerfectHitRate,20;",
+	} {
+		cb, ok := bufs[code]
+		if !ok || cb.Scripts[5] != want || cb.Excl == "" {
+			t.Errorf("%s: %+v, want Nv5 %q in an exclusive group", code, cb, want)
+		}
+	}
+	b := Build{Job: job, BaseLv: 250, JobLv: 50, Skills: map[int]int{skill["IQ_WILL_OF_FAITH"]: 10, skill["MO_IRONHAND"]: 10},
+		Atk: AttackChoice{States: map[string]int{bufs["IQ_POWERFUL_FAITH"].Key: 5, bufs["IQ_FIRM_FAITH"].Key: 5}}}
+	Normalize(&b, c)
+	n := 0
+	for _, k := range []string{bufs["IQ_POWERFUL_FAITH"].Key, bufs["IQ_FIRM_FAITH"].Key} {
+		if b.Atk.States[k] != 0 {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Errorf("two Mantras kept: %v", b.Atk.States)
+	}
+	bonus, extra := map[string]int{}, map[string]int{}
+	applyClassPassives(&b, c, "Knuckle", bonus, extra)
+	if extra["bAddRace RC_Demon"] != 12 || bonus["bMasteryAtk"] != 30 {
+		t.Errorf("knuckle passives: %v %v", bonus, extra)
+	}
+	bonus, extra = map[string]int{}, map[string]int{}
+	applyClassPassives(&b, c, "Book", bonus, extra)
+	if extra["bAddRace RC_Demon"] != 0 || bonus["bMasteryAtk"] != 0 {
+		t.Errorf("book: %v %v", bonus, extra)
+	}
+}

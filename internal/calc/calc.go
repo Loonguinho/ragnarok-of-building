@@ -271,6 +271,17 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 			at.States[k] = clamp(v, 0, 10)
 		}
 	}
+	// One class buff per exclusive group (the three Mantras...): the first in order.
+	excl := map[string]bool{}
+	for _, cb := range ClassBuffsFor(c, b.Job) {
+		if cb.Excl == "" || at.States[cb.Key] == 0 {
+			continue
+		}
+		if excl[cb.Excl] {
+			delete(at.States, cb.Key)
+		}
+		excl[cb.Excl] = true
+	}
 	at.Stack = clamp(at.Stack, 0, 10)
 	slices.Sort(notes)
 	return slices.Compact(notes) // multi-slot items are reported once

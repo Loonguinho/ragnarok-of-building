@@ -123,6 +123,20 @@ type Skill struct {
 	// Type from the client: "Quest" (learned by quest) or "Soul" (granted by
 	// Soul Link). Such skills cost no skill points.
 	Type string `json:"type,omitempty"`
+	// Effects are the status bonuses read from the client description's
+	// level table (clientimport.SkillDescEffects); nil when it has none the
+	// simulator understands.
+	Effects *SkillEffects `json:"effects,omitempty"`
+}
+
+// SkillEffects: what a buff or passive gives at each level, from the
+// client's own description (LATAM values).
+type SkillEffects struct {
+	Kind    string         `json:"kind"`              // "passive" (counts at the learned level) or "buff" (turned on)
+	Weapons []string       `json:"weapons,omitempty"` // only with these weapon types (rAthena SubType); empty = any
+	Group   string         `json:"group,omitempty"`   // buffs that cannot be on together share it
+	Levels  map[int]string `json:"levels"`            // level -> rAthena script
+	Unread  []string       `json:"unread,omitempty"`  // table columns not turned into bonuses
 }
 
 // Free reports whether the skill costs no skill points.

@@ -703,6 +703,12 @@
     const a = { ...(build.a || {}) };
     a.st = { ...(a.st || {}) };
     a.st[f.dataset.atkState] = f.type === "checkbox" ? (f.checked ? 1 : 0) : Number(f.value);
+    // Class buffs that exclude each other (the Mantras...): the new one wins.
+    if (a.st[f.dataset.atkState] && f.dataset.stateExcl) {
+      document.querySelectorAll(`[data-state-excl="${f.dataset.stateExcl}"]`).forEach((o) => {
+        if (o.dataset.atkState !== f.dataset.atkState) delete a.st[o.dataset.atkState];
+      });
+    }
     build.a = a;
     recalc();
   });

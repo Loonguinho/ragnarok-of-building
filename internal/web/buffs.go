@@ -25,10 +25,10 @@ type buffGroup struct {
 
 type buffItem struct {
 	Key, Label string
-	SkillID    int         // icon; 0 = none
-	Excl       string      // only one of the same Excl group at a time
-	State      bool        // a class buff or formula state: kept in the attack states (data-atk-state)
-	Toggle     bool        // Sim/Não buttons (OnValue is the "Sim" value)
+	SkillID    int    // icon; 0 = none
+	Excl       string // only one of the same Excl group at a time
+	State      bool   // a class buff or formula state: kept in the attack states (data-atk-state)
+	Toggle     bool   // Sim/Não buttons (OnValue is the "Sim" value)
 	OnValue    string
 	Choices    [][2]string // selector; nil = checkbox or number
 	Max        int         // > 0: number input

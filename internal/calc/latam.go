@@ -372,29 +372,6 @@ func fmax(v ...float64) float64 {
 
 func jsRound(x float64) float64 { return math.Floor(x + 0.5) } // Math.round
 
-// LatamPassives applies class passives that change the status window
-// (from latam-ro-calc's setAdditionalBonus; MIT).
-func LatamPassives(b Build, c *gamedata.Catalog, weapon string, bonus map[string]int) {
-	// A passive whose client description has a level table is applied from
-	// it (applyClassPassives): counting it here too would double it.
-	learn := func(code string) int {
-		for id, lv := range b.Skills {
-			if sk := c.Skills[id]; sk != nil && sk.Code == code {
-				if sk.Effects != nil && sk.Effects.Kind == "passive" {
-					return 0
-				}
-				return lv
-			}
-		}
-		return 0
-	}
-	// War Book Mastery (Sky Emperor): with a book, P.ATK +(lv+2) and HIT +3/lv.
-	if lv := learn("SKE_WAR_BOOK_MASTERY"); lv > 0 && weapon == "Book" {
-		bonus["bPAtk"] += lv + 2
-		bonus["bHit"] += lv * 3
-	}
-}
-
 // ratioFloor applies a percentage ratio with LATAM's flooring.
 func ratioFloor(v int64, pct float64) int64 { return int64(math.Floor(float64(v) * pct / 100)) }
 

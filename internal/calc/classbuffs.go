@@ -264,6 +264,9 @@ func applyClassPassives(b *Build, c *gamedata.Catalog, weapon string, bonus, ext
 			if e[0] != "" && e[0] != weapon {
 				continue
 			}
+			if ws := passiveWeapons[p.Skill]; e[0] == "" && ws != nil && !slices.Contains(ws, weapon) {
+				continue
+			}
 			res := script.Eval(e[1], script.Context{BaseLv: b.BaseLv, JobLv: b.JobLv, Class: b.Job})
 			addAll(bonus, res.Bonus)
 			addAll(extra, res.Extra)

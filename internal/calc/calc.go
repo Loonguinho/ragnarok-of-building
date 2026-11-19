@@ -656,7 +656,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	}
 	applyBuffs(&b, baseJob, bonus, extra)
 	applyClassBuffs(&b, c, bonus, extra)                  // the class's own buffs (Buffs window, Próprios)
-	LatamPassives(b, c, r.WeaponType, bonus)              // hand-written passives (War Book Mastery)
+	LatamPassives(b, c, r.WeaponType, bonus, extra)       // hand-written class rules (latam_class.go)
 	applyClassPassives(&b, c, r.WeaponType, bonus, extra) // the class passives generated from latam-ro-calc
 	r.Bonuses = bonus
 	r.Extra = extra

@@ -96,12 +96,12 @@ func TestWarBookMastery(t *testing.T) {
 	c := skyCatalog()
 	b := Build{Skills: map[int]int{5464: 10}}
 	bonus := map[string]int{}
-	LatamPassives(b, c, "Book", bonus)
+	LatamPassives(b, c, "Book", bonus, map[string]int{})
 	if bonus["bPAtk"] != 12 || bonus["bHit"] != 30 {
 		t.Errorf("with book: %v, want P.ATK 12 HIT 30", bonus)
 	}
 	bonus = map[string]int{}
-	LatamPassives(b, c, "Knuckle", bonus)
+	LatamPassives(b, c, "Knuckle", bonus, map[string]int{})
 	if len(bonus) != 0 {
 		t.Errorf("without a book: %v", bonus)
 	}

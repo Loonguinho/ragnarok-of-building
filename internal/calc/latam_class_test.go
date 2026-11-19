@@ -43,8 +43,64 @@ func TestWarBookMasteryNotDoubled(t *testing.T) {
 	c := skyCatalog()
 	c.Skills[5464].Effects = &gamedata.SkillEffects{Kind: "passive", Weapons: []string{"Book"}, Levels: map[int]string{10: "bonus bPAtk,12; bonus bHit,30;"}}
 	bonus := map[string]int{}
-	LatamPassives(Build{Skills: map[int]int{5464: 10}}, c, "Book", bonus)
+	LatamPassives(Build{Skills: map[int]int{5464: 10}}, c, "Book", bonus, map[string]int{})
 	if len(bonus) != 0 {
 		t.Errorf("hand-written rule applied on top of the client table: %v", bonus)
+	}
+}
+
+func ruleCatalog() *gamedata.Catalog {
+	return &gamedata.Catalog{
+		Jobs: map[int]*gamedata.Job{
+			1: {ID: 1, Code: "JT_TAEKWON", Parent: -1}, 2: {ID: 2, Code: "JT_STAR", Parent: 1},
+			3: {ID: 3, Code: "JT_KNIGHT_H", Parent: -1}, 4: {ID: 4, Code: "JT_RUNE_KNIGHT_H", Parent: 3},
+			5: {ID: 5, Code: "JT_SHADOW_CROSS", Parent: -1}, 6: {ID: 6, Code: "JT_ABYSS_CHASER", Parent: -1},
+			7: {ID: 7, Code: "JT_ARCH_MAGE", Parent: -1, Tree: map[int]int{0: 5200}},
+		},
+		Skills: map[int]*gamedata.Skill{
+			411: {ID: 411, Code: "TK_RUN"}, 55: {ID: 55, Code: "KN_SPEARMASTERY"}, 2007: {ID: 2007, Code: "RK_DRAGONTRAINING"},
+			6001: {ID: 6001, Code: "SHC_SHADOW_SENSE"}, 6002: {ID: 6002, Code: "ABC_DAGGER_AND_BOW_M"},
+			5200: {ID: 5200, Code: "AG_TWOHANDSTAFF", Effects: &gamedata.SkillEffects{Kind: "passive", Levels: map[int]string{10: "bonus bSMatk,20;"}}},
+		},
+	}
+}
+
+func TestLatamClassRules(t *testing.T) {
+	c := ruleCatalog()
+	run := func(b Build, weapon string) (map[string]int, map[string]int) {
+		bonus, extra := map[string]int{}, map[string]int{}
+		LatamPassives(b, c, weapon, bonus, extra)
+		return bonus, extra
+	}
+	// Corrida: +100 mastery ATK bare-handed on the Taekwon line only.
+	if bn, _ := run(Build{Job: 2, Skills: map[int]int{411: 10}}, "Fist"); bn["bMasteryAtk"] != 100 {
+		t.Errorf("Run bare-handed: %v", bn)
+	}
+	if bn, _ := run(Build{Job: 2, Skills: map[int]int{411: 10}}, "Book"); bn["bMasteryAtk"] != 0 {
+		t.Errorf("Run with a book: %v", bn)
+	}
+	// Rune Knight (transcendent line): Dragon Training +10/lv; on a dragon +1/lv and no size penalty.
+	b := Build{Job: 4, Skills: map[int]int{55: 10, 2007: 1}, Atk: AttackChoice{States: map[string]int{stateKey("Ride Dragon"): 1}}}
+	if bn, _ := run(b, "2hSpear"); bn["bMasteryAtk"] != 110 || bn["bNoSizeFix"] != 1 {
+		t.Errorf("Rune Knight spear: %v", bn)
+	}
+	// Senso das Sombras Nv 10: FLEE +100, CRIT +50 with a dagger.
+	if bn, _ := run(Build{Job: 5, Skills: map[int]int{6001: 10}}, "Dagger"); bn["bFlee"] != 100 || bn["bCritical"] != 50 {
+		t.Errorf("Shadow Sense: %v", bn)
+	}
+	// Versatilidade Nv 10 with a bow: +10/+15/+20% by size; nothing with a sword.
+	if _, ex := run(Build{Job: 6, Skills: map[int]int{6002: 10}}, "Bow"); ex["bAddSize Size_Small"] != 10 || ex["bAddSize Size_Medium"] != 15 || ex["bAddSize Size_Large"] != 20 {
+		t.Errorf("Dagger & Bow Mastery: %v", ex)
+	}
+	if _, ex := run(Build{Job: 6, Skills: map[int]int{6002: 10}}, "1hSword"); len(ex) != 0 {
+		t.Errorf("Dagger & Bow Mastery with a sword: %v", ex)
+	}
+	// Two-Handed Staff Mastery (client table): S.MATK only with a two-handed staff.
+	for weapon, want := range map[string]int{"2hStaff": 20, "Staff": 0} {
+		bonus, extra := map[string]int{}, map[string]int{}
+		applyClassPassives(&Build{Job: 7, Skills: map[int]int{5200: 10}}, c, weapon, bonus, extra)
+		if bonus["bSMatk"] != want {
+			t.Errorf("Two-Handed Staff Mastery with %s: S.MATK %d, want %d", weapon, bonus["bSMatk"], want)
+		}
 	}
 }

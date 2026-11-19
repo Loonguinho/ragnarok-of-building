@@ -14,3 +14,7 @@ data/browiki/
 dist/
 resume.txt
 data/latam-ro-calc/
+
+# Saved builds of the desktop app / SAVED_FILE (personal)
+builds.json
+builds.json.tmp

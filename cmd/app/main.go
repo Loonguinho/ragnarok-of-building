@@ -1,25 +1,28 @@
 // app is Ragnarok of Building as one program for players: double-click it
-// and it opens the simulator in the browser.
+// and the simulator opens in its own window (WebView2, no console).
 //
 // On first run (and after each game patch) it builds the game catalog from
 // the player's own RO LATAM client, downloading rAthena's tables (GPL-3.0)
 // and latam-ro-calc's monster list (MIT) once. No game data ships with the
-// program: everything is read from the client already installed.
+// program: everything is read from the client already installed. The
+// window shows that progress, and asks for the client folder when it is
+// not found.
 //
-//	go build -o RagnarokOfBuilding.exe ./cmd/app
-//	RagnarokOfBuilding.exe            # find the client, import if needed, open the browser
-//	RagnarokOfBuilding.exe -import    # rebuild the catalog now
+//	go run ./tools/buildexe            # the .exe with its icon, as released
+//	RagnarokOfBuilding.exe             # find the client, import if needed, open the window
+//	RagnarokOfBuilding.exe -import     # rebuild the catalog now
 //	RagnarokOfBuilding.exe -client D:\RO -port 8090
+//	RagnarokOfBuilding.exe -browser    # open in the browser instead of the window
 //
 // The client can also be a copy: a data.grf and the System folder copied
 // next to the executable are read instead of the installed game. A ready
 // catalog.json.gz placed there is used as is.
 //
-// Its files (.env, data\) live next to the executable.
+// Its files (.env, data\, builds.json, RagnarokOfBuilding.log) live next to
+// the executable.
 package main
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"flag"
@@ -30,12 +33,11 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
+	"sync/atomic"
 	"time"
 
 	"ragnarok-of-building/internal/config"
@@ -45,27 +47,45 @@ import (
 )
 
 const (
+	appTitle    = "Ragnarok of Building"
 	catalogPath = `data/gen/catalog.json.gz`
 	rathenaDir  = `data/rathena`
 	// sharedCatalog is a ready catalog someone passed along: dropped next
 	// to the executable, it is used as is (no client needed).
 	sharedCatalog = `catalog.json.gz`
+	logFile       = `RagnarokOfBuilding.log`
+	// defaultPort: a fixed, uncommon port, so the page's address (and what
+	// the browser engine keeps for it, like the window layout) stays the same.
+	defaultPort = 47880
 )
+
+// showWindow opens the program's own window on url and returns when it is
+// closed (window_windows.go); nil, or errNoWindow, means the browser is used.
+var showWindow func(url string, debug bool) error
+
+var errNoWindow = errors.New("janela própria indisponível (WebView2 não encontrado)")
+
+type options struct {
+	reimport, browser, noBrowser, debug bool
+	client                              string
+	port                                int
+}
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Println()
-		fmt.Println("ERRO:", err)
-		pause()
+		fatal(err.Error())
 		os.Exit(1)
 	}
 }
 
 func run() error {
-	reimport := flag.Bool("import", false, "rebuild the catalog from the client now")
-	clientFlag := flag.String("client", "", "RO LATAM client folder (default: RO_CLIENT in .env, else the usual install folders)")
-	port := flag.Int("port", 8080, "first port to try (the next free one up to +20 is used)")
-	noBrowser := flag.Bool("no-browser", false, "do not open the browser")
+	var o options
+	flag.BoolVar(&o.reimport, "import", false, "rebuild the catalog from the client now")
+	flag.StringVar(&o.client, "client", "", "RO LATAM client folder (default: RO_CLIENT in .env, else the usual install folders)")
+	flag.IntVar(&o.port, "port", defaultPort, "first port to try (the next free one up to +20 is used)")
+	flag.BoolVar(&o.browser, "browser", false, "open in the browser instead of the program's window")
+	flag.BoolVar(&o.noBrowser, "no-browser", false, "only run the server (no window, no browser)")
+	flag.BoolVar(&o.debug, "debug", false, "allow the browser engine's developer tools in the window")
 	flag.Parse()
 
 	// Work next to the executable, wherever it was started from.
@@ -74,97 +94,157 @@ func run() error {
 			return err
 		}
 	}
+	if !singleInstance() {
+		focusExisting()
+		return nil
+	}
+	log := openLog()
 	_ = config.LoadDotEnv(".env")
-	fmt.Println("Ragnarok of Building — simulador de builds do RO LATAM")
-	fmt.Println()
 
-	// Where the game data comes from, first match wins: -client; a data.grf
-	// (+ System) copied into this folder; a ready catalog.json.gz here; the
-	// client in RO_CLIENT or the usual install folders; the catalog attached
-	// to this version's GitHub release (downloaded once into this folder).
+	st := newStartup(log, pickFolder)
+	// Before the game data is ready the server answers the startup page; the
+	// static files come from a server without a catalog meanwhile.
+	early, err := web.New(web.Options{Log: log})
+	if err != nil {
+		return err
+	}
+	earlyRoutes := early.Routes()
+	var app atomic.Pointer[http.Handler]
+	root := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/startup"):
+			st.ServeHTTP(w, r)
+		case app.Load() != nil:
+			(*app.Load()).ServeHTTP(w, r)
+		case strings.HasPrefix(r.URL.Path, "/static/"):
+			earlyRoutes.ServeHTTP(w, r)
+		default:
+			http.Redirect(w, r, "/startup", http.StatusFound)
+		}
+	})
+	ln, err := listen(o.port)
+	if err != nil {
+		return err
+	}
+	hs := &http.Server{Handler: root, ReadHeaderTimeout: 5 * time.Second}
+	go func() {
+		if err := hs.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("server", "err", err)
+		}
+	}()
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		hs.Shutdown(ctx)
+	}()
+
+	go func() {
+		srv, err := prepare(st, o, log)
+		if err != nil {
+			st.fail(err)
+			return
+		}
+		h := srv.Routes()
+		app.Store(&h)
+		st.ready("/build")
+	}()
+
+	url := "http://" + ln.Addr().String() + "/startup"
+	log.Info("listening", "url", url)
+	switch {
+	case o.noBrowser:
+		waitBrowserMode(url)
+	case !o.browser && showWindow != nil:
+		if err := showWindow(url, o.debug); err == nil {
+			return nil
+		} else {
+			log.Warn("window", "err", err)
+		}
+		fallthrough
+	default:
+		openBrowser(url)
+		waitBrowserMode(url)
+	}
+	return nil
+}
+
+// openLog writes the program's messages to RagnarokOfBuilding.log (there
+// is no console), starting it over at each run.
+func openLog() *slog.Logger {
+	var w io.Writer = io.Discard
+	if f, err := os.Create(logFile); err == nil {
+		w = f
+	}
+	if runtime.GOOS != "windows" {
+		w = io.MultiWriter(w, os.Stdout)
+	}
+	return slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{Level: slog.LevelInfo}))
+}
+
+// prepare finds the game data and returns the simulator's server. Where the
+// game data comes from, first match wins: -client; a data.grf (+ System)
+// copied into this folder; a ready catalog.json.gz here; the client in
+// RO_CLIENT or the usual install folders; the catalog attached to this
+// version's GitHub release (downloaded once into this folder).
+func prepare(st *startup, o options, log *slog.Logger) (*web.Server, error) {
 	catalog := catalogPath
-	client := *clientFlag
+	client := o.client
 	here, _ := os.Getwd()
 	switch {
 	case client != "":
 	case setup.IsClient(here):
-		fmt.Println("Usando o data.grf desta pasta.")
+		st.say("Usando o data.grf desta pasta.")
 		if err := checkSystem(here); err != nil {
-			return err
+			return nil, err
 		}
 		client = here
-	case !*reimport && exists(sharedCatalog):
-		fmt.Println("Usando os dados do jogo do arquivo", sharedCatalog, "desta pasta.")
+	case !o.reimport && exists(sharedCatalog):
+		st.say("Usando os dados do jogo do arquivo " + sharedCatalog + " desta pasta.")
 		catalog = sharedCatalog
 	default:
 		client = setup.FindClient()
 	}
-	why := needsImport(client, *reimport)
-	if catalog == catalogPath && why != "" && client == "" && !*reimport {
+	why := needsImport(client, o.reimport)
+	if catalog == catalogPath && why != "" && client == "" && !o.reimport {
 		// No game here: the catalog published with this version.
-		if err := downloadCatalog(catalogURL(), sharedCatalog); err == nil {
+		if err := downloadCatalog(st, catalogURL(), sharedCatalog); err == nil {
 			catalog, why = sharedCatalog, ""
 		} else {
-			fmt.Println("  Não deu para baixar:", err)
+			st.say("Não deu para baixar: " + err.Error())
 		}
 	}
 	if catalog == catalogPath && why != "" {
-		fmt.Println(why)
+		st.say(why)
 		if client == "" || !setup.IsClient(client) {
-			client = askClient()
+			client = st.askClient(`Não achei o cliente do RO LATAM nas pastas de sempre (ex.: C:\Gravity\Ragnarok). Escolha a pasta do jogo (a que tem o data.grf).`)
 		}
-		if err := importCatalog(client); err != nil {
+		if err := importCatalog(st, client); err != nil {
 			// The client could not be read (no internet for rAthena, a
 			// broken copy...): the catalog published with this version.
-			fmt.Println("  Não deu para ler o jogo:", err)
+			st.say("Não deu para ler o jogo: " + err.Error())
 			if exists(sharedCatalog) {
 				catalog = sharedCatalog
-			} else if derr := downloadCatalog(catalogURL(), sharedCatalog); derr == nil {
+			} else if derr := downloadCatalog(st, catalogURL(), sharedCatalog); derr == nil {
 				catalog = sharedCatalog
 			} else {
-				return err
+				return nil, err
 			}
-			fmt.Println("Usando os dados do jogo publicados com esta versão.")
+			st.say("Usando os dados do jogo publicados com esta versão.")
 		}
 	}
 
+	st.say("Carregando os dados do jogo…")
 	cat, err := gamedata.Load(catalog)
 	if err != nil {
-		return fmt.Errorf("catálogo do jogo: %w (rode de novo com -import)", err)
+		return nil, fmt.Errorf("catálogo do jogo: %w (abra de novo com -import)", err)
 	}
-	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelWarn}))
-	srv, err := web.New(web.Options{Log: log, Catalog: cat, NoRateLimit: true,
+	return web.New(web.Options{Log: log, Catalog: cat, NoRateLimit: true,
 		SoundDir: filepath.Join(filepath.Dir(catalogPath), "sounds"), PasteURL: os.Getenv("PASTE_URL"),
-		// Saved builds in a file next to the executable (not in the browser).
-		SavedFile: "builds.json"})
-	if err != nil {
-		return err
-	}
-	ln, err := listen(*port)
-	if err != nil {
-		return err
-	}
-	url := "http://" + ln.Addr().String() + "/build"
-	hs := &http.Server{Handler: srv.Routes(), ReadHeaderTimeout: 5 * time.Second}
-	go func() {
-		if err := hs.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			fmt.Println("ERRO:", err)
-			os.Exit(1)
-		}
-	}()
-
-	fmt.Println()
-	fmt.Println("Pronto! O simulador está aberto em:", url)
-	fmt.Println("Deixe esta janela aberta enquanto usa. Para sair, feche-a (ou Ctrl+C).")
-	if !*noBrowser {
-		openBrowser(url)
-	}
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-	<-stop
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	return hs.Shutdown(ctx)
+		// Saved builds in a file next to the executable (not in the browser),
+		// icons kept once seen (the program also works offline).
+		SavedFile:  "builds.json",
+		ImageCache: filepath.Join("data", "cache", "img"),
+	})
 }
 
 // needsImport says why the catalog must be (re)built, or "" when it is
@@ -205,8 +285,8 @@ func catalogURL() string {
 
 // downloadCatalog fetches the catalog at u into dst, keeping it only if it
 // loads.
-func downloadCatalog(u, dst string) error {
-	fmt.Println("Baixando os dados do jogo da página do programa no GitHub…")
+func downloadCatalog(st *startup, u, dst string) error {
+	st.say("Baixando os dados do jogo da página do programa no GitHub…")
 	c := &http.Client{Timeout: 5 * time.Minute}
 	res, err := c.Get(u)
 	if err != nil {
@@ -257,41 +337,18 @@ func exists(p string) bool {
 	return err == nil
 }
 
-// askClient asks for the client folder until one has a data.grf, and
-// remembers it in .env.
-func askClient() string {
-	fmt.Println()
-	fmt.Println(`Não achei o cliente do RO LATAM nas pastas de sempre (ex.: C:\Gravity\Ragnarok).`)
-	fmt.Println("Ou feche esta janela, copie o data.grf e a pasta System do jogo para a pasta")
-	fmt.Println("do RagnarokOfBuilding.exe e abra de novo.")
-	in := bufio.NewScanner(os.Stdin)
-	for {
-		fmt.Print("Cole aqui a pasta do jogo (a que tem o data.grf) e aperte Enter: ")
-		if !in.Scan() {
-			os.Exit(1)
-		}
-		dir := strings.Trim(strings.TrimSpace(in.Text()), `"`)
-		if setup.IsClient(dir) {
-			remember("RO_CLIENT", dir)
-			return dir
-		}
-		fmt.Println("Essa pasta não tem o data.grf. Tente de novo.")
-	}
-}
-
-func importCatalog(client string) error {
-	fmt.Println("Cliente do RO:", client)
-	progress := func(m string) { fmt.Println("  " + m) }
+func importCatalog(st *startup, client string) error {
+	st.say("Cliente do RO: " + client)
 	ctx := context.Background()
-	if err := setup.FetchRathena(ctx, rathenaDir, progress); err != nil {
+	if err := setup.FetchRathena(ctx, rathenaDir, st.say); err != nil {
 		return fmt.Errorf("baixar os dados do rAthena (precisa de internet na primeira vez): %w", err)
 	}
 	start := time.Now()
-	c, err := setup.BuildCatalog(client, rathenaDir, catalogPath, progress)
+	c, err := setup.BuildCatalog(client, rathenaDir, catalogPath, st.say)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("  %d itens, %d habilidades, %d classes (%s)\n", len(c.Items), len(c.Skills), len(c.Jobs), time.Since(start).Round(time.Second))
+	st.say(fmt.Sprintf("%d itens, %d habilidades, %d classes (%s)", len(c.Items), len(c.Skills), len(c.Jobs), time.Since(start).Round(time.Second)))
 	return nil
 }
 
@@ -328,14 +385,5 @@ func openBrowser(url string) {
 	default:
 		cmd = exec.Command("xdg-open", url)
 	}
-	if err := cmd.Start(); err != nil {
-		fmt.Println("Abra no navegador:", url)
-	}
-}
-
-// pause keeps the console open after an error (double-clicked programs
-// close their window when they exit).
-func pause() {
-	fmt.Print("\nAperte Enter para fechar.")
-	bufio.NewReader(os.Stdin).ReadString('\n')
+	cmd.Start()
 }

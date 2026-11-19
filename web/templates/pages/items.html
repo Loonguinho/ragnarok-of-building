@@ -42,7 +42,7 @@
 {{range .Results}}
 <li class="ro-list__item ro-itemrow" tabindex="0" data-tip-item="{{.ID}}"
     hx-get="/items/{{.ID}}?lang={{.Lang}}" hx-target="#item-info" hx-trigger="click">
-  <img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="24" height="24" loading="lazy">
+  <img src="{{dpimg}}/images/items/item/{{.ID}}.png" alt="" width="24" height="24" loading="lazy">
   <span>{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}{{if .MVP}} <em class="ro-mvp">MVP</em>{{end}}</span>
   <small>#{{.ID}}</small>
 </li>
@@ -55,7 +55,7 @@
 <section class="ro-window ro-iteminfo" id="win-iteminfo" style="left:400px;top:24px">
   <header class="ro-window__title">{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}} <button class="ro-window__close" aria-label="{{t "Fechar"}}">×</button></header>
   <div class="ro-window__body ro-iteminfo__body">
-    <div class="ro-iteminfo__icon"><img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="48" height="48"></div>
+    <div class="ro-iteminfo__icon"><img src="{{dpimg}}/images/items/item/{{.ID}}.png" alt="" width="48" height="48"></div>
     <div class="ro-iteminfo__desc">{{roText .Desc}}</div>
   </div>
   <footer class="ro-window__footer">

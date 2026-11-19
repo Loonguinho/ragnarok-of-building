@@ -1,6 +1,8 @@
 package main
 
 import (
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -30,8 +32,9 @@ func TestDownloadCatalog(t *testing.T) {
 	}))
 	defer srv.Close()
 
+	st := newStartup(slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
 	dst := filepath.Join(dir, "catalog.json.gz")
-	if err := downloadCatalog(srv.URL+"/ok", dst); err != nil {
+	if err := downloadCatalog(st, srv.URL+"/ok", dst); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := gamedata.Load(dst); err != nil {
@@ -40,7 +43,7 @@ func TestDownloadCatalog(t *testing.T) {
 	// A missing asset or a broken file leaves nothing behind.
 	for _, path := range []string{"/missing", "/junk"} {
 		bad := filepath.Join(dir, strings.Trim(path, "/")+".json.gz")
-		if err := downloadCatalog(srv.URL+path, bad); err == nil {
+		if err := downloadCatalog(st, srv.URL+path, bad); err == nil {
 			t.Errorf("%s: no error", path)
 		}
 		if _, err := os.Stat(bad); err == nil {

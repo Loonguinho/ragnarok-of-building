@@ -64,7 +64,7 @@
     {{$job := .Build.Job}}
     {{range .Families}}
     <div class="ro-classdd__fam">{{.Name}}</div>
-    {{range .Jobs}}<button type="button" role="option" class="ro-classdd__job{{if eq .ID $job}} is-current{{end}}" data-pick-job="{{.ID}}"><img class="ro-jobicon" src="https://static.divine-pride.net/images/jobs/icon_jobs_{{.ID}}.png" alt="" width="25" height="25" onerror="this.style.visibility='hidden'"><span>{{.Name}}</span></button>{{end}}
+    {{range .Jobs}}<button type="button" role="option" class="ro-classdd__job{{if eq .ID $job}} is-current{{end}}" data-pick-job="{{.ID}}"><img class="ro-jobicon" src="{{dpimg}}/images/jobs/icon_jobs_{{.ID}}.png" alt="" width="25" height="25" onerror="this.style.visibility='hidden'"><span>{{.Name}}</span></button>{{end}}
     {{end}}
   </div>
 </section>
@@ -287,7 +287,7 @@
 {{if .Target}}
 <div class="ro-target">
   <div class="ro-target__head">
-    <img src="https://static.divine-pride.net/images/mobs/png/{{.Target.ID}}.png" alt="" loading="lazy">
+    <img src="{{dpimg}}/images/mobs/png/{{.Target.ID}}.png" alt="" loading="lazy">
     <div><b>{{.Target.NameIn lang}}</b> <small>#{{.Target.ID}}{{with .Target.Source}} · {{t "atributos"}}: {{.}}{{end}}</small></div>
   </div>
   <div class="ro-target__grid">{{range .TargetInfo}}<span>{{t .Label}}</span><b>{{t .Value}}</b>{{end}}</div>
@@ -346,7 +346,7 @@
 {{end}}
 
 {{define "build_basic"}}
-<div class="ro-basic__name"><button class="ro-linkbtn" data-class-dd aria-haspopup="listbox" title="{{t "Trocar a classe"}} (Alt+J)"><img class="ro-jobicon" src="https://static.divine-pride.net/images/jobs/icon_jobs_{{.Build.Job}}.png" alt="" width="25" height="25" onerror="this.style.visibility='hidden'"><b>{{.JobName}}</b> ▾</button></div>
+<div class="ro-basic__name"><button class="ro-linkbtn" data-class-dd aria-haspopup="listbox" title="{{t "Trocar a classe"}} (Alt+J)"><img class="ro-jobicon" src="{{dpimg}}/images/jobs/icon_jobs_{{.Build.Job}}.png" alt="" width="25" height="25" onerror="this.style.visibility='hidden'"><b>{{.JobName}}</b> ▾</button></div>
 <div class="ro-basic__lv">Base Lv. {{.Build.BaseLv}} {{t "· Classe Lv."}} {{.Build.JobLv}}</div>
 <div class="ro-bar ro-bar--hp"><span style="width:100%"></span><em>HP {{.R.HP}} / {{.R.HP}}</em></div>
 <div class="ro-bar ro-bar--sp"><span style="width:100%"></span><em>SP {{.R.SP}} / {{.R.SP}}</em></div>
@@ -447,7 +447,7 @@
 
 {{define "equip_slot"}}
 <button class="ro-eslot{{if .Item}} is-filled{{end}}" data-slot="{{.Key}}" data-loc="{{with .Item}}{{.Loc}}{{end}}"{{with .Item}} data-tip-item="{{.ID}}" aria-label="{{t $.Label}}: {{.Name}}"{{else}} title="{{t .Label}}"{{end}}>
-  {{with .Item}}<img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="24" height="24">{{else}}<i class="ro-eslot__empty"></i>{{end}}
+  {{with .Item}}<img src="{{dpimg}}/images/items/item/{{.ID}}.png" alt="" width="24" height="24">{{else}}<i class="ro-eslot__empty"></i>{{end}}
   <span>{{with .Item}}{{if $.Grade}}<b class="ro-grade">[{{gradeName $.Grade}}]</b> {{end}}{{if $.Refine}}+{{$.Refine}} {{end}}{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}{{else}}<em>{{t .Label}}</em>{{end}}</span>
 </button>
 {{end}}
@@ -457,7 +457,7 @@
   {{if .Item}}
   <div class="ro-slotedit">
     <div class="ro-iteminfo__body">
-      <div class="ro-iteminfo__icon" data-tip-item="{{.Item.ID}}"><img src="https://static.divine-pride.net/images/items/item/{{.Item.ID}}.png" alt="" width="40" height="40"></div>
+      <div class="ro-iteminfo__icon" data-tip-item="{{.Item.ID}}"><img src="{{dpimg}}/images/items/item/{{.Item.ID}}.png" alt="" width="40" height="40"></div>
       <div>
         <b data-tip-item="{{.Item.ID}}">{{if .Grade}}<span class="ro-grade">[{{gradeName .Grade}}]</span> {{end}}{{if .Refine}}+{{.Refine}} {{end}}{{.Item.Name}}{{if .Item.Slots}} [{{.Item.Slots}}]{{end}}</b>
         {{if .Refineable}}
@@ -480,7 +480,7 @@
     <ul class="ro-list ro-cards">
       {{range $i, $c := .Cards}}
       <li class="ro-cardrow"{{if $c}} data-tip-item="{{$c.ID}}"{{end}}>
-        {{if $c}}<img src="https://static.divine-pride.net/images/items/item/{{$c.ID}}.png" alt="" width="24" height="24"><span>{{$c.Name}}{{if $c.MVP}} <em class="ro-mvp">MVP</em>{{end}}</span>
+        {{if $c}}<img src="{{dpimg}}/images/items/item/{{$c.ID}}.png" alt="" width="24" height="24"><span>{{$c.Name}}{{if $c.MVP}} <em class="ro-mvp">MVP</em>{{end}}</span>
         <button class="ro-btn" data-pick-card="{{$i}}">{{t "Trocar"}}</button><button class="ro-btn" data-remove-card="{{$i}}">×</button>
         {{else}}<i class="ro-eslot__empty"></i><span><em>{{if lt $i $.CardSlots}}Slot {{inc $i}} {{t "vazio"}}{{else}}{{t "Encantamento vazio"}}{{end}}</em></span><button class="ro-btn" data-pick-card="{{$i}}">{{if lt $i $.CardSlots}}{{t "Carta…"}}{{else}}{{t "Encantar…"}}{{end}}</button>{{end}}
       </li>
@@ -525,7 +525,7 @@
 
 {{define "buff_row"}}
 <div class="ro-fx{{if .Value}} is-on{{end}}" data-fx-row{{if .Excl}} title="{{t "Só um deste tipo por vez (escolher outro desliga este)."}}"{{end}}>
-  {{if .SkillID}}<img class="ro-fx__icon" src="https://static.divine-pride.net/images/skill/{{.SkillID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">{{else if .ItemID}}<img class="ro-fx__icon" src="https://static.divine-pride.net/images/items/item/{{.ItemID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'" data-tip-item="{{.ItemID}}">{{else}}<span class="ro-fx__icon"></span>{{end}}
+  {{if .SkillID}}<img class="ro-fx__icon" src="{{dpimg}}/images/skill/{{.SkillID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">{{else if .ItemID}}<img class="ro-fx__icon" src="{{dpimg}}/images/items/item/{{.ItemID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'" data-tip-item="{{.ItemID}}">{{else}}<span class="ro-fx__icon"></span>{{end}}
   <span class="ro-fx__name">{{.Label}}</span>
   {{template "buff_control" .}}
 </div>
@@ -550,7 +550,7 @@
     <thead><tr><th>{{t "Habilidade"}}</th><th class="num">{{t "Dano"}}</th><th>%</th><th class="num">{{t "Golpes"}}</th><th class="num">{{t "Média"}}</th><th class="num">{{t "Máximo"}}</th></tr></thead>
     <tbody>
     {{range .Skills}}
-    <tr><td class="ro-rdmg__name">{{if .ID}}<img class="ro-fx__icon" src="https://static.divine-pride.net/images/skill/{{.ID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">{{else}}<span class="ro-fx__icon"></span>{{end}} {{.Name}}</td><td class="num">{{.Total}}</td>
+    <tr><td class="ro-rdmg__name">{{if .ID}}<img class="ro-fx__icon" src="{{dpimg}}/images/skill/{{.ID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">{{else}}<span class="ro-fx__icon"></span>{{end}} {{.Name}}</td><td class="num">{{.Total}}</td>
       <td class="ro-rdmg__pct"><span class="ro-rdmg__bar"><i style="width:{{printf "%.1f" .Pct}}%"></i></span> {{.PctS}}</td>
       <td class="num">{{.Hits}}</td><td class="num">{{.Avg}}</td><td class="num">{{.Max}}</td></tr>
     {{end}}
@@ -560,7 +560,7 @@
 {{range .Monsters}}
 <details class="ro-rdmg__mob">
   <summary>
-    <img class="ro-rdmg__mobimg" src="https://static.divine-pride.net/images/mobs/png/{{.ID}}.png" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+    <img class="ro-rdmg__mobimg" src="{{dpimg}}/images/mobs/png/{{.ID}}.png" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
     <span class="ro-rdmg__name">{{.Name}}</span>
     <span class="num"><b>{{.Total}}</b></span>
     <span class="ro-rdmg__pct"><span class="ro-rdmg__bar"><i style="width:{{printf "%.1f" .Pct}}%"></i></span> {{.PctS}}</span>
@@ -571,7 +571,7 @@
     <thead><tr><th>{{t "Habilidade"}}</th><th class="num">{{t "Dano"}}</th><th>%</th><th class="num">{{t "Golpes"}}</th><th class="num">{{t "Média"}}</th><th class="num">{{t "Máximo"}}</th></tr></thead>
     <tbody>
     {{range .Skills}}
-    <tr><td class="ro-rdmg__name">{{if .ID}}<img class="ro-fx__icon" src="https://static.divine-pride.net/images/skill/{{.ID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">{{else}}<span class="ro-fx__icon"></span>{{end}} {{.Name}}</td><td class="num">{{.Total}}</td>
+    <tr><td class="ro-rdmg__name">{{if .ID}}<img class="ro-fx__icon" src="{{dpimg}}/images/skill/{{.ID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">{{else}}<span class="ro-fx__icon"></span>{{end}} {{.Name}}</td><td class="num">{{.Total}}</td>
       <td class="ro-rdmg__pct"><span class="ro-rdmg__bar"><i style="width:{{printf "%.1f" .Pct}}%"></i></span> {{.PctS}}</td>
       <td class="num">{{.Hits}}</td><td class="num">{{.Avg}}</td><td class="num">{{.Max}}</td></tr>
     {{end}}
@@ -591,7 +591,7 @@
 <div class="ro-fx__grid">
   {{range .Items}}
   <div class="ro-fx{{if .Value}} is-on{{end}}" data-fx-row title="{{.Gives}}">
-    <img class="ro-fx__icon" src="https://static.divine-pride.net/images/items/item/{{.ItemID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">
+    <img class="ro-fx__icon" src="{{dpimg}}/images/items/item/{{.ItemID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">
     <span class="ro-fx__name">{{.Label}} <small class="ro-fx__gives">{{.Gives}}</small></span>
     <span class="ro-yesno" role="group" aria-label="{{.Label}}"><button type="button" class="ro-yesno__b{{if .Value}} is-on{{end}}" data-buff-set="{{.Key}}" data-buff-value="1">{{t "Sim"}}</button><button type="button" class="ro-yesno__b{{if not .Value}} is-on{{end}}" data-buff-set="{{.Key}}" data-buff-value="0">{{t "Não"}}</button></span>
   </div>
@@ -607,7 +607,7 @@
 <div class="ro-fx__grid">
   {{range .Passives}}
   <div class="ro-fx{{if .Level}} is-on{{end}}" data-fx-row>
-    <img class="ro-fx__icon" src="https://static.divine-pride.net/images/skill/{{.SkillID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">
+    <img class="ro-fx__icon" src="{{dpimg}}/images/skill/{{.SkillID}}.png" alt="" width="20" height="20" loading="lazy" onerror="this.style.visibility='hidden'">
     <span class="ro-fx__name">{{.Label}}</span>
     {{$lv := .Level}}<select class="ro-select" data-learn="{{.SkillID}}" aria-label="{{.Label}}"><option value="0">—</option>{{range $i := seq 1 .Max}}<option value="{{$i}}"{{if eq $i $lv}} selected{{end}}>{{t "Nv."}} {{$i}}</option>{{end}}</select>
   </div>
@@ -663,7 +663,7 @@
   <ul class="ro-list ro-optlist">
   {{range .Options}}
     <li class="ro-optrow" data-tip-item="{{.Item.ID}}">
-      <img src="https://static.divine-pride.net/images/items/item/{{.Item.ID}}.png" alt="" width="24" height="24" loading="lazy">
+      <img src="{{dpimg}}/images/items/item/{{.Item.ID}}.png" alt="" width="24" height="24" loading="lazy">
       <span>{{.Item.Name}}{{if .Item.MVP}} <em class="ro-mvp">MVP</em>{{end}}{{with .Skill}}<small class="ro-optrow__skill">{{t "em"}} {{.}}</small>{{end}}</span>
       <b class="ro-optrow__gain">{{.Gain}}</b>
       <button class="ro-btn" data-opt-apply="{{.Slot}}" data-opt-index="{{.Index}}" data-opt-card="{{.Item.ID}}" title="{{.Value}}">{{t "Aplicar"}}</button>
@@ -692,7 +692,7 @@
 {{define "pick_results"}}
 {{range .Results}}
 <li class="ro-list__item ro-itemrow" tabindex="0" data-pick="{{.ID}}" data-loc="{{.Loc}}" data-tip-item="{{.ID}}">
-  <img src="https://static.divine-pride.net/images/items/item/{{.ID}}.png" alt="" width="24" height="24" loading="lazy">
+  <img src="{{dpimg}}/images/items/item/{{.ID}}.png" alt="" width="24" height="24" loading="lazy">
   <span>{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}{{if .MVP}} <em class="ro-mvp">MVP</em>{{end}}</span>
   {{with index $.Gains .ID}}{{if .Diff}}<b class="ro-gain{{if .Same}}{{else if .Better}} is-up{{else}} is-down{{end}}" title="{{t "Dano esperado"}}">{{.Diff}}</b>{{end}}{{end}}
   <small>#{{.ID}}</small>

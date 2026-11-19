@@ -39,12 +39,16 @@ type Options struct {
 	// SavedFile keeps the saved builds in this JSON file (the desktop app);
 	// empty: they stay in each browser's localStorage.
 	SavedFile string
+	// ImageCache keeps the Divine Pride icons in this folder (the desktop
+	// app: shown offline once seen); empty: the page links Divine Pride.
+	ImageCache string
 }
 
 // Server holds parsed templates and dependencies for handlers.
 type Server struct {
 	opt   Options
 	saved *savedStore // nil: saved builds live in the browser
+	imgs  *imgCache   // nil: icons come straight from Divine Pride
 	fsys  fs.FS
 	pages map[string]*template.Template
 	items *gamedata.ItemIndex
@@ -63,6 +67,9 @@ func New(opt Options) (*Server, error) {
 	s := &Server{opt: opt, fsys: assets.FS}
 	if opt.SavedFile != "" {
 		s.saved = newSavedStore(opt.SavedFile)
+	}
+	if opt.ImageCache != "" {
+		s.imgs = newImgCache(opt.ImageCache)
 	}
 	if opt.Dev {
 		s.fsys = os.DirFS("web")
@@ -93,7 +100,7 @@ func (s *Server) parse() (map[string]*template.Template, error) {
 	for _, ul := range uiLangs {
 		for _, p := range pageFiles {
 			files := append([]string{"templates/layout.html", p}, partials...)
-			t, err := template.New("layout.html").Funcs(funcs).Funcs(langFuncs(ul.Code)).Funcs(template.FuncMap{"asset": s.assetURL, "savedFile": s.savedJSON}).ParseFS(s.fsys, files...)
+			t, err := template.New("layout.html").Funcs(funcs).Funcs(langFuncs(ul.Code)).Funcs(template.FuncMap{"asset": s.assetURL, "savedFile": s.savedJSON, "dpimg": s.dpImgBase}).ParseFS(s.fsys, files...)
 			if err != nil {
 				return nil, fmt.Errorf("parse %s: %w", p, err)
 			}
@@ -144,6 +151,9 @@ func (s *Server) Routes() http.Handler {
 	r.Get("/build", s.handleBuild)
 	if s.saved != nil {
 		r.Put("/saved", s.handleSavedPut)
+	}
+	if s.imgs != nil {
+		r.Get("/img/dp/*", s.handleImgCache)
 	}
 	r.With(calcLimit.limit).Post("/build/calc", s.handleBuildCalc)
 	r.With(calcLimit.limit).Post("/build/optimize", oneAtATime(2, http.HandlerFunc(s.handleOptimize)).ServeHTTP)

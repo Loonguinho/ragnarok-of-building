@@ -22,6 +22,10 @@ type Context struct {
 	Class    int
 	Weapon   string // weapon type of the right hand (Dagger, 1hSword, ...)
 	EquipIDs map[int]bool
+	// Slots: refine and enchant grade of each equipment position, by rAthena
+	// name (EQI_HAND_R...), for getequiprefinerycnt / getenchantgrade(EQI_x).
+	SlotRefine map[string]int
+	SlotGrade  map[string]int
 }
 
 // Result accumulates bonuses: name (bStr, bMaxHPrate, ...) -> value.
@@ -473,8 +477,19 @@ func (p *parser) unary() int {
 			p.args()
 			return p.ctx.Refine
 		case t.s == "getenchantgrade":
-			p.args()
+			// getenchantgrade() is the item's own; getenchantgrade(EQI_x) a position's.
+			if a := p.rawArgs(); len(a) == 1 && strings.HasPrefix(a[0], "EQI_") {
+				if g, ok := p.ctx.SlotGrade[a[0]]; ok || p.ctx.SlotGrade != nil {
+					return g
+				}
+			}
 			return p.ctx.Grade
+		case t.s == "getequiprefinerycnt":
+			if a := p.rawArgs(); len(a) == 1 && strings.HasPrefix(a[0], "EQI_") && p.ctx.SlotRefine != nil {
+				return p.ctx.SlotRefine[a[0]]
+			}
+			p.bad = true
+			return 0
 		case t.s == "getrandomoptinfo":
 			if a := p.rawArgs(); len(a) == 1 && a[0] == "ROA_VALUE" {
 				return p.ctx.OptValue
@@ -576,6 +591,7 @@ var known = map[string]bool{
 	// multipliers).
 	"bMasteryAtk": true,
 	"bCritTenths": true, // CRIT in tenths (skill tables write "+12,5")
+	"bAspdFixed":  true, // ASPD potions and quicken skills: × AGI ÷ 200 before the ASPD %
 }
 
 // Known reports whether a bonus name is applied by the calculator.

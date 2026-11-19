@@ -286,10 +286,12 @@ var Buffs = []BuffDef{
 	{Key: "food_int", Label: "Comida de INT", Group: "Consumíveis", Choices: amounts(5, 10, 15, 20), Script: statFood("bInt")},
 	{Key: "food_dex", Label: "Comida de DES", Group: "Consumíveis", Choices: amounts(5, 10, 15, 20), Script: statFood("bDex")},
 	{Key: "food_luk", Label: "Comida de SOR", Group: "Consumíveis", Choices: amounts(5, 10, 15, 20), Script: statFood("bLuk")},
-	// Velocidade de ataque: Concentração 10%, Despertar 15%, Fúria Selvagem 20%.
+	// ASPD potions: a fixed bonus × AGI ÷ 200 (rAthena SC_ASPDPOTION*, in
+	// status_calc_aspd's fixed group), LATAM values 4/6/9 (latam-ro-calc
+	// aspd-potion-list.ts). The stored values stay 10/15/20 (older builds).
 	{Key: "aspd_potion", Label: "Poção de velocidade de ataque", Group: "Consumíveis",
-		Choices: [][2]string{{"0", "—"}, {"10", "Poção da Concentração (+10%)"}, {"15", "Poção do Despertar (+15%)"}, {"20", "Poção da Fúria Selvagem (+20%)"}},
-		Script:  func(v int, _ [6]int) string { return fmt.Sprintf("bonus bAspdRate,%d;", v) }},
+		Choices: [][2]string{{"0", "—"}, {"10", "Poção da Concentração"}, {"15", "Poção do Despertar"}, {"20", "Poção da Fúria Selvagem"}},
+		Script:  table(map[int]string{10: "bonus bAspdFixed,4;", 15: "bonus bAspdFixed,6;", 20: "bonus bAspdFixed,9;"})},
 
 	// ---- Outros: anything else, typed in ----
 	{Key: "x_atk", Label: "ATQ", Group: "Outros", Max: 9999, Script: func(v int, _ [6]int) string { return fmt.Sprintf("bonus bBaseAtk,%d;", v) }},

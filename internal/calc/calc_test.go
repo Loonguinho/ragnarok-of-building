@@ -337,3 +337,26 @@ func TestMaxStatByClass(t *testing.T) {
 		}
 	}
 }
+
+// ASPD as rAthena renewal / latam-ro-calc: the equipment % works on the room
+// left to 195; potions add a fixed bonus × AGI ÷ 200. Real case: Inquisidor
+// with a knuckle and a shield, AGI 140, DES 156, +45% -> 187 (latam-tools).
+func TestASPDRenewal(t *testing.T) {
+	c, err := gamedata.Load(filepath.Join("..", "..", "data", "gen", "catalog.json.gz"))
+	if err != nil {
+		t.Skip("catalog not generated")
+	}
+	var j *gamedata.Job
+	for _, x := range c.Jobs {
+		if x.Code == "JT_INQUISITOR" {
+			j = x
+		}
+	}
+	if got := aspd(j, "Knuckle", true, 140, 156, false, 45, 0, 0); got != 187 {
+		t.Errorf("ASPD %d, want 187", got)
+	}
+	// A potion's fixed 9 x 140 / 200 = +6.3 before the %.
+	if got, base := aspd(j, "Knuckle", true, 140, 156, false, 0, 9, 0), aspd(j, "Knuckle", true, 140, 156, false, 0, 0, 0); got-base != 6 {
+		t.Errorf("Fúria Selvagem: %d -> %d, want +6", base, got)
+	}
+}

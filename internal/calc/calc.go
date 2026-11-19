@@ -525,6 +525,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			}
 		}
 	}
+	slotRefine, slotGrade := slotStates(b)
 	bonus := map[string]int{}
 	extra := map[string]int{}
 	r.WeaponType = "Fist"
@@ -552,7 +553,8 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			continue
 		}
 		seen[e.Item] = true
-		ctx := script.Context{Refine: e.Refine, Grade: e.Grade, BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs}
+		ctx := script.Context{Refine: e.Refine, Grade: e.Grade, BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs,
+			SlotRefine: slotRefine, SlotGrade: slotGrade}
 		res := script.Eval(itemScript(it, &r.SkippedScriptEffects), ctx)
 		addAll(bonus, res.Bonus)
 		addAll(extra, res.Extra)
@@ -570,7 +572,8 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		for _, cd := range e.Cards {
 			if ci := c.Items[cd]; cd > 0 && ci != nil {
 				// Cards and enchants read the refine and grade of the item they are in.
-				cr := script.Eval(itemScript(ci, &r.SkippedScriptEffects), script.Context{Refine: e.Refine, Grade: e.Grade, BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs})
+				cr := script.Eval(itemScript(ci, &r.SkippedScriptEffects), script.Context{Refine: e.Refine, Grade: e.Grade, BaseLv: b.BaseLv, JobLv: b.JobLv, Param: param, Class: b.Job, EquipIDs: equipIDs,
+					SlotRefine: slotRefine, SlotGrade: slotGrade})
 				addAll(bonus, cr.Bonus)
 				addAll(extra, cr.Extra)
 				r.SkippedScriptEffects += cr.Skipped
@@ -603,7 +606,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			r.OtherEquipATK += it.Attack
 		}
 	}
-	r.Combos, r.ComboEffects = applyCombos(c, &b, param, equipIDs, bonus, extra, &r.SkippedScriptEffects)
+	r.Combos, r.ComboEffects = applyCombos(c, &b, param, equipIDs, slotRefine, slotGrade, bonus, extra, &r.SkippedScriptEffects)
 	var baseJob [6]int
 	for i := range baseJob {
 		baseJob[i] = b.Stats[i] + jb[i]
@@ -702,7 +705,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	}
 
 	// ASPD (status_base_amotion_pc, RENEWAL_ASPD).
-	r.ASPD = aspd(j, r.WeaponType, shield, st[AGI], st[DEX], ranged, bonus["bAspdRate"], bonus["bAspd"])
+	r.ASPD = aspd(j, r.WeaponType, shield, st[AGI], st[DEX], ranged, bonus["bAspdRate"], bonus["bAspdFixed"], bonus["bAspd"])
 
 	for _, slot := range Slots {
 		if e, ok := b.Equip[slot]; ok {
@@ -751,7 +754,15 @@ func maxPool(base, stat int, upper bool, equipStat, fix, rate int) int {
 	return int(d)
 }
 
-func aspd(j *gamedata.Job, weapon string, shield bool, agi, dex int, ranged bool, rate, add int) int {
+// aspd is rAthena's renewal ASPD (status_base_amotion_pc + status_calc_bl),
+// which latam-ro-calc's LATAM measurements follow:
+//  1. √(DES²/5 + AGI²/2) × 0,25 + 196 (DES²/7 for ranged weapons), plus the
+//     "fixed" bonuses of potions and quicken skills × AGI ÷ 200, minus the
+//     weapon's (and shield's) delay;
+//  2. ASPD % (equipment, Aumentar Agilidade...) on the room left to 195:
+//     + max(195 − ASPD, 2) × % ÷ 100;
+//  3. flat ASPD (bAspd).
+func aspd(j *gamedata.Job, weapon string, shield bool, agi, dex int, ranged bool, rate, fixed, add int) int {
 	base, ok := j.BaseASPD[weapon]
 	if !ok {
 		base = j.BaseASPD["Fist"]
@@ -766,7 +777,8 @@ func aspd(j *gamedata.Job, weapon string, shield bool, agi, dex int, ranged bool
 		t = float64(dex*dex)/5 + float64(agi*agi)*0.5
 	}
 	t = math.Sqrt(t)*0.25 + 196
-	v := int(t+float64(rate)*float64(agi)/200) - min(base, 200)
+	v := int(t+float64(fixed)*float64(agi)/200) - min(base, 200)
+	v += max(195-v, 2) * rate / 100
 	v += add
 	return clamp(v, 0, 193)
 }
@@ -817,4 +829,25 @@ func (r Result) SortedBonuses() [][2]any {
 		out[i] = [2]any{k, r.Bonuses[k]}
 	}
 	return out
+}
+
+// eqiSlots maps rAthena's equipment positions (getequiprefinerycnt(EQI_x))
+// to the build's slots.
+var eqiSlots = map[string]string{
+	"EQI_HEAD_TOP": HeadTop, "EQI_HEAD_MID": HeadMid, "EQI_HEAD_LOW": HeadLow, "EQI_ARMOR": Armor,
+	"EQI_HAND_R": Weapon, "EQI_HAND_L": Shield, "EQI_GARMENT": Garment, "EQI_SHOES": Shoes,
+	"EQI_ACC_R": AccRight, "EQI_ACC_L": AccLeft,
+	"EQI_SHADOW_ARMOR": ShArmor, "EQI_SHADOW_WEAPON": ShWeapon, "EQI_SHADOW_SHIELD": ShShield,
+	"EQI_SHADOW_SHOES": ShShoes, "EQI_SHADOW_ACC_R": ShAccR, "EQI_SHADOW_ACC_L": ShAccL,
+}
+
+// slotStates are the refine and enchant grade of every position (0 when
+// empty), for scripts that read another position than their own.
+func slotStates(b Build) (refine, grade map[string]int) {
+	refine, grade = map[string]int{}, map[string]int{}
+	for eqi, slot := range eqiSlots {
+		e := b.Equip[slot]
+		refine[eqi], grade[eqi] = e.Refine, e.Grade
+	}
+	return refine, grade
 }

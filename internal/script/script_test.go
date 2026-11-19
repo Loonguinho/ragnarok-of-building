@@ -83,3 +83,12 @@ func TestAtkEle(t *testing.T) {
 		t.Errorf("got %+v", r)
 	}
 }
+
+// getequiprefinerycnt / getenchantgrade(EQI_x) read another position.
+func TestOtherPositions(t *testing.T) {
+	ctx := Context{Refine: 3, Grade: 1, SlotRefine: map[string]int{"EQI_HAND_R": 11, "EQI_HEAD_TOP": 0}, SlotGrade: map[string]int{"EQI_HEAD_TOP": 2}}
+	r := Eval(`.@r = getequiprefinerycnt(EQI_HAND_R); bonus bMaxHPrate,2*(.@r/2); if (getenchantgrade(EQI_HEAD_TOP) >= 2) bonus bPAtk,1; bonus bStr,getrefine();`, ctx)
+	if r.Bonus["bMaxHPrate"] != 10 || r.Bonus["bPAtk"] != 1 || r.Bonus["bStr"] != 3 || r.Skipped != 0 {
+		t.Errorf("%v (skipped %d)", r.Bonus, r.Skipped)
+	}
+}

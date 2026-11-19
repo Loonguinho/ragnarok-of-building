@@ -438,6 +438,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		r.Warnings = append(r.Warnings, "classe desconhecida")
 		return r
 	}
+	// LATAM caps traits at 100 (confirmed in game, 2026-11); rAthena now uses 110.
 	r.MaxStat, r.MaxTrait = maxStat(j), 100
 	r.MaxBaseLv, r.MaxJobLv = j.MaxBaseLv, j.MaxJobLv
 	if !j.HasStats() {

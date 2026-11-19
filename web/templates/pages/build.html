@@ -13,39 +13,11 @@
 <!-- Fixed layout: three columns of windows that never overlap. -->
 <div class="ro-desk">
 <div class="ro-desk__col ro-desk__col--1">
-{{with $.V}}
-<!-- Basic Info (Alt+V) -->
-<section class="ro-window ro-basic" id="win-basic" data-hotkey="v">
-  <header class="ro-window__title">{{t "Informações Básicas"}}
-    <button type="button" class="ro-gearbtn" data-settings aria-haspopup="menu" aria-expanded="false" title="{{t "Configurações"}}" aria-label="{{t "Configurações"}}"><svg class="ro-gearicon" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><g fill="currentColor"><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(0 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(45 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(90 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(135 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(180 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(225 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(270 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(315 8 8)"/></g><circle cx="8" cy="8" r="4.6" fill="none" stroke="currentColor" stroke-width="2.6"/></svg></button>
-  </header>
-  <div class="ro-window__body" id="build_basic">{{template "build_basic" .}}</div>
-  <!-- General settings, opened from the gear in the title bar -->
-  <div class="ro-settings" id="settings-menu" role="menu" aria-label="{{t "Configurações"}}" hidden>
-    <div class="ro-settings__head">{{t "Configurações"}}</div>
-    <label class="ro-settings__row" title="{{t "Janelas flutuantes: arraste cada uma pela barra de título. Desligado, ficam nas colunas."}}">
-      <input type="checkbox" data-layout-toggle> {{t "Janelas flutuantes"}} <kbd>Alt+W</kbd></label>
-    <button type="button" class="ro-settings__row" data-layout-reset>{{t "Reorganizar as janelas"}}</button>
-    <button type="button" class="ro-settings__row" data-show-all>{{t "Abrir todas as janelas"}}</button>
-    <button type="button" class="ro-settings__row" data-toggle="win-help">{{t "Atalhos e comandos"}} <kbd>Alt+H</kbd></button>
-    <div class="ro-settings__row ro-settings__lang">{{t "Idioma"}}:
-      <nav class="ro-titlelang" aria-label="{{t "Idioma"}}">{{range uiLangs}}<a href="?lang={{.Code}}" hreflang="{{.HTML}}" lang="{{.HTML}}" title="{{.Label}}"{{if eq .Code lang}} class="is-active" aria-current="true"{{end}}>{{.Code | upper}}</a>{{end}}</nav>
-    </div>
-  </div>
-  <!-- Class dropdown (Alt+J), opened from the class name or from Novo -->
-  <div class="ro-classdd" id="class-dd" role="listbox" aria-label="{{t "Classe"}}" hidden>
-    <p class="ro-classdd__hint" data-class-hint></p>
-    {{$job := .Build.Job}}
-    {{range .Families}}
-    <div class="ro-classdd__fam">{{.Name}}</div>
-    {{range .Jobs}}<button type="button" role="option" class="ro-classdd__job{{if eq .ID $job}} is-current{{end}}" data-pick-job="{{.ID}}"><img class="ro-jobicon" src="https://static.divine-pride.net/images/jobs/icon_jobs_{{.ID}}.png" alt="" width="25" height="25" onerror="this.style.visibility='hidden'"><span>{{.Name}}</span></button>{{end}}
-    {{end}}
-  </div>
-</section>
-{{end}}
 <!-- Menu: the window buttons and the build commands -->
 <section class="ro-window ro-menuwin" id="win-menu" data-no-show-all>
-  <header class="ro-window__title">{{t "Menu"}}</header>
+  <header class="ro-window__title">{{t "Menu"}}
+    <button type="button" class="ro-gearbtn" data-settings aria-haspopup="menu" aria-expanded="false" title="{{t "Configurações"}}" aria-label="{{t "Configurações"}}"><svg class="ro-gearicon" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><g fill="currentColor"><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(0 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(45 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(90 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(135 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(180 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(225 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(270 8 8)"/><rect x="6.6" y="0.6" width="2.8" height="3.6" rx="0.7" transform="rotate(315 8 8)"/></g><circle cx="8" cy="8" r="4.6" fill="none" stroke="currentColor" stroke-width="2.6"/></svg></button>
+  </header>
   <div class="ro-window__body">
     <div class="ro-menu__label">{{t "Janelas"}}</div>
     <div class="ro-menu__grid">
@@ -68,7 +40,35 @@
       <input type="file" id="rrf-menu" accept=".rrf" hidden>
     </div>
   </div>
+  <!-- General settings, opened from the gear in the title bar -->
+  <div class="ro-settings" id="settings-menu" role="menu" aria-label="{{t "Configurações"}}" hidden>
+    <div class="ro-settings__head">{{t "Configurações"}}</div>
+    <label class="ro-settings__row" title="{{t "Janelas flutuantes: arraste cada uma pela barra de título. Desligado, ficam nas colunas."}}">
+      <input type="checkbox" data-layout-toggle> {{t "Janelas flutuantes"}} <kbd>Alt+W</kbd></label>
+    <button type="button" class="ro-settings__row" data-layout-reset>{{t "Reorganizar as janelas"}}</button>
+    <button type="button" class="ro-settings__row" data-show-all>{{t "Abrir todas as janelas"}}</button>
+    <button type="button" class="ro-settings__row" data-toggle="win-help">{{t "Atalhos e comandos"}} <kbd>Alt+H</kbd></button>
+    <div class="ro-settings__row ro-settings__lang">{{t "Idioma"}}:
+      <nav class="ro-titlelang" aria-label="{{t "Idioma"}}">{{range uiLangs}}<a href="?lang={{.Code}}" hreflang="{{.HTML}}" lang="{{.HTML}}" title="{{.Label}}"{{if eq .Code lang}} class="is-active" aria-current="true"{{end}}>{{.Code | upper}}</a>{{end}}</nav>
+    </div>
+  </div>
 </section>
+{{with $.V}}
+<!-- Basic Info (Alt+V) -->
+<section class="ro-window ro-basic" id="win-basic" data-hotkey="v">
+  <header class="ro-window__title">{{t "Informações Básicas"}}</header>
+  <div class="ro-window__body" id="build_basic">{{template "build_basic" .}}</div>
+  <!-- Class dropdown (Alt+J), opened from the class name or from Novo -->
+  <div class="ro-classdd" id="class-dd" role="listbox" aria-label="{{t "Classe"}}" hidden>
+    <p class="ro-classdd__hint" data-class-hint></p>
+    {{$job := .Build.Job}}
+    {{range .Families}}
+    <div class="ro-classdd__fam">{{.Name}}</div>
+    {{range .Jobs}}<button type="button" role="option" class="ro-classdd__job{{if eq .ID $job}} is-current{{end}}" data-pick-job="{{.ID}}"><img class="ro-jobicon" src="https://static.divine-pride.net/images/jobs/icon_jobs_{{.ID}}.png" alt="" width="25" height="25" onerror="this.style.visibility='hidden'"><span>{{.Name}}</span></button>{{end}}
+    {{end}}
+  </div>
+</section>
+{{end}}
 {{with $.V}}
 <!-- Saved builds (Alt+C), like the client's character select -->
 <section class="ro-window ro-savedwin is-hidden" id="win-saved" data-hotkey="c">

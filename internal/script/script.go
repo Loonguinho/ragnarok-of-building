@@ -292,6 +292,14 @@ func (p *parser) statement(run bool) {
 				break
 			}
 		}
+		// Flag bonuses with no value ("bonus bNoSizeFix;") count as 1.
+		if name.kind == 'i' && p.peek().s == ";" && flagBonus[name.s] {
+			p.pos++
+			if run {
+				p.res.Bonus[name.s] = 1
+			}
+			break
+		}
 		v := p.expr()
 		ok := name.kind == 'i' && !p.bad && p.accept(";")
 		if !ok {
@@ -728,6 +736,9 @@ func b2i(b bool) int {
 }
 
 // known lists the bonuses the status calculation applies.
+// flagBonus: bonuses written without a value.
+var flagBonus = map[string]bool{"bNoSizeFix": true}
+
 var known = map[string]bool{
 	"bStr": true, "bAgi": true, "bVit": true, "bInt": true, "bDex": true, "bLuk": true,
 	"bAllStats": true, "bAgiVit": true, "bAgiDexStr": true,
@@ -747,6 +758,7 @@ var known = map[string]bool{
 	// the generated passives write it, the damage engine adds it after the ATK
 	// multipliers).
 	"bMasteryAtk": true,
+	"bNoSizeFix": true, "bCriticalLong": true,
 	"bCritTenths": true, // CRIT in tenths (skill tables write "+12,5")
 	"bAspdFixed":  true, // ASPD potions and quicken skills: × AGI ÷ 200 before the ASPD %
 }

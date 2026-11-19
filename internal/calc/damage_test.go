@@ -104,6 +104,11 @@ func TestDamageElementSizeSkill(t *testing.T) {
 	if d := Damage(Build{}, r2, dmgCatalog(), big, Attack{}); d.Avg != 200+93 {
 		t.Errorf("knuckle vs large: %d, want 293", d.Avg)
 	}
+	// bNoSizeFix (Carta Drake): no size penalty.
+	r2.Bonuses["bNoSizeFix"] = 1
+	if d := Damage(Build{}, r2, dmgCatalog(), big, Attack{}); d.Avg != 325 {
+		t.Errorf("no size fix vs large: %d, want 325", d.Avg)
+	}
 	// Skill: 300% x 2 hits, no criticals.
 	d = Damage(Build{}, baseResult(), dmgCatalog(), target(0, 0, 0), Attack{SkillCode: "X", SkillRatio: 300, Hits: 2})
 	if d.Avg != 325*3*2 || d.Crit != 0 {
@@ -126,15 +131,43 @@ func TestDamageRESAndTaken(t *testing.T) {
 
 func TestHitAndCritChance(t *testing.T) {
 	r := baseResult()
-	r.HIT, r.CritTenths = 150, 300 // 30% crit
-	m := target(0, 0, 10)          // flee = 10 + 1 + 100 = 111
-	m.Stats[LUK] = 20              // -4% crit
+	r.HIT = 150
+	r.st[LUK] = 35              // floor(35 x 0,3) = 10
+	r.Bonuses["bCritical"] = 20 // + 20 = 30 crit
+	m := target(0, 0, 10)       // flee = 10 + 1 + 100 = 111
+	m.Stats[LUK] = 22           // floor(22 / 5) = 4
 	d := Damage(Build{}, r, dmgCatalog(), m, Attack{})
 	if d.HitChance != 39 {
 		t.Errorf("hit = %v, want 39", d.HitChance)
 	}
-	if d.CritChance < 25.9 || d.CritChance > 26.1 {
+	if d.CritChance != 26 {
 		t.Errorf("crit chance = %v, want 26", d.CritChance)
+	}
+	// A skill with half the crit (Cross Impact): floor(30 x 0,5) - 4 = 11;
+	// left out, the share is all of it (30 - 4 = 26).
+	half := &SkillFormula{Code: "X", CanCrit: func(FormulaInput) bool { return true }, CritRate: 0.5, CritDmg: 0.5,
+		Ratio: func(FormulaInput) float64 { return 100 }}
+	if d := Damage(Build{}, r, dmgCatalog(), m, Attack{SkillCode: "X", Formula: half}); d.CritChance != 11 {
+		t.Errorf("half-crit skill: %v, want 11", d.CritChance)
+	}
+	half.CritRate, half.CritDmg = 0, 0
+	if d := Damage(Build{}, r, dmgCatalog(), m, Attack{SkillCode: "X", Formula: half}); d.CritChance != 26 || d.Crit == 0 {
+		t.Errorf("skill without crit share: %v (crit %d), want 26", d.CritChance, d.Crit)
+	}
+	// Per-race crit counts for basic attacks only.
+	r.Extra["bCriticalAddRace RC_Brute"] = 5
+	if d := Damage(Build{}, r, dmgCatalog(), m, Attack{}); d.CritChance != 31 {
+		t.Errorf("race crit: %v, want 31", d.CritChance)
+	}
+	half.CritRate = 1
+	if d := Damage(Build{}, r, dmgCatalog(), m, Attack{SkillCode: "X", Formula: half}); d.CritChance != 26 {
+		t.Errorf("race crit on a skill: %v, want 26", d.CritChance)
+	}
+	// Katar: the character's crit doubles (60 - 4 = 56).
+	delete(r.Extra, "bCriticalAddRace RC_Brute")
+	r.WeaponType = "Katar"
+	if d := Damage(Build{}, r, dmgCatalog(), m, Attack{}); d.CritChance != 56 {
+		t.Errorf("katar crit: %v, want 56", d.CritChance)
 	}
 }
 

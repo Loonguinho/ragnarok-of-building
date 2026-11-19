@@ -83,7 +83,15 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	canCrit, critRate, critDmgPart := !isSkill, 1.0, 1.0
 	if f != nil {
 		canCrit = f.ForceCrit || (f.CanCrit != nil && f.CanCrit(a.Input))
+		// latam-ro-calc's defaults: a skill that leaves baseCriPercentage /
+		// criDmgPercentage out uses all of the character's crit and crit damage.
 		critRate, critDmgPart = f.CritRate, f.CritDmg
+		if critRate == 0 {
+			critRate = 1
+		}
+		if critDmgPart == 0 {
+			critDmgPart = 1
+		}
 	} else if isSkill {
 		critDmgPart = 0.5
 	}
@@ -119,7 +127,9 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	// Negative values (healing) are treated as no damage.
 	eleStatus, eleAtk := max(0, attr(statusEle)), max(0, attr(ele))
 	sizePct := 100
-	if row, ok := c.SizeFix[r.WeaponType]; ok {
+	if r.Bonuses["bNoSizeFix"] > 0 {
+		// battle_calc_sizefix: no_sizefix (Carta Drake...) skips the size penalty.
+	} else if row, ok := c.SizeFix[r.WeaponType]; ok {
 		if v, ok := row[m.Size]; ok {
 			sizePct = v
 		}
@@ -303,9 +313,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	d.HitChance = hitChance(b, r, c, m, f)
 	if canCrit {
 		d.Crit = one(int64(wmax), true, false) // criticals use max weapon variance
-		// bCriticalAddRace adds whole CRIT points against a race.
-		cri := r.CritTenths + 10*sum("bCriticalAddRace", "RC_"+m.Race, "RC_All") - m.Stats[LUK]*2
-		d.CritChance = math.Max(0, float64(cri)/10) * critRate
+		d.CritChance = critChance(r, m, isSkill, critRate, sum("bCriticalAddRace", "RC_"+m.Race, "RC_All"))
 		if f != nil && f.ForceCrit {
 			d.CritChance = 100
 		}
@@ -324,6 +332,35 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		d.Notes = append(d.Notes, "Efeitos de equipamento não simulados (procs, efeitos condicionais) não entram no dano.")
 	}
 	return d
+}
+
+// critChance is the % of attacks that crit against the target, as
+// latam-ro-calc measured it on LATAM (crit-rate.ts): the character's crit is
+// floor(SOR × 0,3) + equipment CRIT (doubled with a katar; the sheet's
+// 1 + level/100 does not count), less the target's floor(SOR ÷ 5). The basic
+// attack adds the per-race crit and, at range, bCriticalLong; a skill takes
+// only its share (rate) of the character's crit, and on a katar the share is
+// taken after the target's part.
+func critChance(r Result, m *gamedata.Monster, isSkill bool, rate float64, raceCrit int) float64 {
+	char := float64(r.st[LUK]*3/10) + float64(10*r.Bonuses["bCritical"]+r.Bonuses["bCritTenths"])/10
+	katar := r.WeaponType == "Katar"
+	if katar {
+		char *= 2
+	}
+	shield := float64(m.Stats[LUK] / 5)
+	var v float64
+	switch {
+	case !isSkill:
+		v = char + float64(raceCrit) - shield
+		if r.Ranged {
+			v += float64(r.Bonuses["bCriticalLong"])
+		}
+	case katar:
+		v = math.Floor(char-shield) * rate
+	default:
+		v = math.Floor(char*rate) - shield
+	}
+	return math.Max(0, math.Floor(v))
 }
 
 // hitChance is the % of non-critical attacks that land (rAthena

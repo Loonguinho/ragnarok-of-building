@@ -119,3 +119,11 @@ if (Upper == 1 && BaseClass == Job_Swordman) bonus bLuk,max(1,2);`, ctx)
 		t.Errorf("bInt %d, skipped %d", r.Bonus["bInt"], r.Skipped)
 	}
 }
+
+// Flag bonuses are written without a value.
+func TestFlagBonus(t *testing.T) {
+	r := Eval(`bonus bNoSizeFix; bonus bCriticalLong,15;`, Context{})
+	if r.Bonus["bNoSizeFix"] != 1 || r.Bonus["bCriticalLong"] != 15 || r.Skipped != 0 {
+		t.Errorf("got %v, skipped %d", r.Bonus, r.Skipped)
+	}
+}

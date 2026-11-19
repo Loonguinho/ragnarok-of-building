@@ -397,3 +397,22 @@ func TestClassInfo(t *testing.T) {
 		}
 	}
 }
+
+// A costume stone fits only its costume slot; ordinary enchants never fit a costume.
+func TestCostumeStones(t *testing.T) {
+	stone := &gamedata.Item{Type: "Card", SubType: "Enchant", Locations: []string{CosMid}}
+	enchant := &gamedata.Item{Type: "Card", SubType: "Enchant"}
+	card := &gamedata.Item{Type: "Card", Locations: []string{"Head_Top", "Head_Mid", "Head_Low"}}
+	for _, tc := range []struct {
+		c    *gamedata.Item
+		slot string
+		want bool
+	}{
+		{stone, CosMid, true}, {stone, CosTop, false}, {stone, HeadMid, false}, {stone, Weapon, false},
+		{enchant, CosMid, false}, {enchant, Armor, true}, {card, CosTop, false}, {card, HeadTop, true},
+	} {
+		if got := CardFits(tc.c, tc.slot); got != tc.want {
+			t.Errorf("%v in %s: %v, want %v", tc.c.Locations, tc.slot, got, tc.want)
+		}
+	}
+}

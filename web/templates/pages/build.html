@@ -262,7 +262,7 @@
 <table class="ro-dmgtable">
   <tr><th>{{t "Dano normal"}}</th><td><b>{{num .Dmg.Min}} ~ {{num .Dmg.Max}}</b> <small>{{t "(média"}} {{num .Dmg.Avg}})</small></td></tr>
   {{if .Dmg.Crit}}<tr><th>{{t "Crítico"}}</th><td><b>{{num .Dmg.Crit}}</b> <small>{{t "chance"}} {{f1 .Dmg.CritChance}}%</small></td></tr>{{end}}
-  <tr><th>{{t "Chance de acerto"}}</th><td>{{.Dmg.HitChance}}%</td></tr>
+  <tr><th>{{t "Chance de acerto"}}</th><td>{{f1 .Dmg.HitChance}}%</td></tr>
   <tr><th>{{t "Dano esperado"}}</th><td>{{num0 .Dmg.Expected}} <small>{{t "por uso, com erros e críticos"}}</small></td></tr>
   <tr><th>{{t "Usos para matar"}}</th><td><b>{{.Dmg.HitsToKill}}</b> <small>{{t "(dano médio)"}}</small></td></tr>
   <tr><th>{{t "Elemento do ataque"}}</th><td>{{.ElementName}}</td></tr>
@@ -271,7 +271,7 @@
 <details class="ro-skilltable" open>
   <summary>{{t "Dano de cada habilidade"}}</summary>
   <table class="ro-skilltable__t">
-    <thead><tr><th>{{t "Habilidade"}}</th><th>{{t "Nv"}}</th><th>{{t "Média"}}</th><th>{{t "Crítico"}}</th><th>{{t "Esperado"}}</th><th>{{t "Usos"}}</th></tr></thead>
+    <thead><tr><th>{{t "Habilidade"}}</th><th>{{t "Nv"}}</th><th>{{t "Média"}}</th><th>{{t "Crítico"}}</th><th title="{{t "Chance de acerto (sem crítico) · chance de crítico"}}">{{t "Acerto"}}</th><th>{{t "Esperado"}}</th><th>{{t "Usos"}}</th></tr></thead>
     <tbody>
     {{range .Table}}
       <tr class="{{if .Selected}}is-selected{{end}}" data-atk-pick="{{.ID}}" data-atk-lv="{{.Level}}" tabindex="0" title="{{t "Clique para usar como ataque"}}">
@@ -279,6 +279,7 @@
         <td>{{if .ID}}{{.Level}}{{else}}—{{end}}</td>
         <td>{{num .Avg}}</td>
         <td>{{if .Crit}}{{num .Crit}}{{else}}—{{end}}</td>
+        <td><small>{{f1 .HitChance}}%{{if .Crit}} · {{f1 .CritChance}}% {{t "crít."}}{{end}}</small></td>
         <td><b>{{num0 .Expected}}</b></td>
         <td>{{.HitsToKill}}</td>
       </tr>

@@ -39,7 +39,7 @@ func main() {
 	if key := os.Getenv("DP_API_KEY"); key != "" {
 		dp = divinepride.New(key, "LATAM", env("DP_CACHE", "data/cache/dp"))
 	}
-	srv, err := web.New(web.Options{Log: log, Catalog: cat, Dev: dev, SoundDir: sounds, DP: dp})
+	srv, err := web.New(web.Options{Log: log, Catalog: cat, Dev: dev, SoundDir: sounds, DP: dp, PasteURL: os.Getenv("PASTE_URL")})
 	if err != nil {
 		log.Error("init", "err", err)
 		os.Exit(1)

@@ -95,18 +95,48 @@
     return [`**${q(".ro-basic__name b")}** · ${T("Nv.")} ${build.b}/${build.jl}`, stats + tr,
       ...(gear.length ? ["", ...gear] : []), "", shareLink()].join("\n");
   }
+  // Pastes the build on paste.rs (through the server) and copies the link.
+  async function pasteBuild(btn) {
+    btn.disabled = true;
+    say(T("Criando o paste…"));
+    try {
+      const res = await fetch("/build/paste", { method: "POST", body: new URLSearchParams({ b: code, text: shareText() }) });
+      if (!res.ok) throw new Error(res.status === 429 ? T("muitos pastes seguidos, espere alguns segundos") : (await res.text()).trim());
+      const { url } = await res.json();
+      const f = document.querySelector("[data-share-code]");
+      if (f) f.value = url;
+      pastedFor = code;
+      copyText(url, T("Link do paste copiado: %s", url));
+    } catch (err) {
+      say(T("Não deu para criar o paste: ") + err.message, true);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+  let pastedFor = null;
   function refreshShare() {
     const f = document.querySelector("[data-share-code]");
-    if (f) f.value = code;
+    if (f && pastedFor !== code) f.value = code; // keeps the paste link while the build is the same
   }
   refreshShare();
-  document.addEventListener("submit", (e) => {
+  document.addEventListener("submit", async (e) => {
     const f = e.target.closest("[data-share-import]");
     if (!f) return;
     e.preventDefault();
     const v = (f.elements.code.value || "").trim();
     const m = v.match(/[?&]b=([A-Za-z0-9_-]+)/);
-    const c = m ? m[1] : v.replace(/[^A-Za-z0-9_-]/g, "");
+    let c = m ? m[1] : v.replace(/[^A-Za-z0-9_-]/g, "");
+    if (!m && /^(https?:\/\/|paste\.rs\/)/i.test(v)) { // a paste link: the server reads the code in it
+      say(T("Lendo o paste…"));
+      try {
+        const res = await fetch("/build/paste?u=" + encodeURIComponent(v));
+        if (!res.ok) throw new Error((await res.text()).trim());
+        c = (await res.json()).code;
+      } catch (err) {
+        say(T("Não deu para ler o paste: ") + err.message, true);
+        return;
+      }
+    }
     if (!c) { say(T("Cole um link ou código de build."), true); return; }
     const into = f.elements.to.value === "this" && saved;
     if (into && !confirm(T('Substituir o build "%s" pelo importado? Ele só muda de vez quando você salvar.', saved.name))) return;
@@ -258,7 +288,8 @@
     if (e.target.closest("[data-share-copy]")) copyText(code, T("Código copiado!"));
     if (e.target.closest("[data-share-go]")) {
       const as = document.querySelector("[data-share-as]").value;
-      if (as === "code") copyText(code, T("Código copiado!"));
+      if (as === "paste") pasteBuild(e.target.closest("[data-share-go]"));
+      else if (as === "code") copyText(code, T("Código copiado!"));
       else if (as === "text") copyText(shareText(), T("Texto do build copiado! Cole no Discord ou no fórum."));
       else copyText(shareLink(), T("Link do build copiado!"));
     }

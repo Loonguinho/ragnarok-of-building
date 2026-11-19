@@ -328,9 +328,19 @@ var dict = map[string][2]string{
 	"Copiar":                            {"Copy", "Copiar"},
 	"Copie:":                            {"Copy:", "Copia:"},
 	"Cole um link ou código de build.":  {"Paste a build link or code.", "Pega un enlace o código de build."},
-	"Para importar um build, cole o link ou o código aqui:": {
-		"To import a build, paste its link or code here:",
-		"Para importar un build, pega el enlace o el código aquí:"},
+	"Para importar um build, cole o link, o link do paste ou o código aqui:": {
+		"To import a build, paste its link, its paste link or its code here:",
+		"Para importar un build, pega el enlace, el enlace del paste o el código aquí:"},
+	"Paste (paste.rs)": {"Paste (paste.rs)", "Paste (paste.rs)"},
+	"Paste cria um link curto no paste.rs com o resumo e o código do build (público para quem tiver o link).": {
+		"Paste makes a short paste.rs link with the build summary and code (public to anyone with the link).",
+		"Paste crea un enlace corto en paste.rs con el resumen y el código del build (público para quien tenga el enlace)."},
+	"Criando o paste…":                               {"Creating the paste…", "Creando el paste…"},
+	"Lendo o paste…":                                 {"Reading the paste…", "Leyendo el paste…"},
+	"Link do paste copiado: %s":                      {"Paste link copied: %s", "Enlace del paste copiado: %s"},
+	"Não deu para criar o paste: ":                   {"Could not create the paste: ", "No se pudo crear el paste: "},
+	"Não deu para ler o paste: ":                     {"Could not read the paste: ", "No se pudo leer el paste: "},
+	"muitos pastes seguidos, espere alguns segundos": {"too many pastes in a row, wait a few seconds", "demasiados pastes seguidos, espera unos segundos"},
 	"Texto do build copiado! Cole no Discord ou no fórum.": {
 		"Build text copied! Paste it on Discord or a forum.",
 		"¡Texto del build copiado! Pégalo en Discord o en el foro."},

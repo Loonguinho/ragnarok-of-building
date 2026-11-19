@@ -34,6 +34,8 @@ type Options struct {
 	// DP fetches, one ID at a time, monsters rAthena has no stats for
 	// (nil: no Divine Pride key).
 	DP *divinepride.Client
+	// PasteURL is the paste service for shared builds (empty: paste.rs).
+	PasteURL string
 }
 
 // Server holds parsed templates and dependencies for handlers.
@@ -103,8 +105,9 @@ func (s *Server) Routes() http.Handler {
 	calcLimit := newRateLimiter(10, 40)
 	searchLimit := newRateLimiter(10, 40)
 	importLimit := newRateLimiter(0.2, 5) // 5 in a row, then one every 5 s
+	pasteLimit := newRateLimiter(0.1, 5)  // builds pasted/read on paste.rs: one every 10 s
 	if s.opt.NoRateLimit {
-		calcLimit, searchLimit, importLimit = nil, nil, nil
+		calcLimit, searchLimit, importLimit, pasteLimit = nil, nil, nil, nil
 	}
 
 	static, _ := fs.Sub(s.fsys, "static")
@@ -138,6 +141,8 @@ func (s *Server) Routes() http.Handler {
 	r.With(searchLimit.limit).Get("/build/items", s.handleBuildItems)
 	r.With(calcLimit.limit).Get("/build/swap", s.handleSwap)
 	r.Get("/build/randomopts", s.handleRandomOpts)
+	r.With(pasteLimit.limit).Post("/build/paste", s.handlePasteCreate)
+	r.With(pasteLimit.limit).Get("/build/paste", s.handlePasteRead)
 	r.With(searchLimit.limit).Get("/build/monsters", s.handleBuildMonsters)
 	r.Get("/sounds/{name}", s.handleSound)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })

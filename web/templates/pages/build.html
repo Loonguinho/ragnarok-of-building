@@ -69,18 +69,20 @@
       </div>
       <div class="ro-sharewin__row">
         <select class="ro-select" data-share-as aria-label="{{t "Formato"}}">
+          <option value="paste">{{t "Paste (paste.rs)"}}</option>
           <option value="link">{{t "Link do simulador"}}</option>
           <option value="code">{{t "Só o código"}}</option>
           <option value="text">{{t "Texto (Discord / fórum)"}}</option>
         </select>
         <button class="ro-btn" type="button" data-share-go>{{t "Compartilhar"}}</button>
       </div>
-      <p class="ro-note">{{t "O código guarda o build inteiro (classe, atributos, equipamento, habilidades e buffs). Quem abrir o link ou colar o código vê o mesmo build."}}</p>
+      <p class="ro-note">{{t "O código guarda o build inteiro (classe, atributos, equipamento, habilidades e buffs). Quem abrir o link ou colar o código vê o mesmo build."}}
+        {{t "Paste cria um link curto no paste.rs com o resumo e o código do build (público para quem tiver o link)."}}</p>
     </fieldset>
     <fieldset class="ro-fieldset">
       <legend>{{t "Importar"}}</legend>
       <form data-share-import>
-        <label class="ro-sharewin__label" for="share-import">{{t "Para importar um build, cole o link ou o código aqui:"}}</label>
+        <label class="ro-sharewin__label" for="share-import">{{t "Para importar um build, cole o link, o link do paste ou o código aqui:"}}</label>
         <input class="ro-input" id="share-import" type="text" name="code" autocomplete="off">
         <div class="ro-sharewin__row">
           <select class="ro-select" name="to" aria-label="{{t "Importar para"}}">

@@ -320,6 +320,32 @@
     }
   });
 
+  // ---- settings menu (gear in Basic Info's title bar) ----
+  const settings = document.getElementById("settings-menu");
+  if (settings) document.body.append(settings); // out of the window, which would clip it
+  const gear = document.querySelector("[data-settings]");
+  function closeSettings() {
+    if (!settings || settings.hidden) return;
+    settings.hidden = true;
+    gear?.setAttribute("aria-expanded", "false");
+  }
+  document.addEventListener("click", (e) => {
+    if (!settings) return;
+    if (e.target.closest("[data-settings]")) {
+      if (!settings.hidden) { closeSettings(); return; }
+      const r = gear.getBoundingClientRect();
+      settings.hidden = false;
+      settings.style.top = r.bottom + 2 + "px";
+      settings.style.left = Math.max(4, Math.min(r.right - settings.offsetWidth, innerWidth - settings.offsetWidth - 4)) + "px";
+      gear.setAttribute("aria-expanded", "true");
+      return;
+    }
+    // Clicks inside keep it open (checkbox); the actions close it.
+    if (!e.target.closest("#settings-menu") || e.target.closest("[data-layout-reset], [data-show-all]")) closeSettings();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
+  document.querySelector(".ro-desk")?.addEventListener("scroll", closeSettings, true);
+
   // ---- class dropdown ----
   // Opens under the class name in Basic Info: to change the class, or (from
   // Novo) to start a blank build of the chosen one.

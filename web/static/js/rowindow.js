@@ -82,7 +82,7 @@
       for (const w of wins) { w.style.left = w.style.top = w.style.width = w.style.zIndex = ""; }
     }
     try { localStorage.setItem(LAYOUT, on ? "float" : "fixed"); } catch {}
-    document.querySelectorAll("[data-layout-toggle]").forEach((b) => b.setAttribute("aria-pressed", String(on)));
+    document.querySelectorAll("[data-layout-toggle]").forEach((b) => { b.checked = on; });
     fitDesk();
   }
 
@@ -149,7 +149,15 @@
     });
   }
 
-  window.ROWin = { show, focus, toggle, setFloating, floating };
+  // Floating spots back to where the columns put the windows.
+  function resetLayout() {
+    for (const w of deskWins()) if (w.id && state[w.id]) delete state[w.id].f;
+    save(state);
+    if (floating()) { setFloating(false); setFloating(true, false); }
+  }
+  function showAll() { deskWins().forEach((w) => { if (w.classList.contains("is-hidden")) show(w); }); }
+
+  window.ROWin = { show, focus, toggle, setFloating, floating, resetLayout, showAll };
 
   document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".ro-window").forEach(init);
@@ -158,6 +166,8 @@
     if (desk() && saved === "float") setFloating(true, true);
     document.addEventListener("click", (e) => {
       if (e.target.closest("[data-layout-toggle]")) setFloating(!floating(), false);
+      if (e.target.closest("[data-layout-reset]")) resetLayout();
+      if (e.target.closest("[data-show-all]")) showAll();
     });
     // Contents change size (recalc, tabs): keep the page tall enough.
     if (desk() && window.ResizeObserver) {

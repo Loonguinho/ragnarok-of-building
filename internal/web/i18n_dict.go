@@ -344,7 +344,10 @@ var dict = map[string][2]string{
 	"O código guarda o build inteiro (classe, atributos, equipamento, habilidades e buffs). Quem abrir o link ou colar o código vê o mesmo build.": {
 		"The code holds the whole build (class, stats, equipment, skills and buffs). Whoever opens the link or pastes the code sees the same build.",
 		"El código guarda el build entero (clase, atributos, equipo, habilidades y buffs). Quien abra el enlace o pegue el código ve el mismo build."},
-	"Flutuantes": {"Floating", "Flotantes"},
+	"Configurações":          {"Settings", "Configuración"},
+	"Janelas flutuantes":     {"Floating windows", "Ventanas flotantes"},
+	"Reorganizar as janelas": {"Rearrange the windows", "Reorganizar las ventanas"},
+	"Abrir todas as janelas": {"Open all windows", "Abrir todas las ventanas"},
 	"Janelas flutuantes: arraste cada uma pela barra de título. Desligado, ficam nas colunas.": {
 		"Floating windows: drag each one by its title bar. Off, they stay in the columns.",
 		"Ventanas flotantes: arrastra cada una por su barra de título. Apagado, quedan en las columnas."},

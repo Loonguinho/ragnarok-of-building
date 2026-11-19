@@ -88,13 +88,23 @@ body.ro-desktop:has(.ro-desk) { overflow: auto; }
 .ro-desk.is-floating .ro-window { position: absolute; }
 .ro-desk.is-floating .ro-window__title { cursor: move; }
 .ro-desk.is-floating .ro-chat { position: fixed; left: 8px; bottom: 8px; width: 360px; z-index: 5; }
-.ro-layoutbtn { padding: 0 2px; border: 0; background: none; font: inherit; font-size: 10px; font-weight: bold;
-  color: var(--ro-title-text); opacity: .55; cursor: pointer; margin-right: 4px; }
-.ro-layoutbtn::before { content: "☐ "; }
-.ro-layoutbtn[aria-pressed="true"] { opacity: 1; }
-.ro-layoutbtn[aria-pressed="true"]::before { content: "☑ "; }
-.ro-layoutbtn:hover { opacity: 1; text-decoration: underline; }
-@media (max-width: 720px) { .ro-layoutbtn { display: none; } }
+.ro-gearbtn { position: absolute; right: 4px; top: 0; padding: 0 3px; border: 0; background: none; cursor: pointer;
+  font-size: 13px; line-height: 18px; color: var(--ro-title-text); opacity: .7; }
+.ro-gearbtn:hover, .ro-gearbtn[aria-expanded="true"] { opacity: 1; }
+/* Settings menu under the gear. */
+.ro-settings { position: fixed; z-index: 60; min-width: 220px; background: #fff; border: 1px solid #7f9db9;
+  box-shadow: 2px 3px 8px rgba(0, 0, 0, .25); padding: 2px 0; font-size: 11px; }
+.ro-settings[hidden] { display: none; }
+.ro-settings__head { padding: 2px 8px; font-weight: bold; color: var(--ro-title-text); background: #e8edf6; border-bottom: 1px solid #c4c8d0; }
+.ro-settings__row { display: flex; align-items: center; gap: 6px; width: 100%; padding: 4px 8px; border: 0; background: none;
+  font: inherit; color: inherit; text-align: left; cursor: pointer; box-sizing: border-box; }
+.ro-settings__row:hover { background: #dce8fb; }
+.ro-settings__row kbd { margin-left: auto; color: #6a7894; font: inherit; font-size: 10px; }
+.ro-settings__lang { cursor: default; border-top: 1px solid #e3e6ec; }
+.ro-settings__lang:hover { background: none; }
+.ro-settings .ro-titlelang { position: static; margin-left: auto; }
+.ro-settings .ro-titlelang a { font-size: 11px; color: #1d4fa8; }
+@media (max-width: 720px) { .ro-settings [data-layout-toggle], .ro-settings [data-layout-reset] { display: none; } }
 .ro-window.is-focused { z-index: 10; }
 .ro-window__title {
   position: relative;

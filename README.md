@@ -16,6 +16,12 @@ docker run -p 8080:8080 ragnarok-of-building    # http://localhost:8080
 
 Hosts pass the port in `PORT`. Saved builds live in each visitor's browser (localStorage) and builds are shared by link, so the server keeps no state and any free container host works. Per-IP rate limits protect the calculation and replay upload endpoints, and the pages send a Content-Security-Policy.
 
+## For players: the Windows program
+
+Download `RagnarokOfBuilding-<version>-windows.zip` from the [Releases](../../releases) page, extract it and double-click `RagnarokOfBuilding.exe`: it opens the simulator in the browser (only on this computer, `127.0.0.1`). On first run it finds the RO LATAM client (or asks for its folder), downloads rAthena's tables and latam-ro-calc's monster list once, and builds the catalog from that client; after each game patch it rebuilds it by itself. No game data ships with the program. Details for players are in [docs/LEIAME.txt](docs/LEIAME.txt), which goes in the zip.
+
+To publish a version, push a tag: `git tag v0.1.0` then `git push origin v0.1.0`. The `release` workflow tests, builds `cmd/app` for Windows and attaches the zip to a new release. To build it locally: `go build -o RagnarokOfBuilding.exe ./cmd/app`.
+
 ## Running from source
 
 You need the RO LATAM client installed (default `C:\Gravity\Ragnarok`; set `RO_CLIENT=<folder>` in `.env` to read a copy of it instead, so the installed game is never touched). Then, once:

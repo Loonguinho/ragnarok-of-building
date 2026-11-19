@@ -1,0 +1,33 @@
+Ragnarok of Building - simulador de builds do Ragnarok Online LATAM
+====================================================================
+
+COMO USAR
+1. Extraia esta pasta em qualquer lugar (ex.: Documentos\RagnarokOfBuilding).
+2. Dê dois cliques em RagnarokOfBuilding.exe.
+3. O simulador abre no seu navegador. Deixe a janela preta aberta enquanto
+   usa; para sair, feche-a.
+
+NA PRIMEIRA VEZ
+- O programa procura o RO LATAM instalado (ex.: C:\Gravity\Ragnarok) e lê os
+  dados do jogo (itens, habilidades, classes, monstros) direto do seu cliente.
+  Se não achar, ele pergunta a pasta do jogo: cole o caminho da pasta que tem
+  o data.grf.
+- Ele baixa uma vez as tabelas do rAthena e a lista de monstros do
+  latam-ro-calc (precisa de internet). Leva menos de um minuto.
+- Depois de cada atualização do jogo ele relê o cliente sozinho.
+
+AVISO DO WINDOWS
+O programa não é assinado, então o Windows pode mostrar "O Windows protegeu o
+seu computador". Clique em "Mais informações" > "Executar assim mesmo".
+O código-fonte está no GitHub, aberto para quem quiser conferir.
+
+OPÇÕES (para quem usa o Prompt de Comando)
+  RagnarokOfBuilding.exe -import          relê os dados do jogo agora
+  RagnarokOfBuilding.exe -client D:\RO    usa outra pasta do jogo
+  RagnarokOfBuilding.exe -port 8090       usa outra porta
+
+Os builds salvos ficam no seu navegador. Para mandar um build a um amigo,
+use o botão Compartilhar (link, código ou paste).
+
+Nenhum dado do jogo vem junto com o programa: tudo é lido do seu próprio
+cliente. Ragnarok Online é marca da Gravity; este projeto não é oficial.

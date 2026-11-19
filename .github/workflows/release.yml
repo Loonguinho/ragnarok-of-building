@@ -1,0 +1,33 @@
+name: release
+# Pushing a version tag (git tag v0.1.0 && git push origin v0.1.0) builds the
+# Windows program and publishes it on the repository's Releases page.
+# Only our code goes in: each player's copy reads the game data from their
+# own RO LATAM client on first run.
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go vet ./... && go test ./...
+      - name: Build
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+        run: |
+          mkdir -p dist/RagnarokOfBuilding
+          go build -trimpath -ldflags "-s -w" -o dist/RagnarokOfBuilding/RagnarokOfBuilding.exe ./cmd/app
+          cp docs/LEIAME.txt dist/RagnarokOfBuilding/
+          cd dist && zip -r "RagnarokOfBuilding-${GITHUB_REF_NAME}-windows.zip" RagnarokOfBuilding
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.zip --title "$GITHUB_REF_NAME" --generate-notes

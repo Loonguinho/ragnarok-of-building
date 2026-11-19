@@ -285,7 +285,10 @@
   });
   document.addEventListener("click", async (e) => {
     if (e.target.closest("[data-save-build]")) saveBuild(true);
-    if (e.target.closest("[data-share-copy]")) copyText(code, T("Código copiado!"));
+    if (e.target.closest("[data-share-copy]")) { // what the box shows: the code or the paste link
+      const v = document.querySelector("[data-share-code]").value || code;
+      copyText(v, v === code ? T("Código copiado!") : T("Link do paste copiado: %s", v));
+    }
     if (e.target.closest("[data-share-go]")) {
       const as = document.querySelector("[data-share-as]").value;
       if (as === "paste") pasteBuild(e.target.closest("[data-share-go]"));

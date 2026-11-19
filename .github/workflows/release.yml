@@ -18,15 +18,8 @@ jobs:
           go-version-file: go.mod
       - run: go vet ./... && go test ./...
       - name: Build
-        env:
-          GOOS: windows
-          GOARCH: amd64
-          CGO_ENABLED: "0"
-        run: |
-          mkdir -p dist/RagnarokOfBuilding
-          go build -trimpath -ldflags "-s -w -X main.version=${GITHUB_REF_NAME} -X main.repo=${GITHUB_REPOSITORY}" -o dist/RagnarokOfBuilding/RagnarokOfBuilding.exe ./cmd/app
-          cp docs/LEIAME.txt LICENSE dist/RagnarokOfBuilding/
-          cd dist && zip -r "RagnarokOfBuilding-${GITHUB_REF_NAME}-windows.zip" RagnarokOfBuilding
+        # Same tool as a local build: icon, version details, windowed (no console), zip.
+        run: go run ./tools/buildexe -version "${GITHUB_REF_NAME}" -repo "${GITHUB_REPOSITORY}"
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}

@@ -471,7 +471,10 @@ button.ro-jobcard { font-family: inherit; cursor: pointer; }
 
 /* Buffs window */
 .ro-buffs { border: 1px solid #c4c8d0; border-radius: 3px; margin: 0 0 6px; padding: 2px 6px 4px; }
-.ro-buffs legend { font-weight: bold; padding: 0 3px; color: #4a5a78; }
+.ro-buffs legend, .ro-buffs summary { font-weight: bold; padding: 0 3px; color: #4a5a78; }
+.ro-buffs summary { cursor: pointer; margin: 0 -3px; }
+.ro-buffs[open] summary { margin-bottom: 2px; }
+.ro-buffs__count { color: #1d4fa8; }
 .ro-buff { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 1px 0; }
 .ro-buff:has(input[type=checkbox]) { justify-content: flex-start; }
 .ro-buff .ro-select { max-width: 170px; }

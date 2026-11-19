@@ -490,20 +490,20 @@
 
 {{define "build_buffs"}}
 {{range .Buffs}}
-<fieldset class="ro-buffs">
-  <legend>{{t .Name}}</legend>
+<details class="ro-buffs" data-buff-group="{{.Name}}"{{if .Open}} open{{end}}>
+  <summary>{{t .Name}}{{if .Active}} <small class="ro-buffs__count">({{.Active}})</small>{{end}}</summary>
   {{range .Items}}
-  <label class="ro-buff">
-    {{if .Choices}}<span>{{t .Label}}</span>
-      <select class="ro-select" data-buff="{{.Key}}">{{$v := .ValueStr}}{{range .Choices}}<option value="{{index . 0}}"{{if eq (index . 0) $v}} selected{{end}}>{{t (index . 1)}}</option>{{end}}</select>
-    {{else if .Max}}<span>{{t .Label}}</span>
+  <label class="ro-buff"{{if .Excl}} title="{{t "Só um deste tipo por vez (escolher outro desliga este)."}}"{{end}}>
+    {{if .Choices}}<span>{{.Label}}</span>
+      <select class="ro-select" data-buff="{{.Key}}"{{if .Excl}} data-buff-excl="{{.Excl}}"{{end}}>{{$v := .ValueStr}}{{range .Choices}}<option value="{{index . 0}}"{{if eq (index . 0) $v}} selected{{end}}>{{t (index . 1)}}</option>{{end}}</select>
+    {{else if .Max}}<span>{{.Label}}</span>
       <input class="ro-input ro-num ro-num--sm" type="number" min="0" max="{{.Max}}" value="{{.Value}}" data-buff="{{.Key}}">
-    {{else}}<input type="checkbox" data-buff="{{.Key}}"{{if .Value}} checked{{end}}> <span>{{t .Label}}</span>{{end}}
+    {{else}}<input type="checkbox" data-buff="{{.Key}}"{{if .Excl}} data-buff-excl="{{.Excl}}"{{end}}{{if .Value}} checked{{end}}> <span>{{.Label}}</span>{{end}}
   </label>
   {{end}}
-</fieldset>
+</details>
 {{end}}
-<p class="ro-note">{{t "Valores do bROWiki. Os buffs entram nos atributos, no status e no dano."}}</p>
+<p class="ro-note">{{t "Valores do bROWiki e do latam-ro-calc. Os buffs entram nos atributos, no status e no dano; tempo de conjuração, velocidade de movimento e regeneração ficam de fora."}}</p>
 {{end}}
 
 {{define "build_bonus"}}

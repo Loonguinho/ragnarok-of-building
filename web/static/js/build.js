@@ -687,6 +687,12 @@
     const bf = { ...(build.bf || {}) };
     const v = f.type === "checkbox" ? (f.checked ? 1 : 0) : Math.max(0, Number(f.value) || 0);
     if (v) bf[f.dataset.buff] = v; else delete bf[f.dataset.buff];
+    // One buff per exclusive group (one bard song, one spirit...): the new one wins.
+    if (v && f.dataset.buffExcl) {
+      document.querySelectorAll(`[data-buff-excl="${f.dataset.buffExcl}"]`).forEach((o) => {
+        if (o !== f) delete bf[o.dataset.buff];
+      });
+    }
     build.bf = bf;
     recalc();
   });

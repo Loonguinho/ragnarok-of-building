@@ -23,7 +23,6 @@ type damageView struct {
 	RatioSource string // "fórmula LATAM", "descrição", "manual", "ataque básico", "não encontrado"
 	Hits        int
 	ElementName string
-	States      []stateView
 	Variants    []string // labels when the skill has several damage lines
 	Variant     int
 	StackMax    int // > 0 when the skill uses stacks
@@ -31,12 +30,6 @@ type damageView struct {
 	// Table: every learned damaging skill against the target (build view
 	// only; the optimizer leaves it empty).
 	Table []skillRow
-}
-
-type stateView struct {
-	Key, Label string
-	Choices    [][2]string
-	Value      int
 }
 
 type atkSkill struct {
@@ -75,11 +68,6 @@ func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
 		for i := 1; i <= b.Skills[b.Atk.Skill]; i++ {
 			v.Levels = append(v.Levels, i)
 		}
-	}
-
-	// Class state selectors (Celestial Space, Exceed...).
-	for _, o := range calc.StatesFor(c, b.Job) {
-		v.States = append(v.States, stateView{Key: o.Key, Label: skillLabel(c, l, o.Label), Choices: o.Choices, Value: b.Atk.States[o.Key]})
 	}
 
 	// Skill ratio: manual value wins, then the LATAM formula, then the
@@ -195,21 +183,4 @@ func fmtInt(n int64) string {
 		b.WriteRune(ch)
 	}
 	return b.String()
-}
-
-// skillLabel shows a state named after a skill (its PT client name) with the
-// skill's name in the chosen language; other labels go through the
-// dictionary in the template.
-func skillLabel(c *gamedata.Catalog, l, label string) string {
-	if l == "pt" {
-		return label
-	}
-	for _, sk := range c.Skills {
-		if sk.Name.Get("pt") == label {
-			if n := sk.Name.Get(l); n != "" {
-				return n
-			}
-		}
-	}
-	return label
 }

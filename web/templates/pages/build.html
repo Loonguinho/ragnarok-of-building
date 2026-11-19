@@ -276,14 +276,9 @@
     <select class="ro-select" data-atk="ele">{{range .Elements}}<option value="{{index . 0}}"{{if eq (index . 0) $.D.Atk.Element}} selected{{end}}>{{t (index . 1)}}</option>{{end}}</select>
   </label>
 </div>
-{{if or .States .StackMax .Variants}}
+{{/* Class states (Celestial Space, stances...) are set in the Buffs window. */}}
+{{if or .StackMax .Variants}}
 <div class="ro-dmg__atk ro-dmg__states">
-  {{range $st := .States}}
-    {{if $st.Choices}}<label>{{t $st.Label}}
-      <select class="ro-select" data-atk-state="{{$st.Key}}">{{range $st.Choices}}<option value="{{index . 0}}"{{if eq (index . 0) (printf "%d" $st.Value)}} selected{{end}}>{{t (index . 1)}}</option>{{end}}</select>
-    </label>
-    {{else}}<label><input type="checkbox" data-atk-state="{{$st.Key}}"{{if $st.Value}} checked{{end}}> {{t $st.Label}}</label>{{end}}
-  {{end}}
   {{if .Variants}}{{$cur := .Variant}}<label>{{t "Linha de dano"}} <select class="ro-select" data-atk="variant">{{range $i, $n := .Variants}}<option value="{{$i}}"{{if eq $i $cur}} selected{{end}}>{{t $n}}</option>{{end}}</select></label>{{end}}
   {{if .StackMax}}<label>{{t "Acúmulos"}} <input class="ro-input ro-num ro-num--sm" type="number" min="1" max="{{.StackMax}}" value="{{.Stack}}" data-atk="stack"></label>{{end}}
 </div>

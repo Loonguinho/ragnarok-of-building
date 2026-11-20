@@ -34,7 +34,7 @@ Re-run `go run ./cmd/import` after each game patch.
 
 **Code.** `internal/calc` is the formula engine; `internal/view` computes what each window shows (build, equipment, buffs, damage, skill tree, optimizer, replay recap) as plain structs; `internal/edit` holds the editing rules (linked headgear slots, exclusive buffs, skill tree points); `internal/ui` draws the windows with Gio; `cmd/app` is the program (startup, import, window).
 
-**Windows:** Menu (gear: floating windows Alt+W, reset layout, open all, language), Basic Info (Alt+V, class list Alt+J), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S), Bonuses (Alt+B), Target/Damage (Alt+D), Buffs (Alt+U), Optimizer (Alt+O), Saved builds (Alt+C), Share (Alt+L), Shortcuts (Alt+H). Saved builds live in `builds.json` next to the program.
+**Windows:** Menu (gear: floating windows Alt+W, reset layout, open all, language), Basic Info (Alt+V, class list Alt+J), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S), Bonuses (Alt+B), Target/Damage (Alt+D), Buffs (Alt+U), Optimizer (Alt+O), Item database (Alt+E), Saved builds (Alt+C), Share (Alt+L), Shortcuts (Alt+H), and the replay damage recap after importing a `.rrf`. Saved builds live in `builds.json` next to the program.
 
 
 ### Regenerating the LATAM formulas

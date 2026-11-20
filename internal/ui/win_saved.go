@@ -645,7 +645,7 @@ func (a *App) helpBody(gtx C) D {
 		row("Alt+V", "Informações Básicas"), row("Alt+A", "Atributos"), row("Alt+Q", "Equipamentos"),
 		row("Alt+S", "Habilidades"), row("Alt+B", "Bônus do Equipamento"), row("Alt+D", "Alvo / Dano"),
 		row("Alt+U", "Buffs"), row("Alt+O", "Otimizador"), row("Alt+C", "Builds salvos"),
-		row("Alt+L", "Compartilhar Build"), row("Alt+H", "Esta lista de comandos"), row("Alt+W", "Janelas flutuantes (liga/desliga)"),
+		row("Alt+L", "Compartilhar Build"), row("Alt+E", "Banco de Itens"), row("Alt+H", "Esta lista de comandos"), row("Alt+W", "Janelas flutuantes (liga/desliga)"),
 		T(th, a.T("A mesma tecla de novo fecha a janela (ou a traz para a frente).")).Sz(SmallText).C(ColMuted).Wrapping().W(),
 		sec("Build"),
 		row("Ctrl+S", "Salvar o build"), row("Alt+J", "Trocar a classe (lista de classes)"),

@@ -59,7 +59,6 @@ func (b Button) draw(gtx C, th *Theme, hover, pressed, disabled bool) D {
 	if b.Wide {
 		w = max(w, gtx.Constraints.Max.X)
 	}
-	w = max(w, gtx.Constraints.Min.X)
 	r := image.Rectangle{Max: image.Pt(w, h)}
 	top, bot := ColBtnA, ColBtnB
 	if pressed {

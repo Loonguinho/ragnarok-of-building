@@ -46,7 +46,7 @@ type App struct {
 
 	// Windows.
 	wMenu, wBasic, wStatus, wEquip, wSkills, wBonus, wDamage, wBuffs, wOptimize *Window
-	wSaved, wShare, wHelp, wSlot, wRdmg                                         *Window
+	wSaved, wShare, wHelp, wSlot, wRdmg, wItems                                 *Window
 
 	menu   menuState
 	basic  basicState
@@ -59,6 +59,8 @@ type App struct {
 	saved  savedState
 	share  shareState
 	replay replayState
+	opt    optimizeState
+	items  itemsState
 
 	showReplayDamage bool // a replay with damage was just imported: open its window
 }
@@ -132,6 +134,10 @@ func (a *App) makeWindows() {
 	d.Below = a.chatBox
 	a.wRdmg = d.Add(&Window{ID: "win-rdmg", Title: "Resumo de dano do replay", Col: 2, NoShowAll: true})
 	a.wRdmg.Body = a.replayBody
+	a.wOptimize = d.Add(&Window{ID: "win-optimize", Title: "Otimizador", Hotkey: "O", Col: 2})
+	a.wOptimize.Body = a.optimizeBody
+	a.wItems = d.Add(&Window{ID: "win-items", Title: "Banco de Itens", Hotkey: "E", Col: 2})
+	a.wItems.Body = a.itemsBody
 	a.wBonus.Body = a.bonusBody
 	a.wDamage.Body = a.damageBody
 	a.wEquip.Body = a.equipBody
@@ -270,6 +276,8 @@ func (a *App) updateTitles() {
 	a.wShare.Title = a.T("Compartilhar Build")
 	a.wHelp.Title = a.T("Atalhos e comandos")
 	a.wRdmg.Title = a.T("Resumo de dano do replay")
+	a.wOptimize.Title = a.T("Otimizador")
+	a.wItems.Title = a.T("Banco de Itens")
 	a.wSlot.Title = a.slotTitle()
 }
 

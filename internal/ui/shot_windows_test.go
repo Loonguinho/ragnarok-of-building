@@ -116,6 +116,18 @@ func TestShotsReplay(t *testing.T) {
 	a.modal.OnClose(0, "Meu build")
 	a.modal = nil
 	h.shot("09-saved-share")
+	a.Desk.Toggle(a.wOptimize)
+	a.Desk.Toggle(a.wItems)
+	a.items.q.Ed.SetText("poring")
+	a.Edit(func(b *calc.Build) { b.Target = 1039 })
+	h.waitReady()
+	a.runOptimizer()
+	deadline = time.Now().Add(40 * time.Second)
+	for a.opt.res == nil && time.Now().Before(deadline) {
+		time.Sleep(50 * time.Millisecond)
+	}
+	h.frame()
+	h.shot("10-optimize-items")
 	if len(a.loadSaved()) != 1 {
 		t.Error("the build was not saved")
 	}

@@ -38,6 +38,7 @@ func (a *App) menuToggles() []menuToggle {
 		{"Atrib", &a.wStatus, "Alt+A"}, {"Equip", &a.wEquip, "Alt+Q"}, {"Habil", &a.wSkills, "Alt+S"},
 		{"Bônus", &a.wBonus, "Alt+B"}, {"Dano", &a.wDamage, "Alt+D"}, {"Buffs", &a.wBuffs, "Alt+U"},
 		{"Otimizar", &a.wOptimize, "Alt+O"},
+		{"Itens", &a.wItems, "Alt+E"},
 	}
 	if a.replayDamage() != nil {
 		t = append(t, menuToggle{"Dano do replay", &a.wRdmg, ""})

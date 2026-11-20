@@ -41,7 +41,8 @@ const externalLinks = `(() => {
 })();`
 
 // openWindow shows url in the program's window and returns when it is
-// closed; errNoWindow when WebView2 is not available.
+// closed. Without WebView2 it uses a browser's app window
+// (appbrowser_windows.go); errNoWindow when neither is available.
 func openWindow(url string, debug bool) error {
 	data, _ := filepath.Abs(filepath.Join("data", "webview"))
 	w := webview2.NewWithOptions(webview2.WebViewOptions{
@@ -54,7 +55,7 @@ func openWindow(url string, debug bool) error {
 		},
 	})
 	if w == nil {
-		return errNoWindow
+		return openAppBrowser(url) // no WebView2: a browser's app window
 	}
 	w.Bind("roOpenExternal", func(u string) {
 		if strings.HasPrefix(u, "https://") || strings.HasPrefix(u, "http://") {

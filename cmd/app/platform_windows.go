@@ -78,8 +78,10 @@ func focusExisting() {
 // waitBrowserMode is the program open in the browser (no WebView2): a box
 // that ends it when closed.
 func waitBrowserMode(url string) {
-	messageBox("O Ragnarok of Building está aberto no navegador:\n"+url+
-		"\n\nDeixe esta mensagem aberta enquanto usa. Clique em OK para encerrar o programa.", mbOK|mbIconInfo)
+	messageBox("O Ragnarok of Building abriu no seu navegador.\n"+
+		"Se a página não apareceu, abra este endereço no navegador:\n"+url+
+		"\n\nNÃO feche esta mensagem enquanto estiver usando: ela mantém o programa ligado.\n"+
+		"Quando terminar, clique em OK para encerrar.", mbOK|mbIconInfo)
 }
 
 type browseInfo struct {

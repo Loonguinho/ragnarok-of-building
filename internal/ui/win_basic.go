@@ -34,18 +34,22 @@ type menuToggle struct {
 }
 
 func (a *App) menuToggles() []menuToggle {
-	return []menuToggle{
+	t := []menuToggle{
 		{"Atrib", &a.wStatus, "Alt+A"}, {"Equip", &a.wEquip, "Alt+Q"}, {"Habil", &a.wSkills, "Alt+S"},
 		{"Bônus", &a.wBonus, "Alt+B"}, {"Dano", &a.wDamage, "Alt+D"}, {"Buffs", &a.wBuffs, "Alt+U"},
 		{"Otimizar", &a.wOptimize, "Alt+O"},
 	}
+	if a.replayDamage() != nil {
+		t = append(t, menuToggle{"Dano do replay", &a.wRdmg, ""})
+	}
+	return t
 }
 
 func (a *App) menuBody(gtx C) D {
 	th, m := a.Th, &a.menu
 	toggles := a.menuToggles()
 	if len(m.toggles) < len(toggles) {
-		m.toggles = make([]widget.Clickable, len(toggles))
+		m.toggles = append(m.toggles, make([]widget.Clickable, len(toggles)-len(m.toggles))...)
 	}
 	for i, t := range toggles {
 		if m.toggles[i].Clicked(gtx) && *t.win != nil {
@@ -122,11 +126,6 @@ func (a *App) menuCommand(i int) {
 		a.importReplay()
 	}
 }
-
-// Placeholders filled by the windows that implement them.
-func (a *App) saveCurrent()  {}
-func (a *App) newBuild()     {}
-func (a *App) importReplay() {}
 
 // gearButton is the settings gear in the Menu title bar.
 func (a *App) gearButton(gtx C) D {
@@ -267,6 +266,7 @@ func upper(s string) string {
 // ---- Informações Básicas (win-basic) ----
 
 type basicState struct {
+	newMode  bool // the class list was opened by Novo: a blank build
 	classBtn widget.Clickable
 	classDD  Popup
 	anchor   Anchor
@@ -299,6 +299,7 @@ func (a *App) basicBody(gtx C) D {
 		s.classDD.At = s.anchor.Origin.Add(image.Pt(0, d.Size.Y))
 		s.classDD.Width = gtx.Dp(260)
 		s.classDD.Content = func(gtx C) D { return a.classList(gtx, v) }
+		s.classDD.OnClose = func() { s.newMode = false }
 		return d
 	}
 	pct := func(x, m int) int {
@@ -349,6 +350,11 @@ func (a *App) classList(gtx C, v view.BuildView) D {
 		if cl.Clicked(gtx) {
 			a.Desk.ClosePopup()
 			jid := id
+			if s.newMode {
+				s.newMode = false
+				a.SetBuild(a.V.NewBuild(jid))
+				continue
+			}
 			a.Edit(func(b *calc.Build) {
 				b.Job = jid
 				b.Skills = nil

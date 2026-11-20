@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"gioui.org/gpu/headless"
 
@@ -87,4 +88,35 @@ func TestShots(t *testing.T) {
 	a.Desk.Toggle(a.wSkills)
 	a.Desk.Toggle(a.wDamage)
 	h.shot("06-skills")
+}
+
+// TestShotsReplay imports RO_REPLAY (a .rrf) and renders the recap, the
+// saved builds, the share window and a dialog.
+func TestShotsReplay(t *testing.T) {
+	rrf := os.Getenv("RO_REPLAY")
+	if os.Getenv("RO_SHOTS") == "" || rrf == "" {
+		t.Skip("set RO_SHOTS and RO_REPLAY")
+	}
+	h := newHarness(t)
+	a := h.a
+	a.SavedFile = filepath.Join(t.TempDir(), "builds.json")
+	a.importReplayFile(rrf)
+	deadline := time.Now().Add(20 * time.Second)
+	for a.replayDamage() == nil && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	h.waitReady()
+	h.frame()
+	h.shot("07-replay")
+	a.Desk.Toggle(a.wRdmg)
+	a.Desk.Toggle(a.wSaved)
+	a.Desk.Toggle(a.wShare)
+	a.saveBuild(true)
+	h.shot("08-save-dialog")
+	a.modal.OnClose(0, "Meu build")
+	a.modal = nil
+	h.shot("09-saved-share")
+	if len(a.loadSaved()) != 1 {
+		t.Error("the build was not saved")
+	}
 }

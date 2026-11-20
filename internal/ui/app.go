@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/json"
+	"fmt"
 	"image"
 	"os"
 	"sync"
@@ -37,8 +38,11 @@ type App struct {
 	ready bool
 	rev   int
 
-	chat     []chatLine
-	needSave bool
+	chat        []chatLine
+	needSave    bool
+	modal       *Modal
+	savedID     string // the saved build being edited ("" = not saved)
+	pendingCopy string // a paste link to copy on the next frame
 
 	// Windows.
 	wMenu, wBasic, wStatus, wEquip, wSkills, wBonus, wDamage, wBuffs, wOptimize *Window
@@ -52,6 +56,11 @@ type App struct {
 	damage damageState
 	buffs  buffsState
 	skills skillsState
+	saved  savedState
+	share  shareState
+	replay replayState
+
+	showReplayDamage bool // a replay with damage was just imported: open its window
 }
 
 type chatLine struct {
@@ -63,7 +72,8 @@ type chatLine struct {
 type uiState struct {
 	Lang     string                 `json:"lang"`
 	Floating bool                   `json:"floating"`
-	Build    string                 `json:"build"` // share code of the last build
+	Build    string                 `json:"build"`           // share code of the last build
+	Saved    string                 `json:"saved,omitempty"` // its saved build's id
 	Windows  map[string]windowState `json:"windows"`
 }
 
@@ -88,6 +98,7 @@ func NewApp(v *view.Views, th *Theme, stateFile string) *App {
 		if d, ok := view.DecodeBuild(st.Build); ok {
 			b = d
 		}
+		a.savedID = st.Saved
 		for id, ws := range st.Windows {
 			if w := a.Desk.Find(id); w != nil {
 				w.Open, w.Pos, w.Placed = ws.Open, image.Pt(ws.X, ws.Y), ws.Placed
@@ -112,6 +123,15 @@ func (a *App) makeWindows() {
 	a.wSkills = d.Add(&Window{ID: "win-skills", Title: "Habilidades", Hotkey: "S", Col: 2})
 	a.wSkills.Body = a.skillsBody
 	a.wSkills.Footer = a.skillsFooter
+	a.wSaved = d.Add(&Window{ID: "win-saved", Title: "Builds salvos", Hotkey: "C", Col: 0})
+	a.wShare = d.Add(&Window{ID: "win-share", Title: "Compartilhar Build", Hotkey: "L", Col: 0})
+	a.wHelp = d.Add(&Window{ID: "win-help", Title: "Atalhos e comandos", Hotkey: "H", Col: 0, NoShowAll: true})
+	a.wSaved.Body = a.savedBody
+	a.wShare.Body = a.shareBody
+	a.wHelp.Body = a.helpBody
+	d.Below = a.chatBox
+	a.wRdmg = d.Add(&Window{ID: "win-rdmg", Title: "Resumo de dano do replay", Col: 2, NoShowAll: true})
+	a.wRdmg.Body = a.replayBody
 	a.wBonus.Body = a.bonusBody
 	a.wDamage.Body = a.damageBody
 	a.wEquip.Body = a.equipBody
@@ -193,7 +213,15 @@ func (a *App) Frame(gtx C) D {
 		backdrop(gtx, gtx.Constraints.Max)
 		return layout.Center.Layout(gtx, T(a.Th, a.T("Calculando…")).C(ColWhite).W())
 	}
+	if a.showReplayDamage {
+		a.showReplayDamage = false
+		if !a.wRdmg.Open {
+			a.Desk.Toggle(a.wRdmg)
+		}
+		a.Desk.Raise(a.wRdmg)
+	}
 	d := a.Desk.Layout(gtx, a.Th)
+	a.layoutModal(gtx)
 	a.mu.Lock()
 	save := a.needSave
 	a.needSave = false
@@ -220,6 +248,8 @@ func (a *App) shortcuts(gtx C) {
 		case "W":
 			a.Desk.Floating = !a.Desk.Floating
 			a.Desk.changed = true
+		case "S":
+			a.saveBuild(false)
 		}
 	}
 }
@@ -233,6 +263,13 @@ func (a *App) updateTitles() {
 	a.wDamage.Title = a.T("Alvo / Dano")
 	a.wBuffs.Title = a.T("Buffs e Consumíveis")
 	a.wSkills.Title = a.T("Habilidades")
+	a.wSaved.Title = a.T("Builds salvos")
+	if n := len(a.loadSaved()); n > 0 {
+		a.wSaved.Title += fmt.Sprintf(" (%d)", n)
+	}
+	a.wShare.Title = a.T("Compartilhar Build")
+	a.wHelp.Title = a.T("Atalhos e comandos")
+	a.wRdmg.Title = a.T("Resumo de dano do replay")
 	a.wSlot.Title = a.slotTitle()
 }
 
@@ -256,7 +293,7 @@ var saveMu sync.Mutex
 
 // snapshot is the state to keep (taken on the UI goroutine).
 func (a *App) snapshot() uiState {
-	st := uiState{Lang: a.Lang, Floating: a.Desk.Floating, Build: view.EncodeBuild(a.Build()), Windows: map[string]windowState{}}
+	st := uiState{Lang: a.Lang, Floating: a.Desk.Floating, Build: view.EncodeBuild(a.Build()), Saved: a.savedID, Windows: map[string]windowState{}}
 	for _, w := range a.Desk.Windows {
 		st.Windows[w.ID] = windowState{Open: w.Open, X: w.Pos.X, Y: w.Pos.Y, Placed: w.Placed}
 	}

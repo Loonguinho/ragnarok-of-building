@@ -21,6 +21,9 @@ type Desk struct {
 	Windows  []*Window
 	Floating bool
 	ColW     [3]unit.Dp // fixed layout column widths (360, 420, 560)
+	// Below is drawn under the first column (the chat log); floating, at
+	// the bottom left.
+	Below layout.Widget
 
 	z       int
 	scroll  widget.List
@@ -162,6 +165,14 @@ func (d *Desk) layoutFixed(gtx C, th *Theme) {
 				w.rect = image.Rectangle{Min: image.Pt(x, y), Max: image.Pt(x+cw, y+wd.Size.Y)}
 				y += wd.Size.Y + gapPx
 			}
+			if ci == 0 && d.Below != nil {
+				g := gtx
+				g.Constraints = layout.Constraints{Max: image.Pt(cw, gtx.Dp(140))}
+				st := op.Offset(image.Pt(x, y)).Push(gtx.Ops)
+				bd := d.Below(g)
+				st.Pop()
+				y += bd.Size.Y + gapPx
+			}
 			bottom = max(bottom, y)
 			x += cw + gapPx
 		}
@@ -197,6 +208,16 @@ func (d *Desk) layoutFloating(gtx C, th *Theme, size image.Point) {
 		wd := w.layout(g, th, d, true)
 		st.Pop()
 		w.rect = image.Rectangle{Min: w.Pos, Max: w.Pos.Add(wd.Size)}
+	}
+	if d.Below != nil {
+		m := op.Record(gtx.Ops)
+		g := gtx
+		g.Constraints = layout.Constraints{Max: image.Pt(gtx.Dp(360), gtx.Dp(140))}
+		bd := d.Below(g)
+		call := m.Stop()
+		st := op.Offset(image.Pt(gtx.Dp(8), size.Y-bd.Size.Y-gtx.Dp(8))).Push(gtx.Ops)
+		call.Add(gtx.Ops)
+		st.Pop()
 	}
 }
 

@@ -7,9 +7,11 @@ import (
 	"os"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"gioui.org/io/key"
 	"gioui.org/layout"
+	"gioui.org/op"
 
 	"ragnarok-of-building/internal/calc"
 	"ragnarok-of-building/internal/view"
@@ -43,12 +45,14 @@ type App struct {
 
 	chat        []chatLine
 	needSave    bool
+	saveDue     time.Time // when to write the pending state; zero = nothing pending
 	modal       *Modal
 	savedID     string // the saved build being edited ("" = not saved)
 	pendingCopy string // a paste link to copy on the next frame
 
 	// Windows.
 	wMenu, wBasic, wStatus, wEquip, wSkills, wBonus, wDamage, wBuffs, wOptimize *Window
+	gTools                                                                      *Window // Ferramentas: a window with side tabs
 	wSaved, wShare, wHelp, wSlot, wRdmg, wItems, wCompare                       *Window
 
 	menu   menuState
@@ -88,6 +92,7 @@ type windowState struct {
 	X      int  `json:"x"`
 	Y      int  `json:"y"`
 	Placed bool `json:"placed"`
+	Min    bool `json:"min,omitempty"`
 }
 
 // NewApp builds the app over the views; it opens the last build (or the
@@ -107,7 +112,7 @@ func NewApp(v *view.Views, th *Theme, stateFile string) *App {
 		a.savedID = st.Saved
 		for id, ws := range st.Windows {
 			if w := a.Desk.Find(id); w != nil {
-				w.Open, w.Pos, w.Placed = ws.Open, image.Pt(ws.X, ws.Y), ws.Placed
+				w.Open, w.Pos, w.Placed, w.Min = ws.Open, image.Pt(ws.X, ws.Y), ws.Placed, ws.Min
 			}
 		}
 	}
@@ -142,7 +147,10 @@ func (a *App) makeWindows() {
 	a.wOptimize.Body = a.optimizeBody
 	a.wItems = d.Add(&Window{ID: "win-items", Title: "Banco de Itens", Hotkey: "E", Col: 2})
 	a.wItems.Body = a.itemsBody
-	a.wCompare = d.Add(&Window{ID: "win-compare", Title: "Comparar itens", Hotkey: "K", Col: 2})
+	a.wItems.Footer = a.itemsFooter
+	// Comparar floats over the columns and opens only when asked (the ↔
+	// buttons, Alt+K).
+	a.wCompare = d.Add(&Window{ID: "win-compare", Title: "Comparar itens", Hotkey: "K", Col: 2, Float: true, Width: 760, NoShowAll: true})
 	a.wCompare.Body = a.compareBody
 	a.wBonus.Body = a.bonusBody
 	a.wDamage.Body = a.damageBody
@@ -152,6 +160,55 @@ func (a *App) makeWindows() {
 	a.wMenu.TitleExtra = a.gearButton
 	a.wBasic.Body = a.basicBody
 	a.wStatus.Body = a.statusBody
+
+	// The RO-client layout, four columns (1920 px wide): the character,
+	// the gear and its bonuses, the Ferramentas window with side tabs
+	// (members keep their hotkeys and open their tab), then the item windows.
+	icon := func(w *Window, item int) { w.Icon = view.ItemIcon(item) }
+	icon(a.wOptimize, 984)
+	icon(a.wRdmg, 603)
+	icon(a.wSaved, 617)
+	icon(a.wShare, 610)
+	a.gTools = d.Group(&Window{ID: "grp-tools", Title: "Ferramentas", Col: 2, Open: true}, a.wOptimize, a.wRdmg, a.wSaved, a.wShare)
+	a.gTools.Body = a.groupBody(a.gTools)
+	a.gTools.Footer = a.groupFooter(a.gTools)
+	// Personagem and Equipamento stay windows of their own (the bonuses
+	// next to the gear, not behind a tab).
+	a.wBuffs.Col = 1
+	// Small windows keep their size; Habilidades goes to the last column,
+	// where there is room for the skill tree.
+	a.wStatus.FullHeight, a.wMenu.FullHeight, a.wBasic.FullHeight = true, true, true
+	a.wSkills.Col = 3
+	a.wItems.Col, a.wHelp.Col = 3, 3
+	// The slot editor drops down under the slot clicked.
+	a.wSlot.Float, a.wSlot.AutoClose, a.wSlot.Dropdown, a.wSlot.Width = true, true, true, 430
+}
+
+// groupBody draws a group's side tabs with the current member's body.
+func (a *App) groupBody(g *Window) layout.Widget {
+	return func(gtx C) D {
+		var tabs []SideTab
+		for _, m := range g.Members {
+			tabs = append(tabs, SideTab{Icon: m.Icon, Label: m.Title})
+		}
+		d, _ := g.side.Layout(gtx, a, tabs, func(gtx C) D {
+			if g.cur == nil || g.cur.Body == nil {
+				return D{}
+			}
+			return Inset(2, 3, 2, 3).Layout(gtx, g.cur.Body)
+		})
+		return d
+	}
+}
+
+// groupFooter is the current member's footer (none when it has none).
+func (a *App) groupFooter(g *Window) layout.Widget {
+	return func(gtx C) D {
+		if g.cur == nil || g.cur.Footer == nil {
+			return D{}
+		}
+		return g.cur.Footer(gtx)
+	}
 }
 
 // T translates an interface text.
@@ -271,9 +328,19 @@ func (a *App) Frame(gtx C) D {
 	save := a.needSave
 	a.needSave = false
 	a.mu.Unlock()
+	// Dragging a window changes the layout every frame: the state file is
+	// written once things settle (saveDelay), not on each step.
 	if a.Desk.Changed() || save {
-		st := a.snapshot()
-		go a.writeState(st)
+		a.saveDue = gtx.Now.Add(saveDelay)
+	}
+	if !a.saveDue.IsZero() {
+		if gtx.Now.Before(a.saveDue) {
+			gtx.Execute(op.InvalidateCmd{At: a.saveDue})
+		} else {
+			a.saveDue = time.Time{}
+			st := a.snapshot()
+			go a.writeState(st)
+		}
 	}
 	return d
 }
@@ -320,6 +387,10 @@ func (a *App) updateTitles() {
 	a.wCompare.Title = a.T("Comparar itens")
 	SearchHint = a.T("Buscar…")
 	a.wSlot.Title = a.slotTitle()
+	a.gTools.Title = a.T("Ferramentas")
+	if c := a.gTools.Current(); c != nil {
+		a.gTools.Title += " · " + c.Title
+	}
 }
 
 // view returns the last computed windows.
@@ -344,9 +415,21 @@ var saveMu sync.Mutex
 func (a *App) snapshot() uiState {
 	st := uiState{Lang: a.Lang, Floating: a.Desk.Floating, Build: view.EncodeBuild(a.Build()), Saved: a.savedID, Windows: map[string]windowState{}}
 	for _, w := range a.Desk.Windows {
-		st.Windows[w.ID] = windowState{Open: w.Open, X: w.Pos.X, Y: w.Pos.Y, Placed: w.Placed}
+		st.Windows[w.ID] = windowState{Open: w.Open, X: w.Pos.X, Y: w.Pos.Y, Placed: w.Placed, Min: w.Min}
 	}
 	return st
+}
+
+// saveDelay is how long the interface must stay unchanged before its state
+// is written.
+const saveDelay = 400 * time.Millisecond
+
+// SaveNow writes a pending state at once (the window is closing).
+func (a *App) SaveNow() {
+	if !a.saveDue.IsZero() {
+		a.saveDue = time.Time{}
+		a.writeState(a.snapshot())
+	}
 }
 
 func (a *App) writeState(st uiState) {

@@ -155,6 +155,11 @@ func ItemTypes() [][2]string { return itemTypes }
 // SearchItems is the item database search.
 func (v *Views) SearchItems(q, typ, l string) []ItemView { return v.s.searchItems(q, typ, l) }
 
+// BrowseItems is SearchItems up to limit results (the item bank).
+func (v *Views) BrowseItems(q, typ, l string, limit int) []ItemView {
+	return v.s.searchItemsN(q, typ, l, limit)
+}
+
 // MonsterRow is one monster picker result, with translated race and element.
 type MonsterRow struct {
 	M             *gamedata.Monster

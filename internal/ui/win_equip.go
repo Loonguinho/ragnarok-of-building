@@ -24,6 +24,7 @@ type equipState struct {
 	tabs  Tabs
 	tab   int
 	slots map[string]*widget.Clickable
+	at    map[string]*Anchor // where each slot is on the desk
 }
 
 type slotState struct {
@@ -146,9 +147,21 @@ func (a *App) equipSlot(gtx C, sv view.SlotView) D {
 		cl = &widget.Clickable{}
 		s.slots[sv.Key] = cl
 	}
+	if s.at == nil {
+		s.at = map[string]*Anchor{}
+	}
+	at := s.at[sv.Key]
+	if at == nil {
+		at = &Anchor{}
+		s.at[sv.Key] = at
+	}
 	if cl.Clicked(gtx) {
 		a.openSlot(sv.Key)
+		// The editor drops down under the slot.
+		a.wSlot.Pos = at.Origin.Add(image.Pt(0, gtx.Dp(30)))
+		a.wSlot.Placed = true
 	}
+	defer func() { at.Track(gtx, a.Desk, image.Pt(gtx.Constraints.Max.X, gtx.Dp(30))) }()
 	d := cl.Layout(gtx, func(gtx C) D {
 		w, h := gtx.Constraints.Max.X, gtx.Dp(30)
 		r := image.Rectangle{Max: image.Pt(w, h)}
@@ -696,13 +709,26 @@ func (a *App) pick(id int) {
 		a.SetBuild(a.V.SwapAt(b, s.key, id, s.bestRefine, s.bestGrade))
 		a.Say(a.T("Item equipado."), false)
 		s.bestOn = false
+		a.equipDone()
 	} else {
 		a.SetBuild(a.V.Swap(b, s.key, id, -1))
 		a.Say(a.T("Item equipado."), false)
+		a.equipDone()
 	}
 	s.q.Ed.SetText("")
 	s.lastQ = ""
 	a.search(0)
+}
+
+// equipDone closes the slot's dropdown and the comparison once an item
+// was equipped, as a dropdown closes on a choice.
+func (a *App) equipDone() {
+	for _, w := range []*Window{a.wSlot, a.wCompare} {
+		if w.Open {
+			w.Open = false
+			a.Desk.changed = true
+		}
+	}
 }
 
 // swapTip is the tooltip's comparison for a picker result, computed in the

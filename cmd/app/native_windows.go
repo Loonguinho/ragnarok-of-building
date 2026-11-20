@@ -60,6 +60,9 @@ func nativeMain(st *startup, o options, log *slog.Logger) {
 					fatal("a janela do programa não abriu: " + e.Err.Error())
 					os.Exit(1)
 				}
+				if a := simulator.Load(); a != nil {
+					a.SaveNow()
+				}
 				os.Exit(0)
 			case app.FrameEvent:
 				gtx := app.NewContext(&ops, e)

@@ -203,7 +203,7 @@ func bonusText(k string, v int, c *gamedata.Catalog, l string) (label, value str
 		return T("Ignora DEFM de ") + class(arg(0)), pct(float64(v))
 	case "bIgnoreResRaceRate":
 		return T("Ignora RES de") + " " + in(raceNames, arg(0)), pct(float64(v))
-	case "bIgnoreMResRaceRate":
+	case "bIgnoreMResRaceRate", "bIgnoreMresRaceRate":
 		return T("Ignora MRES de") + " " + in(raceNames, arg(0)), pct(float64(v))
 	case "bSPGainRace":
 		return T("SP ao derrotar") + " " + in(raceNames, arg(0)), plus(v)

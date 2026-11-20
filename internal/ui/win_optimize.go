@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"image"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 
 	"ragnarok-of-building/internal/calc"
 	"ragnarok-of-building/internal/edit"
+	"ragnarok-of-building/internal/gamedata"
 	"ragnarok-of-building/internal/view"
 )
 
@@ -309,29 +311,89 @@ func (a *App) optGroupRows(g view.OptGroup, gk string) layout.Widget {
 	}
 }
 
-// ---- Banco de Itens (win-items) ----
+// ---- Banco de Itens (win-items), after the Kafra storage ----
 
 type itemsState struct {
 	q       Input
-	typ     Select
-	typVal  string
-	lastKey string
-	results []view.ItemView
+	tabs    SideTabs
+	filt    IconFilter
+	sort    Select
+	sortVal string
+	scroll  ScrollList
+	close   widget.Clickable
+	allKey  string
+	viewKey string
+	all     []view.ItemView // the tab's results
+	results []view.ItemView // after the icon filter and the order
 	rows    map[int]*widget.Clickable
-	list    widget.List
 	shown   int // item whose description is shown below
 }
 
+// itemTab is one storage tab: an item type, its icon and its sub-filters
+// (equip locations).
+type itemTab struct {
+	typ, label string
+	icon       int
+	subs       []itemSub
+}
+
+type itemSub struct {
+	label string
+	icon  int
+	locs  []string
+}
+
+var itemTabs = []itemTab{
+	{"", "Todos", 644, nil},
+	{"weapon", "Armas", 1101, nil},
+	{"armor", "Armaduras e acessórios", 2301, []itemSub{
+		{"Armadura", 2301, []string{"Armor"}}, {"Escudo", 2101, []string{"Left_Hand"}},
+		{"Capa", 2501, []string{"Garment"}}, {"Sapatos", 2401, []string{"Shoes"}},
+		{"Acessório", 2601, []string{"Both_Accessory", "Right_Accessory", "Left_Accessory"}},
+	}},
+	{"head", "Chapéus", 2220, []itemSub{
+		{"Topo", 2220, []string{"Head_Top"}}, {"Meio", 2201, []string{"Head_Mid"}}, {"Baixo", 2265, []string{"Head_Low"}},
+	}},
+	{"costume", "Visuais", 19500, []itemSub{
+		{"Topo", 19500, []string{"Costume_Head_Top"}}, {"Meio", 19501, []string{"Costume_Head_Mid"}},
+		{"Baixo", 19502, []string{"Costume_Head_Low"}}, {"Capa", 20500, []string{"Costume_Garment"}},
+	}},
+	{"card", "Cartas", 4001, nil},
+	{"shadow", "Equip. sombrios", 24012, nil},
+	{"other", "Outros", 501, nil},
+}
+
+// itemBankMax is how many items a tab lists at most.
+const itemBankMax = 5000
+
 func (a *App) itemsBody(gtx C) D {
 	th, s := a.Th, &a.items
-	var types []Option
-	for _, t := range view.ItemTypes() {
-		types = append(types, Option{t[0], a.T(t[1])})
+	if s.close.Clicked(gtx) {
+		a.wItems.Open = false
+		a.Desk.changed = true
 	}
-	key := s.q.Text() + "\x00" + s.typVal + "\x00" + a.Lang
-	if key != s.lastKey {
-		s.lastKey = key
-		s.results = a.V.SearchItems(strings.TrimSpace(s.q.Text()), s.typVal, a.Lang)
+	tab := itemTabs[min(max(s.tabs.Cur, 0), len(itemTabs)-1)]
+	key := s.q.Text() + "|" + tab.typ + "|" + a.Lang
+	if key != s.allKey {
+		s.allKey = key
+		s.all = a.V.BrowseItems(strings.TrimSpace(s.q.Text()), tab.typ, a.Lang, itemBankMax)
+	}
+	// Icon filter and order, applied to the tab's results.
+	vkey := key + "|" + fmt.Sprint(s.filt.On, len(s.all)) + "|" + s.sortVal
+	if vkey != s.viewKey {
+		s.viewKey = vkey
+		s.results = nil
+		var locs []string
+		if s.filt.On >= 0 && s.filt.On < len(tab.subs) {
+			locs = tab.subs[s.filt.On].locs
+		}
+		for _, it := range s.all {
+			if len(locs) > 0 && !locIn(it.Loc, locs) {
+				continue
+			}
+			s.results = append(s.results, it)
+		}
+		sortItems(s.results, s.sortVal)
 	}
 	if s.rows == nil {
 		s.rows = map[int]*widget.Clickable{}
@@ -341,77 +403,57 @@ func (a *App) itemsBody(gtx C) D {
 			s.shown = it.ID
 		}
 	}
+
+	var tabs []SideTab
+	for _, t := range itemTabs {
+		tabs = append(tabs, SideTab{Icon: view.ItemIcon(t.icon), Label: a.T(t.label)})
+	}
+	list := func(gtx C) D {
+		h := gtx.Dp(360)
+		gtx.Constraints.Min.Y, gtx.Constraints.Max.Y = h, h
+		if len(s.results) == 0 {
+			msg := a.T("Digite o nome de um item (PT, ES ou EN) ou o ID, ou escolha uma aba.")
+			if s.q.Text() != "" || tab.typ != "" {
+				msg = a.T("Nenhum item encontrado.")
+			}
+			d := Inset(8, 8, 8, 8).Layout(gtx, T(th, msg).C(rgb(0x777777)).Wrapping().W())
+			d.Size.Y = h
+			return d
+		}
+		return s.scroll.Layout(gtx, len(s.results), func(gtx C, i int) D { return a.itemBankRow(gtx, s.results[i]) })
+	}
+	bottom := func(gtx C) D {
+		var subs []SideTab
+		for _, sb := range tab.subs {
+			subs = append(subs, SideTab{Icon: view.ItemIcon(sb.icon), Label: a.T(sb.label)})
+		}
+		orders := []Option{{"", a.T("Padrão")}, {"az", "A-Z"}, {"za", "Z-A"}, {"id", "ID"}}
+		return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+			layout.Rigid(func(gtx C) D {
+				if len(subs) == 0 {
+					return D{}
+				}
+				d, _ := s.filt.Layout(gtx, a, subs)
+				return d
+			}),
+			layout.Flexed(1, func(gtx C) D { return D{Size: image.Pt(gtx.Constraints.Min.X, 0)} }),
+			layout.Rigid(func(gtx C) D {
+				d, val, ok := s.sort.Layout(gtx, th, a.Desk, orders, s.sortVal, 64)
+				if ok {
+					s.sortVal = val
+				}
+				return d
+			}),
+		)
+	}
 	kids := []layout.Widget{
 		func(gtx C) D {
-			s.q.Hint = a.T("Nome ou ID…")
-			return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-				layout.Flexed(1, func(gtx C) D { d, _, _ := s.q.Layout(gtx, th, 0); return d }),
-				layout.Rigid(Gap(4, 0)),
-				layout.Rigid(func(gtx C) D {
-					d, val, ok := s.typ.Layout(gtx, th, a.Desk, types, s.typVal, 130)
-					if ok {
-						s.typVal = val
-					}
-					return d
-				}),
-			)
-		},
-		func(gtx C) D {
-			h := gtx.Dp(300)
-			gtx.Constraints.Min.Y, gtx.Constraints.Max.Y = h, h
-			return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(2, 2, 2, 2)}.Layout(gtx, func(gtx C) D {
-				gtx.Constraints.Min = gtx.Constraints.Max
-				if len(s.results) == 0 {
-					msg := a.T("Digite o nome de um item (PT, ES ou EN) ou o ID, ou escolha um tipo.")
-					if s.q.Text() != "" || s.typVal != "" {
-						msg = a.T("Nenhum item encontrado.")
-					}
-					return Inset(8, 8, 8, 8).Layout(gtx, T(th, msg).C(rgb(0x777777)).Wrapping().W())
-				}
-				s.list.Axis = layout.Vertical
-				return s.list.Layout(gtx, len(s.results), func(gtx C, i int) D {
-					it := s.results[i]
-					cl := s.rows[it.ID]
-					if cl == nil {
-						cl = &widget.Clickable{}
-						s.rows[it.ID] = cl
-					}
-					d := cl.Layout(gtx, func(gtx C) D {
-						gtx.Constraints.Min.X = gtx.Constraints.Max.X
-						m := op.Record(gtx.Ops)
-						d := Inset(2, 6, 2, 6).Layout(gtx, func(gtx C) D {
-							name := it.Name
-							if it.Slots > 0 {
-								name += fmt.Sprintf(" [%d]", it.Slots)
-							}
-							if it.MVP {
-								name += " (MVP)"
-							}
-							return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-								layout.Rigid(func(gtx C) D { return a.Icons.Icon(gtx, view.ItemIcon(it.ID), 24) }),
-								layout.Rigid(Gap(6, 0)),
-								layout.Flexed(1, T(th, name).W()),
-								layout.Rigid(T(th, fmt.Sprintf("#%d", it.ID)).Sz(SmallText).C(rgb(0x888888)).W()),
-							)
-						})
-						call := m.Stop()
-						switch {
-						case it.ID == s.shown:
-							Fill(gtx, image.Rectangle{Max: d.Size}, ColSelect)
-						case cl.Hovered():
-							Fill(gtx, image.Rectangle{Max: d.Size}, ColHover)
-						}
-						call.Add(gtx.Ops)
-						pointerCursor(gtx, d.Size)
-						return d
-					})
-					if cl.Hovered() && it.ID != s.shown {
-						id := it.ID
-						a.Desk.ShowTip(func(gtx C) D { return a.itemTip(gtx, id, nil) })
-					}
-					return d
-				})
-			})
+			d, changed := s.tabs.Layout(gtx, a, tabs, Col(4, list, bottom))
+			if changed {
+				s.filt.On = -1
+				s.scroll.List.Position = layout.Position{}
+			}
+			return d
 		},
 	}
 	if it := a.V.Item(s.shown, a.Lang); it != nil {
@@ -437,4 +479,103 @@ func (a *App) itemsBody(gtx C) D {
 		})
 	}
 	return Col(6, kids...)(gtx)
+}
+
+// itemsFooter is the storage's footer: the count, the search and Fechar.
+func (a *App) itemsFooter(gtx C) D {
+	th, s := a.Th, &a.items
+	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+		layout.Rigid(T(th, fmt.Sprintf("%d %s", len(s.results), a.T("itens"))).C(ColLabel).W()),
+		layout.Rigid(Gap(8, 0)),
+		layout.Flexed(1, func(gtx C) D {
+			d, _ := SearchBox(gtx, th, &s.q, a.T("Nome ou ID…"), 0)
+			return d
+		}),
+		layout.Rigid(Gap(6, 0)),
+		layout.Rigid(func(gtx C) D { return Button{Label: a.T("Fechar")}.Layout(gtx, th, &s.close) }),
+	)
+}
+
+// itemBankRow is one storage line: the icon, with the slots in its corner,
+// and the name.
+func (a *App) itemBankRow(gtx C, it view.ItemView) D {
+	th, s := a.Th, &a.items
+	cl := s.rows[it.ID]
+	if cl == nil {
+		cl = &widget.Clickable{}
+		s.rows[it.ID] = cl
+	}
+	d := cl.Layout(gtx, func(gtx C) D {
+		gtx.Constraints.Min.X = gtx.Constraints.Max.X
+		m := op.Record(gtx.Ops)
+		d := Inset(2, 4, 2, 4).Layout(gtx, func(gtx C) D {
+			name := it.Name
+			if it.MVP {
+				name += " (MVP)"
+			}
+			return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+				layout.Rigid(func(gtx C) D {
+					return layout.Stack{Alignment: layout.SW}.Layout(gtx,
+						layout.Stacked(func(gtx C) D { return a.Icons.Icon(gtx, view.ItemIcon(it.ID), 24) }),
+						layout.Stacked(func(gtx C) D {
+							if it.Slots == 0 {
+								return D{}
+							}
+							return T(th, fmt.Sprint(it.Slots)).Sz(SmallText).C(ColText).W()(gtx)
+						}),
+					)
+				}),
+				layout.Rigid(Gap(6, 0)),
+				layout.Flexed(1, T(th, name).Lines(1).W()),
+			)
+		})
+		call := m.Stop()
+		switch {
+		case it.ID == s.shown:
+			Fill(gtx, image.Rectangle{Max: d.Size}, ColSelect)
+		case cl.Hovered():
+			Fill(gtx, image.Rectangle{Max: d.Size}, ColHover)
+		}
+		call.Add(gtx.Ops)
+		pointerCursor(gtx, d.Size)
+		return d
+	})
+	if cl.Hovered() && it.ID != s.shown {
+		id := it.ID
+		a.Desk.ShowTip(func(gtx C) D { return a.itemTip(gtx, id, nil) })
+	}
+	return d
+}
+
+// locIn reports whether a comma-separated location list has one of locs.
+func locIn(loc string, locs []string) bool {
+	for _, l := range strings.Split(loc, ",") {
+		for _, w := range locs {
+			if l == w {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// sortItems orders the item bank: "az", "za" (accents folded), "id", or
+// "" for the search's own order.
+func sortItems(items []view.ItemView, by string) {
+	if by == "" {
+		return
+	}
+	keys := make(map[int]string, len(items))
+	for _, it := range items {
+		keys[it.ID] = gamedata.Normalize(it.Name)
+	}
+	slices.SortStableFunc(items, func(x, y view.ItemView) int {
+		switch by {
+		case "az":
+			return strings.Compare(keys[x.ID], keys[y.ID])
+		case "za":
+			return strings.Compare(keys[y.ID], keys[x.ID])
+		}
+		return x.ID - y.ID
+	})
 }

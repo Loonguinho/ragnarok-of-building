@@ -41,7 +41,14 @@ type hface struct {
 	main, alt fontFace
 	asc, desc int // whole pixels above and below the baseline
 	lineH     int // baseline to baseline
+	// Measuring runs the font's hinting program for every glyph, which is
+	// slow: advances and whole-line widths are kept (used under Hinted.mu).
+	adv    map[rune]fixed.Int26_6
+	widths map[string]int
 }
+
+// widthCacheMax is when a face's line widths are dropped and measured again.
+const widthCacheMax = 20000
 
 type fontFace struct {
 	f    *truetype.Font
@@ -94,8 +101,10 @@ func (h *Hinted) face(k faceKey) *hface {
 	}
 	opts := &truetype.Options{Size: float64(k.px) / 4, DPI: 72, Hinting: xfont.HintingFull}
 	hf := &hface{
-		main: fontFace{p.main, truetype.NewFace(p.main, opts)},
-		alt:  fontFace{p.alt, truetype.NewFace(p.alt, opts)},
+		main:   fontFace{p.main, truetype.NewFace(p.main, opts)},
+		alt:    fontFace{p.alt, truetype.NewFace(p.alt, opts)},
+		adv:    map[rune]fixed.Int26_6{},
+		widths: map[string]int{},
 	}
 	m := hf.main.face.Metrics()
 	hf.asc, hf.desc = m.Ascent.Ceil(), m.Descent.Ceil()
@@ -114,6 +123,29 @@ func (hf *hface) pick(r rune) fontFace {
 
 // width is s's advance in whole pixels.
 func (hf *hface) width(s string) int {
+	if w, ok := hf.widths[s]; ok {
+		return w
+	}
+	if len(hf.widths) >= widthCacheMax {
+		hf.widths = map[string]int{}
+	}
+	w := hf.measure(s)
+	hf.widths[s] = w
+	return w
+}
+
+// advance is r's advance in ff, cached per face (the main and fallback
+// fonts never share a rune: pick sends each rune to one of them).
+func (hf *hface) advance(ff fontFace, r rune) fixed.Int26_6 {
+	if a, ok := hf.adv[r]; ok {
+		return a
+	}
+	a, _ := ff.face.GlyphAdvance(r)
+	hf.adv[r] = a
+	return a
+}
+
+func (hf *hface) measure(s string) int {
 	var w fixed.Int26_6
 	prev, prevFace := rune(-1), (*truetype.Font)(nil)
 	for _, r := range s {
@@ -121,8 +153,7 @@ func (hf *hface) width(s string) int {
 		if prev >= 0 && prevFace == ff.f {
 			w += ff.face.Kern(prev, r)
 		}
-		a, _ := ff.face.GlyphAdvance(r)
-		w += a
+		w += hf.advance(ff, r)
 		prev, prevFace = r, ff.f
 	}
 	return w.Ceil()

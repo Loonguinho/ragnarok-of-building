@@ -29,18 +29,22 @@ func viewItem(it *gamedata.Item, l string) itemView {
 // itemTypes are the item database filters (value, label).
 var itemTypes = [][2]string{
 	{"", "Todos"}, {"weapon", "Armas"}, {"armor", "Armaduras e acessórios"}, {"head", "Chapéus"},
-	{"card", "Cartas"}, {"shadow", "Equip. sombrios"}, {"other", "Outros"},
+	{"costume", "Visuais"}, {"card", "Cartas"}, {"shadow", "Equip. sombrios"}, {"other", "Outros"},
 }
 
 func matchType(it *gamedata.Item, typ string) bool {
 	isHead := it.Type == "Armor" && (it.HasLocation("Head_Top") || it.HasLocation("Head_Mid") || it.HasLocation("Head_Low"))
+	isCostume := it.Type == "Armor" && !isHead && (it.HasLocation("Costume_Head_Top") || it.HasLocation("Costume_Head_Mid") ||
+		it.HasLocation("Costume_Head_Low") || it.HasLocation("Costume_Garment"))
 	switch typ {
 	case "":
 		return true
 	case "weapon":
 		return it.Type == "Weapon"
 	case "armor":
-		return it.Type == "Armor" && !isHead
+		return it.Type == "Armor" && !isHead && !isCostume
+	case "costume":
+		return isCostume
 	case "head":
 		return isHead
 	case "card":
@@ -55,7 +59,11 @@ func matchType(it *gamedata.Item, typ string) bool {
 
 // searchItems searches by name/ID within a type. With no query, a type
 // filter lists that type by ID; with neither, nothing is listed.
-func (s *Server) searchItems(q, typ, l string) []itemView {
+func (s *Server) searchItems(q, typ, l string) []itemView { return s.searchItemsN(q, typ, l, searchLimit) }
+
+// searchItemsN is searchItems with its own result limit (the item bank
+// lists a whole type to scroll through).
+func (s *Server) searchItemsN(q, typ, l string, limit int) []itemView {
 	var pool []*gamedata.Item
 	switch {
 	case q != "":
@@ -68,7 +76,7 @@ func (s *Server) searchItems(q, typ, l string) []itemView {
 			}
 		}
 		slices.Sort(ids)
-		for _, id := range ids[:min(searchLimit, len(ids))] {
+		for _, id := range ids[:min(limit, len(ids))] {
 			pool = append(pool, s.opt.Catalog.Items[id])
 		}
 	}
@@ -76,7 +84,7 @@ func (s *Server) searchItems(q, typ, l string) []itemView {
 	for _, it := range pool {
 		if matchType(it, typ) {
 			out = append(out, viewItem(it, l))
-			if len(out) >= searchLimit {
+			if len(out) >= limit {
 				break
 			}
 		}

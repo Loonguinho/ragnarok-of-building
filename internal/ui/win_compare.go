@@ -128,6 +128,7 @@ func (a *App) compareBody(gtx C) D {
 			a.Say(a.T("Item equipado."), false)
 			cs.cols = append(cs.cols[:i:i], cs.cols[i+1:]...)
 			cs.cols[0] = view.CompareCand{}
+			a.equipDone()
 			return D{}
 		}
 	}

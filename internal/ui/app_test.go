@@ -1,8 +1,8 @@
 package ui
 
 import (
+	"fmt"
 	"image"
-	"strings"
 	"path/filepath"
 	"testing"
 	"time"
@@ -105,7 +105,7 @@ func TestStatPlus(t *testing.T) {
 	h := newHarness(t)
 	before := h.a.Build().Stats[0]
 	// FOR's "+" in the Atributos window (fixed layout, as in the screenshot).
-	h.click(135, 402)
+	h.click(147, 375)
 	if got := h.a.Build().Stats[0]; got != before+1 {
 		t.Fatalf("FOR %d -> %d, want +1", before, got)
 	}
@@ -181,37 +181,49 @@ func TestEquipFlow(t *testing.T) {
 // TestSelectPick opens dropdowns and picks an option: the popup used to
 // lay a click catcher over its own content, so options ignored clicks.
 func TestSelectPick(t *testing.T) {
+	// A long select on a window of its own: its list has a search box with
+	// the focus, and Enter picks the first match.
 	h := newHarness(t)
-	// Atributos ▸ Classe (fixed layout, as in the screenshot).
-	before := h.a.Build().Job
-	h.click(135, 373)
-	if h.a.Desk.popup == nil {
-		t.Fatal("the class select did not open")
+	var sel Select
+	var opts []Option
+	for i := range 30 {
+		opts = append(opts, Option{Value: fmt.Sprint(i), Label: fmt.Sprintf("Opção %d", i)})
 	}
-	// A long list: its search box has the focus; Enter picks the first
-	// match.
-	sel := &h.a.status.job
-	if !h.a.Desk.PopupOpen(&sel.popup) || len(sel.shown) < selectSearchMin {
-		t.Fatalf("the class list has no search (%d shown)", len(sel.shown))
+	opts = append(opts, Option{Value: "x", Label: "Feiticeiro"})
+	val := "0"
+	w := h.a.Desk.Add(&Window{ID: "test-select", Title: "Teste", Col: 3, Open: true})
+	w.Body = func(gtx C) D {
+		d, v, ok := sel.Layout(gtx, h.a.Th, h.a.Desk, opts, val, 120)
+		if ok {
+			val = v
+		}
+		return d
+	}
+	h.frame()
+	h.a.Desk.OpenPopup(&sel.popup)
+	h.frame()
+	h.frame()
+	if len(sel.shown) < selectSearchMin {
+		t.Fatalf("the list has no search (%d shown)", len(sel.shown))
 	}
 	n := sel.q.Ed.Len()
 	h.router.Queue(key.EditEvent{Range: key.Range{Start: 0, End: n}, Text: "feiticeiro"})
 	h.frame()
 	h.frame()
-	if len(sel.shown) == 0 || len(sel.shown) > 3 {
-		t.Fatalf("search \"feiticeiro\" shows %d classes", len(sel.shown))
+	if len(sel.shown) != 1 {
+		t.Fatalf("search \"feiticeiro\" shows %d options", len(sel.shown))
 	}
 	h.router.Queue(key.Event{Name: key.NameReturn, State: key.Press})
 	h.frame()
 	h.frame()
-	h.waitReady()
-	h.frame()
 	if h.a.Desk.popup != nil {
 		t.Error("the popup stayed open after a pick")
 	}
-	if got := h.a.Build().Job; got == before || !strings.Contains(h.a.View().Job.Name.Get("pt"), "Feiticeiro") {
-		t.Errorf("class %d (%s) after searching Feiticeiro", got, h.a.View().Job.Name.Get("pt"))
+	if val != "x" {
+		t.Errorf("picked %q, want the Feiticeiro option", val)
 	}
+	w.Open = false
+	h.frame()
 	// Informações Básicas ▸ the class name opens the grouped class list.
 	h.click(115, 214)
 	if h.a.Desk.popup == nil {
@@ -231,7 +243,7 @@ func TestSelectPick(t *testing.T) {
 func TestStatTyped(t *testing.T) {
 	h := newHarness(t)
 	in := &h.a.status.stat[0]
-	h.click(72, 404) // FOR's box (fixed layout)
+	h.click(72, 375) // FOR's box (fixed layout)
 	if !in.focused {
 		t.Fatal("FOR's box did not take the focus")
 	}
@@ -466,5 +478,47 @@ func TestNewBuildResets(t *testing.T) {
 	h.waitReady()
 	if n := len(a.Build().Equip); n != 0 {
 		t.Errorf("new build kept %d item(s): %v", n, a.Build().Equip)
+	}
+}
+
+// TestGroups: a member's hotkey opens its group on its tab, again closes
+// the group; a member opened from elsewhere becomes the tab shown; only
+// the group is drawn.
+func TestGroups(t *testing.T) {
+	h := newHarness(t)
+	a, d := h.a, h.a.Desk
+	g := a.gTools
+	if !g.Open || g.Current() != a.wOptimize {
+		t.Fatalf("Ferramentas open %v on %v, want open on Otimizador", g.Open, g.Current().ID)
+	}
+	d.Toggle(a.wSaved) // Alt+C
+	h.frame()
+	if !g.Open || g.Current() != a.wSaved || !a.wSaved.Open || a.wOptimize.Open {
+		t.Fatalf("after Alt+C: open %v on %s", g.Open, g.Current().ID)
+	}
+	d.Toggle(a.wSaved) // again: closes the group
+	h.frame()
+	if g.Open || a.wSaved.Open {
+		t.Fatal("Alt+C on the tab shown did not close Ferramentas")
+	}
+	a.wRdmg.Open = true // the replay import opens its window directly
+	h.frame()
+	if !g.Open || g.Current() != a.wRdmg {
+		t.Fatalf("opening a member did not show its tab: open %v on %s", g.Open, g.Current().ID)
+	}
+	if a.wRdmg.rect != (image.Rectangle{}) {
+		t.Error("a member was drawn as a window of its own")
+	}
+	if !a.wDamage.Open || a.wDamage.parent != nil {
+		t.Error("Alvo / Dano should be a window of its own")
+	}
+	// Comparar: closed until asked, then floating over the columns.
+	if a.wCompare.Open || a.wCompare.parent != nil {
+		t.Fatal("Comparar should start closed, outside Ferramentas")
+	}
+	a.showCompare()
+	h.frame()
+	if !a.wCompare.Open || a.wCompare.rect.Empty() || a.wCompare.rect.Min.Y < 1 {
+		t.Errorf("Comparar did not float when asked: open %v at %v", a.wCompare.Open, a.wCompare.rect)
 	}
 }

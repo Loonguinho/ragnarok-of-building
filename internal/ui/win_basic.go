@@ -273,6 +273,8 @@ type basicState struct {
 	anchor   Anchor
 	jobs     map[int]*widget.Clickable
 	list     widget.List
+	// Base and class levels, typed in.
+	base, joblv NumInput
 }
 
 func (a *App) basicBody(gtx C) D {
@@ -312,7 +314,29 @@ func (a *App) basicBody(gtx C) D {
 	r := v.R
 	kids := []layout.Widget{
 		nameRow,
-		T(th, fmt.Sprintf("Base Lv. %d %s %d", b.BaseLv, a.T("· Classe Lv."), b.JobLv)).W(),
+		func(gtx C) D {
+			s.base.Compact, s.base.SelectOnFocus = true, true
+			s.joblv.Compact, s.joblv.SelectOnFocus = true, true
+			return Row(4,
+				T(th, a.T("Base Lv.")).C(ColLabel).W(),
+				func(gtx C) D {
+					d, x, ok := s.base.Layout(gtx, th, b.BaseLv, 40)
+					if ok && x >= 1 {
+						a.Edit(func(b *calc.Build) { b.BaseLv = min(x, max(r.MaxBaseLv, 1)) })
+					}
+					return d
+				},
+				Gap(6, 0),
+				T(th, a.T("Classe Lv.")).C(ColLabel).W(),
+				func(gtx C) D {
+					d, x, ok := s.joblv.Layout(gtx, th, b.JobLv, 34)
+					if ok && x >= 1 {
+						a.Edit(func(b *calc.Build) { b.JobLv = min(x, max(r.MaxJobLv, 1)) })
+					}
+					return d
+				},
+			)(gtx)
+		},
 		func(gtx C) D { return Bar(gtx, th, 100, BarHP[0], BarHP[1], fmt.Sprintf("HP %d / %d", r.HP, r.HP)) },
 		func(gtx C) D { return Bar(gtx, th, 100, BarSP[0], BarSP[1], fmt.Sprintf("SP %d / %d", r.SP, r.SP)) },
 	}
@@ -401,8 +425,6 @@ func (a *App) classList(gtx C, v view.BuildView) D {
 // ---- Atributos (win-status) ----
 
 type statusState struct {
-	job          Select
-	base, joblv  NumInput
 	plus, minus  [6]widget.Clickable
 	tplus, tminu [6]widget.Clickable
 	// The stat and trait values, typed in.
@@ -418,7 +440,7 @@ var traitNames = [6]string{"POW", "STA", "WIS", "SPL", "CON", "CRT"}
 func (a *App) statusBody(gtx C) D {
 	th, s := a.Th, &a.status
 	v := a.View()
-	b, r := v.Build, v.R
+	r := v.R
 	// Shift+click: ±10.
 	step := func(cl *widget.Clickable) (int, bool) {
 		c, ok := cl.Update(gtx)
@@ -445,38 +467,6 @@ func (a *App) statusBody(gtx C) D {
 			a.Edit(func(b *calc.Build) { b.Traits[i] = max(0, b.Traits[i]-n) })
 		}
 	}
-	var jobs []Option
-	for _, j := range v.Jobs {
-		jobs = append(jobs, Option{Value: fmt.Sprint(j.ID), Label: j.Name})
-	}
-	form := Row(6,
-		T(th, a.T("Classe")).W(),
-		func(gtx C) D {
-			d, val, ok := s.job.Layout(gtx, th, a.Desk, jobs, fmt.Sprint(b.Job), 150)
-			if ok {
-				var id int
-				fmt.Sscan(val, &id)
-				a.Edit(func(b *calc.Build) { b.Job = id; b.Skills = nil; b.Traits = [6]int{} })
-			}
-			return d
-		},
-		T(th, a.T("Base")).W(),
-		func(gtx C) D {
-			d, x, ok := s.base.Layout(gtx, th, b.BaseLv, 54)
-			if ok && x >= 1 {
-				a.Edit(func(b *calc.Build) { b.BaseLv = min(x, max(r.MaxBaseLv, 1)) })
-			}
-			return d
-		},
-		T(th, a.T("Classe")).W(),
-		func(gtx C) D {
-			d, x, ok := s.joblv.Layout(gtx, th, b.JobLv, 54)
-			if ok && x >= 1 {
-				a.Edit(func(b *calc.Build) { b.JobLv = min(x, max(r.MaxJobLv, 1)) })
-			}
-			return d
-		},
-	)
 	// attrTip is the tooltip of an attribute: its value and what it gives.
 	attrTip := func(name string, st calc.StatLine, lines []view.AttrLine) layout.Widget {
 		return func(gtx C) D {
@@ -511,7 +501,7 @@ func (a *App) statusBody(gtx C) D {
 						}
 						return d
 					},
-					Fixed(30, func(gtx C) D {
+					Fixed(40, func(gtx C) D {
 						if st.Bonus == 0 {
 							return D{}
 						}
@@ -521,12 +511,14 @@ func (a *App) statusBody(gtx C) D {
 					Gap(1, 0),
 					func(gtx C) D { return PlusBtn(gtx, th, &plus[i], st.Cost == 0) },
 					Gap(4, 0),
-					func(gtx C) D {
+					// Fixed, so both tables (with and without the cost)
+					// end at the same x and the stats beside them line up.
+					Fixed(20, func(gtx C) D {
 						if !showCost || st.Cost == 0 {
 							return D{}
 						}
 						return T(th, fmt.Sprint(st.Cost)).C(rgb(0x888888)).Layout(gtx)
-					},
+					}),
 				))
 			}
 			return Col(2, rows...)(gtx)
@@ -536,7 +528,7 @@ func (a *App) statusBody(gtx C) D {
 		return func(gtx C) D {
 			var ws []layout.Widget
 			for _, rw := range rows {
-				ws = append(ws, Row(0, Fixed(64, T(th, a.T(rw[0])).C(ColLabel).W()), T(th, rw[1]).W()))
+				ws = append(ws, Row(0, Fixed(78, T(th, a.T(rw[0])).C(ColLabel).W()), T(th, rw[1]).W()))
 			}
 			return Col(2, ws...)(gtx)
 		}
@@ -544,7 +536,7 @@ func (a *App) statusBody(gtx C) D {
 	// tipped is a derived row whose tooltip lists lines under a title.
 	tipped := func(h *Hoverable, label, value, title string, lines []view.AttrLine) layout.Widget {
 		return func(gtx C) D {
-			d, over := h.Layout(gtx, Row(0, Fixed(64, T(th, a.T(label)).C(ColLabel).W()), T(th, value).C(ColLink).W()))
+			d, over := h.Layout(gtx, Row(0, Fixed(78, T(th, a.T(label)).C(ColLabel).W()), T(th, value).C(ColLink).W()))
 			if over {
 				a.Desk.ShowTip(func(gtx C) D {
 					return TipBox(gtx, Col(2, append([]layout.Widget{B(th, a.T(title)).W()}, tipRows(th, lines)...)...))
@@ -568,9 +560,7 @@ func (a *App) statusBody(gtx C) D {
 		}
 	}
 	kids := []layout.Widget{
-		form,
-		Sep,
-		RowTop(12,
+		RowTop(28,
 			statTable(r.Stats, statNames, &s.plus, &s.minus, &s.stat, 1, maxStat, func(b *calc.Build, i, v int) { b.Stats[i] = v }, true, &s.statTip, false),
 			Col(2, derived([][2]string{
 				{"ATQ", fmt.Sprintf("%d + %d", r.StatusATK, r.EquipATK)},
@@ -591,7 +581,7 @@ func (a *App) statusBody(gtx C) D {
 	}
 	if v.Job != nil && v.Job.Fourth {
 		kids = append(kids, Sep,
-			RowTop(12,
+			RowTop(28,
 				statTable(r.Traits, traitNames, &s.tplus, &s.tminu, &s.trait, 0, r.MaxTrait, func(b *calc.Build, i, v int) { b.Traits[i] = v }, false, &s.traitTip, true),
 				derived([][2]string{
 					{"P.ATQ", fmt.Sprint(r.PATK)}, {"S.ATQM", fmt.Sprint(r.SMATK)}, {"RES", fmt.Sprint(r.RES)},

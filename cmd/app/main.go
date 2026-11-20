@@ -1,6 +1,5 @@
 // app is Ragnarok of Building as one program for players: double-click it
-// and the simulator opens in its own window (WebView2, no console). The
-// native window (no browser engine, internal/ui) is being built: -native.
+// and the simulator opens in its own window (no console, no browser).
 //
 // On first run (and after each game patch) it builds the game catalog from
 // the player's own RO LATAM client, downloading rAthena's tables (GPL-3.0)
@@ -12,9 +11,7 @@
 //	go run ./tools/buildexe            # the .exe with its icon, as released
 //	RagnarokOfBuilding.exe             # find the client, import if needed, open the window
 //	RagnarokOfBuilding.exe -import     # rebuild the catalog now
-//	RagnarokOfBuilding.exe -client D:\RO -port 8090
-//	RagnarokOfBuilding.exe -native     # the native window (in progress)
-//	RagnarokOfBuilding.exe -browser    # open in the browser instead of the window
+//	RagnarokOfBuilding.exe -client D:\RO
 //
 // The client can also be a copy: a data.grf and the System folder copied
 // next to the executable are read instead of the installed game. A ready
@@ -31,21 +28,17 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"ragnarok-of-building/internal/config"
 	"ragnarok-of-building/internal/gamedata"
 	"ragnarok-of-building/internal/setup"
-	"ragnarok-of-building/internal/web"
+	"ragnarok-of-building/internal/view"
 )
 
 const (
@@ -56,25 +49,15 @@ const (
 	// to the executable, it is used as is (no client needed).
 	sharedCatalog = `catalog.json.gz`
 	logFile       = `RagnarokOfBuilding.log`
-	// defaultPort: a fixed, uncommon port, so the page's address (and what
-	// the browser engine keeps for it, like the window layout) stays the same.
-	defaultPort = 47880
 )
 
-// showWindow opens the program's own window on url and returns when it is
-// closed (window_windows.go); nil, or errNoWindow, means the browser is used.
-var showWindow func(url string, debug bool) error
-
-var errNoWindow = errors.New("janela própria indisponível (WebView2 não encontrado)")
-
-// runNative is the native window (native_windows.go); nil where there is
-// none. It never returns.
+// runNative opens the program's window (native_windows.go) and never
+// returns; nil where there is none.
 var runNative func(st *startup, o options, log *slog.Logger)
 
 type options struct {
-	reimport, browser, noBrowser, debug, web, native bool
-	client                                           string
-	port                                             int
+	reimport bool
+	client   string
 }
 
 func main() {
@@ -88,13 +71,6 @@ func run() error {
 	var o options
 	flag.BoolVar(&o.reimport, "import", false, "rebuild the catalog from the client now")
 	flag.StringVar(&o.client, "client", "", "RO LATAM client folder (default: RO_CLIENT in .env, else the usual install folders)")
-	flag.IntVar(&o.port, "port", defaultPort, "first port to try (the next free one up to +20 is used)")
-	flag.BoolVar(&o.browser, "browser", false, "open in the browser instead of the program's window")
-	flag.BoolVar(&o.noBrowser, "no-browser", false, "only run the server (no window, no browser)")
-	flag.BoolVar(&o.debug, "debug", false, "allow the browser engine's developer tools in the window")
-	flag.BoolVar(&o.web, "web", false, "the old version: the web pages in WebView2 (or the browser)")
-	// The native window is opt-in until it has every window of the web one.
-	flag.BoolVar(&o.native, "native", false, "the native window (in progress)")
 	flag.Parse()
 
 	// Work next to the executable, wherever it was started from.
@@ -103,81 +79,16 @@ func run() error {
 			return err
 		}
 	}
+	if runNative == nil {
+		return errors.New("o Ragnarok of Building roda no Windows")
+	}
 	if !singleInstance() {
 		focusExisting()
 		return nil
 	}
 	log := openLog()
 	_ = config.LoadDotEnv(".env")
-
-	st := newStartup(log, pickFolder)
-	if runNative != nil && o.native && !o.web && !o.browser && !o.noBrowser {
-		runNative(st, o, log)
-		return nil
-	}
-	// The web version. Before the game data is ready the server answers the startup page; the
-	// static files come from a server without a catalog meanwhile.
-	early, err := web.New(web.Options{Log: log})
-	if err != nil {
-		return err
-	}
-	earlyRoutes := early.Routes()
-	var app atomic.Pointer[http.Handler]
-	root := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case strings.HasPrefix(r.URL.Path, "/startup"):
-			st.ServeHTTP(w, r)
-		case app.Load() != nil:
-			(*app.Load()).ServeHTTP(w, r)
-		case strings.HasPrefix(r.URL.Path, "/static/"):
-			earlyRoutes.ServeHTTP(w, r)
-		default:
-			http.Redirect(w, r, "/startup", http.StatusFound)
-		}
-	})
-	ln, err := listen(o.port)
-	if err != nil {
-		return err
-	}
-	hs := &http.Server{Handler: root, ReadHeaderTimeout: 5 * time.Second}
-	go func() {
-		if err := hs.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Error("server", "err", err)
-		}
-	}()
-	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		hs.Shutdown(ctx)
-	}()
-
-	go func() {
-		srv, err := prepare(st, o, log)
-		if err != nil {
-			st.fail(err)
-			return
-		}
-		h := srv.Routes()
-		app.Store(&h)
-		st.ready("/build")
-	}()
-
-	url := "http://" + ln.Addr().String() + "/startup"
-	log.Info("listening", "url", url)
-	switch {
-	case o.noBrowser:
-		waitBrowserMode(url)
-	case !o.browser && showWindow != nil:
-		if err := showWindow(url, o.debug); err == nil {
-			return nil
-		} else {
-			log.Warn("window", "err", err)
-		}
-		fallthrough
-	default:
-		openBrowser(url)
-		waitBrowserMode(url)
-	}
+	runNative(newStartup(log, pickFolder), o, log)
 	return nil
 }
 
@@ -194,12 +105,12 @@ func openLog() *slog.Logger {
 	return slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{Level: slog.LevelInfo}))
 }
 
-// prepare finds the game data and returns the simulator's server. Where the
+// prepare finds the game data and returns the simulator's views. Where the
 // game data comes from, first match wins: -client; a data.grf (+ System)
 // copied into this folder; a ready catalog.json.gz here; the client in
 // RO_CLIENT or the usual install folders; the catalog attached to this
 // version's GitHub release (downloaded once into this folder).
-func prepare(st *startup, o options, log *slog.Logger) (*web.Server, error) {
+func prepare(st *startup, o options, log *slog.Logger) (*view.Views, error) {
 	catalog := catalogPath
 	client := o.client
 	here, _ := os.Getwd()
@@ -251,13 +162,7 @@ func prepare(st *startup, o options, log *slog.Logger) (*web.Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("catálogo do jogo: %w (abra de novo com -import)", err)
 	}
-	return web.New(web.Options{Log: log, Catalog: cat, NoRateLimit: true,
-		SoundDir: filepath.Join(filepath.Dir(catalogPath), "sounds"), PasteURL: os.Getenv("PASTE_URL"),
-		// Saved builds in a file next to the executable (not in the browser),
-		// icons kept once seen (the program also works offline).
-		SavedFile:  "builds.json",
-		ImageCache: filepath.Join("data", "cache", "img"),
-	})
+	return view.New(view.Options{Log: log, Catalog: cat, PasteURL: os.Getenv("PASTE_URL")})
 }
 
 // needsImport says why the catalog must be (re)built, or "" when it is
@@ -373,30 +278,4 @@ func remember(k, v string) {
 	}
 	defer f.Close()
 	fmt.Fprintf(f, "%s=%s\n", k, v)
-}
-
-// listen takes the first free local port from port to port+20 (local only:
-// the simulator is not exposed to the network).
-func listen(port int) (net.Listener, error) {
-	var err error
-	for p := port; p <= port+20; p++ {
-		var ln net.Listener
-		if ln, err = net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(p)); err == nil {
-			return ln, nil
-		}
-	}
-	return nil, fmt.Errorf("nenhuma porta livre entre %d e %d: %w", port, port+20, err)
-}
-
-func openBrowser(url string) {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-	case "darwin":
-		cmd = exec.Command("open", url)
-	default:
-		cmd = exec.Command("xdg-open", url)
-	}
-	cmd.Start()
 }

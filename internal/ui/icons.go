@@ -15,7 +15,7 @@ import (
 // Icons loads item/skill/monster/class icons in the background (from the
 // icon cache, which downloads each one once) and keeps them in memory.
 type Icons struct {
-	Get        func(ctx context.Context, rel string) (string, error) // the cache (web.IconCache.Get)
+	Get        func(ctx context.Context, rel string) (string, error) // the cache (view.IconCache.Get)
 	Invalidate func()                                                // redraw when one arrives
 
 	mu      sync.Mutex

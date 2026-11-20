@@ -1,7 +1,7 @@
 .PHONY: run test vet build
 
 run:
-	go run ./cmd/server
+	go run ./cmd/app
 
 test:
 	go test ./...
@@ -9,5 +9,6 @@ test:
 vet:
 	go vet ./...
 
+# The Windows program as released (icon, version, zip in dist/).
 build:
-	go build -o bin/server ./cmd/server
+	go run ./tools/buildexe

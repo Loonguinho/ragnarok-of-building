@@ -1,5 +1,7 @@
 # Ragnarok of Building: Design Doc
 
+> **Historical.** This is the original plan. Since November 2026 the interface is a native window drawn with Gio (`internal/ui`, over `internal/view`); the HTMX web version described below was retired (branch `legacy-web`). See the README for the current layout.
+
 ## Context
 The repo is empty (no commits). The goal is a build simulator for **Ragnarok Online LATAM** that improves on https://simulador.latam-tools.com.br. That site is an Angular SPA that loads ~2 MB of JS plus static JSON (items-core, monsters, classes, hpsp, i18n names) and runs everything on the client.
 

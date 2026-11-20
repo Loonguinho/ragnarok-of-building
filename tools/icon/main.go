@@ -1,6 +1,6 @@
 // icon draws the app icon (a sword on an RO-window-blue tile) as a PNG.
 //
-//	go run ./tools/icon web/static/img/icon.png
+//	go run ./tools/icon cmd/app/icon.png
 package main
 
 import (

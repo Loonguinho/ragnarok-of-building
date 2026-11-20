@@ -11,7 +11,7 @@ import (
 	"gioui.org/widget"
 
 	"ragnarok-of-building/internal/calc"
-	"ragnarok-of-building/internal/web"
+	"ragnarok-of-building/internal/view"
 )
 
 // ---- Menu (win-menu) ----
@@ -21,7 +21,7 @@ type menuState struct {
 	cmds     [5]widget.Clickable
 	gear     widget.Clickable
 	settings Popup
-	setRows  [4]widget.Clickable
+	setRows  [3]widget.Clickable
 	langs    []widget.Clickable
 	float    Checkbox
 	anchor   Anchor
@@ -168,11 +168,6 @@ func (a *App) settingsMenu(gtx C) D {
 				a.Desk.Toggle(a.wHelp)
 			}
 		},
-		func() {
-			if a.OpenWeb != nil {
-				a.OpenWeb()
-			}
-		},
 	}
 	for i := range m.setRows {
 		if m.setRows[i].Clicked(gtx) {
@@ -180,7 +175,7 @@ func (a *App) settingsMenu(gtx C) D {
 			rowsActions[i]()
 		}
 	}
-	langs := web.Langs()
+	langs := view.Langs()
 	if len(m.langs) < len(langs) {
 		m.langs = make([]widget.Clickable, len(langs))
 	}
@@ -236,7 +231,6 @@ func (a *App) settingsMenu(gtx C) D {
 		row(&m.setRows[0], a.T("Reorganizar as janelas"), ""),
 		row(&m.setRows[1], a.T("Abrir todas as janelas"), ""),
 		row(&m.setRows[2], a.T("Atalhos e comandos"), "Alt+H"),
-		row(&m.setRows[3], a.T("Abrir a versão antiga (navegador)"), ""),
 		func(gtx C) D {
 			return Inset(4, 8, 4, 8).Layout(gtx, func(gtx C) D {
 				kids := []layout.Widget{T(th, a.T("Idioma")+":").W()}
@@ -294,7 +288,7 @@ func (a *App) basicBody(gtx C) D {
 	nameRow := func(gtx C) D {
 		d := s.classBtn.Layout(gtx, func(gtx C) D {
 			d := Row(4,
-				func(gtx C) D { return a.Icons.Icon(gtx, web.JobIcon(b.Job), 25) },
+				func(gtx C) D { return a.Icons.Icon(gtx, view.JobIcon(b.Job), 25) },
 				B(th, v.JobName).W(),
 				func(gtx C) D { return Caret(gtx, ColTitleText) },
 			)(gtx)
@@ -335,14 +329,14 @@ func (a *App) basicBody(gtx C) D {
 }
 
 // classList is the class dropdown (Alt+J): classes grouped by family.
-func (a *App) classList(gtx C, v web.BuildView) D {
+func (a *App) classList(gtx C, v view.BuildView) D {
 	th, s := a.Th, &a.basic
 	if s.jobs == nil {
 		s.jobs = map[int]*widget.Clickable{}
 	}
 	type row struct {
 		fam string
-		job web.JobOption
+		job view.JobOption
 	}
 	var rows []row
 	for _, f := range v.Families {
@@ -378,7 +372,7 @@ func (a *App) classList(gtx C, v web.BuildView) D {
 			gtx.Constraints.Min.X = gtx.Constraints.Max.X
 			mm := op.Record(gtx.Ops)
 			d := Inset(1, 6, 1, 14).Layout(gtx, Row(6,
-				func(gtx C) D { return a.Icons.Icon(gtx, web.JobIcon(r.job.ID), 25) },
+				func(gtx C) D { return a.Icons.Icon(gtx, view.JobIcon(r.job.ID), 25) },
 				T(th, r.job.Name).W(),
 			))
 			call := mm.Stop()

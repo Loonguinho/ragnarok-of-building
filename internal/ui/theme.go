@@ -1,5 +1,5 @@
 // Package ui is the native interface of Ragnarok of Building, drawn with
-// Gio: the same RO-client-style windows as the web pages (web/static/css/
+// Gio: RO-client-style windows (the look of the retired web version's
 // ro-ui.css), without a browser engine. It only uses Gio's portable
 // packages; the window itself (gioui.org/app) is opened by cmd/app.
 package ui

@@ -14,7 +14,7 @@ import (
 	"gioui.org/unit"
 
 	"ragnarok-of-building/internal/gamedata"
-	"ragnarok-of-building/internal/web"
+	"ragnarok-of-building/internal/view"
 )
 
 // harness drives the app without a window: frames on an input router,
@@ -33,12 +33,12 @@ func newHarness(t *testing.T) *harness {
 	if err != nil {
 		t.Skip("no generated catalog:", err)
 	}
-	srv, err := web.New(web.Options{Catalog: cat})
+	v, err := view.New(view.Options{Catalog: cat})
 	if err != nil {
 		t.Fatal(err)
 	}
 	h := &harness{t: t, size: image.Pt(1440, 900)}
-	h.a = NewApp(srv.Views(), NewTheme(), "")
+	h.a = NewApp(v, NewTheme(), "")
 	h.waitReady()
 	h.frame()
 	return h

@@ -4,8 +4,7 @@ Ragnarok of Building - simulador de builds do Ragnarok Online LATAM
 COMO USAR
 1. Extraia esta pasta em qualquer lugar (ex.: Documentos\RagnarokOfBuilding).
 2. Dê dois cliques em RagnarokOfBuilding.exe.
-3. O simulador abre no seu navegador. Deixe a janela preta aberta enquanto
-   usa; para sair, feche-a.
+3. O simulador abre na janela dele. Para sair, feche a janela.
 
 Na primeira vez, se você não tem o jogo instalado, o programa baixa os dados
 do jogo (catalog.json.gz, uns 4 MB) da página dele no GitHub e guarda nesta
@@ -35,10 +34,8 @@ O código-fonte está no GitHub, aberto para quem quiser conferir.
 OPÇÕES (para quem usa o Prompt de Comando)
   RagnarokOfBuilding.exe -import          relê os dados do jogo agora
   RagnarokOfBuilding.exe -client D:\RO    usa outra pasta do jogo
-  RagnarokOfBuilding.exe -port 8090       usa outra porta
 
-Os builds salvos ficam no arquivo builds.json, nesta pasta (não dependem
-do navegador). Na janela Builds dá para exportar todos para um arquivo e
+Os builds salvos ficam no arquivo builds.json, nesta pasta. Na janela Builds dá para exportar todos para um arquivo e
 importar de volta. Para mandar um build a um amigo, use o botão
 Compartilhar (link, código ou paste).
 

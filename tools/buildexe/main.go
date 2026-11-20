@@ -30,7 +30,7 @@ import (
 const (
 	exeName = "RagnarokOfBuilding.exe"
 	sysoOut = "cmd/app/rsrc_windows_amd64.syso" // linked into cmd/app by go build (Windows only)
-	iconPNG = "./web/static/img/icon.png"       // drawn by tools/icon
+	iconPNG = "./cmd/app/icon.png" // drawn by tools/icon
 )
 
 func main() {

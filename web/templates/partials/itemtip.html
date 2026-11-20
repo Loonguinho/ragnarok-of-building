@@ -1,7 +1,0 @@
-{{define "item_tip"}}
-<div class="ro-itemtip__head">
-  <span class="ro-itemtip__icon"><img src="{{dpimg}}/images/items/item/{{.ID}}.png" alt="" width="24" height="24"></span>
-  <b>{{.Name}}{{if .Slots}} [{{.Slots}}]{{end}}</b>{{if .MVP}} <em class="ro-mvp">MVP</em>{{end}} <small>#{{.ID}}</small>
-</div>
-<div class="ro-itemtip__desc">{{roText .Desc}}</div>
-{{end}}

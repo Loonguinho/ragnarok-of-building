@@ -5,7 +5,6 @@ package main
 import (
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync/atomic"
 
@@ -14,13 +13,11 @@ import (
 	"gioui.org/unit"
 
 	"ragnarok-of-building/internal/ui"
-	"ragnarok-of-building/internal/web"
+	"ragnarok-of-building/internal/view"
 )
 
-// The native window (Gio): the startup screen, then the simulator drawn by
-// internal/ui. No browser engine is needed. The old web version stays
-// available with -web, from the settings menu, and as the fallback when
-// this window cannot open.
+// The program's window (Gio): the startup screen while the game data gets
+// ready, then the simulator drawn by internal/ui. No browser engine.
 
 func init() { runNative = nativeMain }
 
@@ -38,38 +35,32 @@ func nativeMain(st *startup, o options, log *slog.Logger) {
 	st.onChange = w.Invalidate
 
 	go func() {
-		srv, err := prepare(st, o, log)
+		v, err := prepare(st, o, log)
 		if err != nil {
 			st.fail(err)
-			w.Invalidate()
 			return
 		}
-		a := ui.NewApp(srv.Views(), th, filepath.Join("data", "ui.json"))
-		a.Icons = ui.NewIcons(web.NewIconCache(filepath.Join("data", "cache", "img")).Get, w.Invalidate)
+		a := ui.NewApp(v, th, filepath.Join("data", "ui.json"))
+		a.Icons = ui.NewIcons(view.NewIconCache(filepath.Join("data", "cache", "img")).Get, w.Invalidate)
 		a.Invalidate = w.Invalidate
 		a.SavedFile = "builds.json"
 		a.OpenFile = openFileDialog
-		a.OpenWeb = func() { relaunch(log, "-web") }
 		simulator.Store(a)
 		w.Invalidate()
 	}()
 
 	go func() {
 		var ops op.Ops
-		frames := 0
 		for {
 			switch e := w.Event().(type) {
 			case app.DestroyEvent:
 				if e.Err != nil {
-					log.Error("native window", "err", e.Err)
-					if frames == 0 {
-						// The window could not open (no Direct3D...): the web version.
-						relaunch(log, "-web")
-					}
+					log.Error("window", "err", e.Err)
+					fatal("a janela do programa não abriu: " + e.Err.Error())
+					os.Exit(1)
 				}
 				os.Exit(0)
 			case app.FrameEvent:
-				frames++
 				gtx := app.NewContext(&ops, e)
 				if a := simulator.Load(); a != nil {
 					a.Frame(gtx)
@@ -81,21 +72,4 @@ func nativeMain(st *startup, o options, log *slog.Logger) {
 		}
 	}()
 	app.Main()
-}
-
-// relaunch starts this program again with args (the web version) and ends
-// this one.
-func relaunch(log *slog.Logger, args ...string) {
-	exe, err := os.Executable()
-	if err != nil {
-		log.Error("relaunch", "err", err)
-		return
-	}
-	releaseInstance()
-	cmd := exec.Command(exe, args...)
-	if err := cmd.Start(); err != nil {
-		log.Error("relaunch", "err", err)
-		return
-	}
-	os.Exit(0)
 }

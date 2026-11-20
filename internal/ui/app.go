@@ -10,15 +10,15 @@ import (
 	"gioui.org/layout"
 
 	"ragnarok-of-building/internal/calc"
-	"ragnarok-of-building/internal/web"
+	"ragnarok-of-building/internal/view"
 )
 
-// App is the native build editor: the same windows as /build, computed by
-// web.Views (so both interfaces agree) and drawn with Gio.
+// App is the build editor: its windows are computed by view.Views and drawn
+// with Gio.
 type App struct {
 	Th    *Theme
 	Desk  *Desk
-	V     *web.Views
+	V     *view.Views
 	Icons *Icons
 	Lang  string
 
@@ -30,12 +30,10 @@ type App struct {
 	StateFile string
 	// OpenFile asks the system for a file to open (replay import).
 	OpenFile func(title, filter string) (string, error)
-	// OpenWeb opens the old (web) version.
-	OpenWeb func()
 
 	mu    sync.Mutex
 	b     calc.Build    // the build being edited (normalized by the last compute)
-	view  web.BuildView // its windows
+	view  view.BuildView // its windows
 	ready bool
 	rev   int
 
@@ -73,7 +71,7 @@ type windowState struct {
 
 // NewApp builds the app over the views; it opens the last build (or the
 // default one).
-func NewApp(v *web.Views, th *Theme, stateFile string) *App {
+func NewApp(v *view.Views, th *Theme, stateFile string) *App {
 	a := &App{Th: th, Desk: NewDesk(), V: v, Lang: "pt", StateFile: stateFile}
 	a.makeWindows()
 	b := v.DefaultBuild()
@@ -82,7 +80,7 @@ func NewApp(v *web.Views, th *Theme, stateFile string) *App {
 			a.Lang = st.Lang
 		}
 		a.Desk.Floating = st.Floating
-		if d, ok := web.DecodeBuild(st.Build); ok {
+		if d, ok := view.DecodeBuild(st.Build); ok {
 			b = d
 		}
 		for id, ws := range st.Windows {
@@ -107,7 +105,7 @@ func (a *App) makeWindows() {
 }
 
 // T translates an interface text.
-func (a *App) T(s string) string { return web.Tr(a.Lang, s) }
+func (a *App) T(s string) string { return view.Tr(a.Lang, s) }
 
 // Build returns the build being edited.
 func (a *App) Build() calc.Build {
@@ -215,7 +213,7 @@ func (a *App) updateTitles() {
 }
 
 // view returns the last computed windows.
-func (a *App) View() web.BuildView {
+func (a *App) View() view.BuildView {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return a.view
@@ -234,7 +232,7 @@ var saveMu sync.Mutex
 
 // snapshot is the state to keep (taken on the UI goroutine).
 func (a *App) snapshot() uiState {
-	st := uiState{Lang: a.Lang, Floating: a.Desk.Floating, Build: web.EncodeBuild(a.Build()), Windows: map[string]windowState{}}
+	st := uiState{Lang: a.Lang, Floating: a.Desk.Floating, Build: view.EncodeBuild(a.Build()), Windows: map[string]windowState{}}
 	for _, w := range a.Desk.Windows {
 		st.Windows[w.ID] = windowState{Open: w.Open, X: w.Pos.X, Y: w.Pos.Y, Placed: w.Placed}
 	}

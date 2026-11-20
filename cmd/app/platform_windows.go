@@ -29,7 +29,6 @@ var (
 	procCoInitializeEx  = ole32.NewProc("CoInitializeEx")
 	procCoUninitialize  = ole32.NewProc("CoUninitialize")
 	procCoTaskMemFree   = ole32.NewProc("CoTaskMemFree")
-	procCloseHandle     = kernel.NewProc("CloseHandle")
 	procGetOpenFileName = syscall.NewLazyDLL("comdlg32.dll").NewProc("GetOpenFileNameW")
 )
 
@@ -60,22 +59,11 @@ func fatal(msg string) {
 // another copy already runs.
 func singleInstance() bool {
 	h, _, err := procCreateMutex.Call(0, 0, uintptr(unsafe.Pointer(utf16("Local\\RagnarokOfBuilding"))))
-	instanceMutex = h
 	if h == 0 {
 		return true // cannot tell: go on
 	}
 	var errno syscall.Errno
 	return !(errors.As(err, &errno) && errno == errAlreadyRun)
-}
-
-var instanceMutex uintptr
-
-// releaseInstance lets another copy start (before relaunching).
-func releaseInstance() {
-	if instanceMutex != 0 {
-		procCloseHandle.Call(instanceMutex)
-		instanceMutex = 0
-	}
 }
 
 // openFileDialog asks for a file to open; filter is pairs of name and
@@ -144,15 +132,6 @@ func focusExisting() {
 	}
 	procShowWindow.Call(hwnd, swRestore)
 	procSetForeground.Call(hwnd)
-}
-
-// waitBrowserMode is the program open in the browser (no WebView2): a box
-// that ends it when closed.
-func waitBrowserMode(url string) {
-	messageBox("O Ragnarok of Building abriu no seu navegador.\n"+
-		"Se a página não apareceu, abra este endereço no navegador:\n"+url+
-		"\n\nNÃO feche esta mensagem enquanto estiver usando: ela mantém o programa ligado.\n"+
-		"Quando terminar, clique em OK para encerrar.", mbOK|mbIconInfo)
 }
 
 type browseInfo struct {

@@ -1,26 +1,16 @@
 # Ragnarok of Building
 
-A build simulator for **Ragnarok Online LATAM**, with a UI modeled on the game client: one screen of client-style windows in fixed columns, Alt hotkeys and NPC dialogs.
+A build simulator for **Ragnarok Online LATAM**, with a UI modeled on the game client: client-style windows in fixed columns (or floating), Alt hotkeys and NPC dialogs.
 
-Stack: Go (chi) · HTMX + Go templates · data from the LATAM client itself (+ Divine Pride for item bonuses) · PT-BR / ES / EN.
+Stack: Go · native window drawn with [Gio](https://gioui.org) (no browser engine) · data from the LATAM client itself (+ Divine Pride for item icons) · PT-BR / ES / EN.
 
-## Online
-
-The site is one Go binary plus the game catalog, packaged with Docker (about 170 MB of RAM, so free 512 MB plans fit). The catalog is generated from your own client and copied into the image: it is never committed to git.
-
-```powershell
-go run ./cmd/fetchrathena; go run ./cmd/import   # once, and after each game patch
-docker build -t ragnarok-of-building .
-docker run -p 8080:8080 ragnarok-of-building    # http://localhost:8080
-```
-
-Hosts pass the port in `PORT`. Saved builds live in each visitor's browser (localStorage) and builds are shared by link, so the server keeps no state and any free container host works. Per-IP rate limits protect the calculation and replay upload endpoints, and the pages send a Content-Security-Policy.
+The old web version (HTMX pages, the hosted server and its Docker image) was retired in November 2026; its last state is the `legacy-web` branch.
 
 ## For players: the Windows program
 
-Download `RagnarokOfBuilding-<version>-windows.zip` from the [Releases](../../releases) page, extract it and double-click `RagnarokOfBuilding.exe`: it opens the simulator in the browser (only on this computer, `127.0.0.1`). The game data is read from, in order: a `data.grf` and `System` folder copied next to the executable; a ready `catalog.json.gz` placed there (built with `go run ./cmd/import`); the installed client; the `catalog.json.gz` attached to the program's release, downloaded once. On first run it finds the RO LATAM client (or asks for its folder), downloads rAthena's tables and latam-ro-calc's monster list once, and builds the catalog from that client; after each game patch it rebuilds it by itself. No game data ships with the program. Details for players are in [docs/LEIAME.txt](docs/LEIAME.txt), which goes in the zip.
+Download `RagnarokOfBuilding-<version>-windows.zip` from the [Releases](../../releases) page, extract it and double-click `RagnarokOfBuilding.exe`: the simulator opens in its own window. The game data is read from, in order: a `data.grf` and `System` folder copied next to the executable; a ready `catalog.json.gz` placed there (built with `go run ./cmd/import`); the installed client; the `catalog.json.gz` attached to the program's release, downloaded once. On first run it finds the RO LATAM client (or asks for its folder), downloads rAthena's tables and latam-ro-calc's monster list once, and builds the catalog from that client; after each game patch it rebuilds it by itself. No game data ships with the program. Details for players are in [docs/LEIAME.txt](docs/LEIAME.txt), which goes in the zip.
 
-To publish a version, push a tag: `git tag v0.1.0` then `git push origin v0.1.0`. The `release` workflow tests, builds `cmd/app` for Windows and attaches the zip to a new release. GitHub has no game client, so attach the catalog yourself: run `go run ./cmd/import`, then edit the release and drop `data/gen/catalog.json.gz` on it. Players without the game get it from there on first run (the program downloads the `catalog.json.gz` of its own version). To build it locally: `go build -o RagnarokOfBuilding.exe ./cmd/app`.
+To publish a version, push a tag: `git tag v0.1.0` then `git push origin v0.1.0`. The `release` workflow tests, builds `cmd/app` for Windows and attaches the zip to a new release. GitHub has no game client, so attach the catalog yourself: run `go run ./cmd/import`, then edit the release and drop `data/gen/catalog.json.gz` on it. Players without the game get it from there on first run (the program downloads the `catalog.json.gz` of its own version). To build it locally: `go run ./tools/buildexe` (or `go build -ldflags -H=windowsgui -o RagnarokOfBuilding.exe ./cmd/app`).
 
 ## Running from source
 
@@ -34,30 +24,18 @@ go run ./cmd/import         # client + rAthena -> data/gen/catalog.json.gz (~3 s
 and every time:
 
 ```powershell
-go run ./cmd/server         # http://localhost:8080
+go run ./cmd/app            # the program's window
 go test ./...
 ```
 
 Re-run `go run ./cmd/import` after each game patch.
 
-**Languages.** The Basic Info window's title bar has a PT / EN / ES picker (remembered in a cookie; first visits follow the browser's language). Game data (items, skills, classes, monsters) comes in each language from the client; the interface texts are in `internal/web/i18n_dict.go`, keyed by the Portuguese text. Mark new texts with `{{t "…"}}` in templates or `T("…")` in scripts: `go test ./internal/web` fails while one lacks its EN/ES version.
+**Languages.** The settings menu (the gear in the Menu window) has a PT / EN / ES picker, kept in `data/ui.json`. Game data (items, skills, classes, monsters) comes in each language from the client; the interface texts are in `internal/view/i18n_dict.go`, keyed by the Portuguese text.
 
+**Code.** `internal/calc` is the formula engine; `internal/view` computes what each window shows (build, equipment, buffs, damage, skill tree, optimizer, replay recap) as plain structs; `internal/edit` holds the editing rules (linked headgear slots, exclusive buffs, skill tree points); `internal/ui` draws the windows with Gio; `cmd/app` is the program (startup, import, window).
 
-**Pages**
-- `/` opens the build editor (`/build`); its **Builds** window (Alt+C) lists the builds saved in this browser, opens shared links and links the replay import, item database and skill tree pages
-- `/build` is the **build editor**, with Basic Info (Alt+V), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S), Bonuses (Alt+B), Target/Damage (Alt+D), Buffs (Alt+U) and the Optimizer (Alt+O), which tries every card that fits each slot (and the enchants the client's enchant list gives each item) against the damage window's target and ranks them by expected damage. Ctrl+S saves the build in the browser; **Copiar link** shares it.
-- `/new` starts a build from a replay (`.rrf`) or a blank class
-- `/items` is the item database (PT/ES/EN search, filter by type)
-- `/skills` is a standalone skill tree
-- `/uikit` is the RO UI kit (development)
+**Windows:** Menu (gear: floating windows Alt+W, reset layout, open all, language), Basic Info (Alt+V, class list Alt+J), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S), Bonuses (Alt+B), Target/Damage (Alt+D), Buffs (Alt+U), Optimizer (Alt+O), Saved builds (Alt+C), Share (Alt+L), Shortcuts (Alt+H). Saved builds live in `builds.json` next to the program.
 
-### Development (hot reload)
-
-```powershell
-$env:DEV = "1"; go run ./cmd/server   # templates/CSS/JS: edit and refresh the browser
-```
-
-To also reload on **Go** changes, install [Air](https://github.com/air-verse/air) once with `go install github.com/air-verse/air@latest`, then just run `air` (it already sets `DEV=1`).
 
 ### Regenerating the LATAM formulas
 
@@ -94,7 +72,7 @@ go run ./cmd/scriptcov                                                 # how muc
 - [x] Phase 3: in-game-style skill tree with skill point limits per class step
 - [x] Phase 4: equipment, cards, enchants, refine, enchant grades (D–A: refine bonus and the items' own grade bonuses), random options (the client's option texts + rAthena scripts, also read from replays), class restrictions, item combos (rAthena + LATAM-only items read from the client descriptions)
 - [x] Phase 5: physical and magic damage vs monsters with LATAM formulas for every class, checked against bROWiki; buffs and consumables
-- [x] Phase 6: share links, last build restored, saved builds (browser storage, Builds window), Docker image for hosting
+- [x] Phase 6: share links, last build restored, saved builds (Builds window)
 - [x] Phase 6b: import a character from a replay (`.rrf`)
 - [~] Phase 7: item comparison in the equipment picker (damage change per result, stat changes in the tooltip) and card/enchant optimizer done; stat and gear optimizer pending
 - [ ] Phase 8: polish

@@ -28,3 +28,5 @@ func waitBrowserMode(url string) {
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	<-stop
 }
+
+func releaseInstance() {}

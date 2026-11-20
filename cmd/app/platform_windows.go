@@ -5,6 +5,7 @@ package main
 import (
 	"errors"
 	"runtime"
+	"strings"
 	"syscall"
 	"unsafe"
 )
@@ -28,6 +29,8 @@ var (
 	procCoInitializeEx  = ole32.NewProc("CoInitializeEx")
 	procCoUninitialize  = ole32.NewProc("CoUninitialize")
 	procCoTaskMemFree   = ole32.NewProc("CoTaskMemFree")
+	procCloseHandle     = kernel.NewProc("CloseHandle")
+	procGetOpenFileName = syscall.NewLazyDLL("comdlg32.dll").NewProc("GetOpenFileNameW")
 )
 
 const (
@@ -57,11 +60,79 @@ func fatal(msg string) {
 // another copy already runs.
 func singleInstance() bool {
 	h, _, err := procCreateMutex.Call(0, 0, uintptr(unsafe.Pointer(utf16("Local\\RagnarokOfBuilding"))))
+	instanceMutex = h
 	if h == 0 {
 		return true // cannot tell: go on
 	}
 	var errno syscall.Errno
 	return !(errors.As(err, &errno) && errno == errAlreadyRun)
+}
+
+var instanceMutex uintptr
+
+// releaseInstance lets another copy start (before relaunching).
+func releaseInstance() {
+	if instanceMutex != 0 {
+		procCloseHandle.Call(instanceMutex)
+		instanceMutex = 0
+	}
+}
+
+// openFileDialog asks for a file to open; filter is pairs of name and
+// pattern separated by "|" ("Replays (*.rrf)|*.rrf").
+func openFileDialog(title, filter string) (string, error) {
+	type openFileName struct {
+		structSize    uint32
+		owner         uintptr
+		instance      uintptr
+		filter        *uint16
+		customFilter  *uint16
+		maxCustFilter uint32
+		filterIndex   uint32
+		file          *uint16
+		maxFile       uint32
+		fileTitle     *uint16
+		maxFileTitle  uint32
+		initialDir    *uint16
+		title         *uint16
+		flags         uint32
+		fileOffset    uint16
+		fileExtension uint16
+		defExt        *uint16
+		custData      uintptr
+		hook          uintptr
+		templateName  *uint16
+		reserved      uintptr
+		reserved2     uint32
+		flagsEx       uint32
+	}
+	// The filter is NUL-terminated strings, ending with two NULs.
+	var f []uint16
+	for _, part := range strings.Split(filter, "|") {
+		u, _ := syscall.UTF16FromString(part)
+		f = append(f, u...)
+	}
+	f = append(f, 0)
+	buf := make([]uint16, 4096)
+	owner, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(utf16(appTitle))))
+	ofn := openFileName{owner: owner, filter: &f[0], file: &buf[0], maxFile: uint32(len(buf)), title: utf16(title),
+		flags: 0x1000 | 0x800 | 0x80000 | 0x8} // FILEMUSTEXIST | PATHMUSTEXIST | EXPLORER | NOCHANGEDIR
+	ofn.structSize = uint32(unsafe.Sizeof(ofn))
+	done := make(chan struct{})
+	var ok uintptr
+	go func() { // the dialog wants a COM apartment on its own thread
+		defer close(done)
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+		procCoInitializeEx.Call(0, 0x2)
+		defer procCoUninitialize.Call()
+		ok, _, _ = procGetOpenFileName.Call(uintptr(unsafe.Pointer(&ofn)))
+	}()
+	<-done
+	if ok == 0 {
+		return "", errors.New("nenhum arquivo escolhido")
+	}
+	return syscall.UTF16ToString(buf), nil
 }
 
 // focusExisting brings the running copy's window to the front.

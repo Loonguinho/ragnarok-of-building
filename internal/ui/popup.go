@@ -1,0 +1,250 @@
+package ui
+
+import (
+	"image"
+
+	"gioui.org/io/event"
+	"gioui.org/io/key"
+	"gioui.org/io/pointer"
+	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/op/clip"
+	"gioui.org/unit"
+	"gioui.org/widget"
+)
+
+// Popup is a box drawn above every window (a dropdown list, the settings
+// menu): it closes on Esc or a click outside.
+type Popup struct {
+	At      image.Point // desk coordinates of its top-left corner
+	Width   int         // px; 0 = its content's width
+	Content layout.Widget
+	OnClose func()
+	catch   bool
+}
+
+// OpenPopup shows p (closing any other).
+func (d *Desk) OpenPopup(p *Popup) {
+	if d.popup != nil && d.popup != p && d.popup.OnClose != nil {
+		d.popup.OnClose()
+	}
+	d.popup = p
+}
+
+// ClosePopup closes the open popup.
+func (d *Desk) ClosePopup() {
+	if d.popup != nil && d.popup.OnClose != nil {
+		d.popup.OnClose()
+	}
+	d.popup = nil
+}
+
+// PopupOpen reports whether p is the open popup.
+func (d *Desk) PopupOpen(p *Popup) bool { return d.popup == p }
+
+// ShowTip sets this frame's tooltip, drawn next to the mouse.
+func (d *Desk) ShowTip(w layout.Widget) { d.tip = w }
+
+// Mouse is the pointer position on the desk.
+func (d *Desk) Mouse() image.Point { return d.mouse }
+
+func (d *Desk) layoutOverlay(gtx C, size image.Point) {
+	if p := d.popup; p != nil {
+		// A transparent catcher: a click outside closes the popup.
+		for {
+			ev, ok := gtx.Event(pointer.Filter{Target: &p.catch, Kinds: pointer.Press})
+			if !ok {
+				break
+			}
+			if _, ok := ev.(pointer.Event); ok {
+				d.ClosePopup()
+			}
+		}
+		for {
+			ev, ok := gtx.Event(key.Filter{Name: key.NameEscape})
+			if !ok {
+				break
+			}
+			if e, ok := ev.(key.Event); ok && e.State == key.Press {
+				d.ClosePopup()
+			}
+		}
+		if d.popup == p {
+			st := clip.Rect{Max: size}.Push(gtx.Ops)
+			event.Op(gtx.Ops, &p.catch)
+			st.Pop()
+			m := op.Record(gtx.Ops)
+			g := gtx
+			g.Constraints = layout.Constraints{Max: image.Pt(size.X, size.Y)}
+			if p.Width > 0 {
+				g.Constraints.Min.X, g.Constraints.Max.X = p.Width, p.Width
+			}
+			pd := Box{Bg: ColWhite, Line: rgb(0x7f9db9)}.Layout(g, p.Content)
+			call := m.Stop()
+			at := p.At
+			// Keep it on screen.
+			if at.X+pd.Size.X > size.X {
+				at.X = max(0, size.X-pd.Size.X)
+			}
+			if at.Y+pd.Size.Y > size.Y {
+				at.Y = max(0, size.Y-pd.Size.Y)
+			}
+			off := op.Offset(at).Push(gtx.Ops)
+			Shadow(gtx, image.Rectangle{Max: pd.Size}, 0)
+			call.Add(gtx.Ops)
+			// Clicks on the popup itself don't reach the catcher.
+			area := clip.Rect{Max: pd.Size}.Push(gtx.Ops)
+			event.Op(gtx.Ops, p)
+			area.Pop()
+			off.Pop()
+		}
+	}
+	if d.tip != nil {
+		m := op.Record(gtx.Ops)
+		g := gtx
+		g.Constraints = layout.Constraints{Max: image.Pt(gtx.Dp(340), size.Y)}
+		td := d.tip(g)
+		call := m.Stop()
+		at := d.mouse.Add(image.Pt(gtx.Dp(14), gtx.Dp(16)))
+		if at.X+td.Size.X > size.X {
+			at.X = max(0, d.mouse.X-td.Size.X-gtx.Dp(8))
+		}
+		if at.Y+td.Size.Y > size.Y {
+			at.Y = max(0, d.mouse.Y-td.Size.Y-gtx.Dp(8))
+		}
+		off := op.Offset(at).Push(gtx.Ops)
+		Shadow(gtx, image.Rectangle{Max: td.Size}, gtx.Dp(3))
+		call.Add(gtx.Ops)
+		off.Pop()
+	}
+}
+
+// TipBox is the tooltip frame (.ro-tooltip).
+func TipBox(gtx C, w layout.Widget) D {
+	return Box{Bg: ColTipBG, Line: ColBorder, Radius: 3, Pad: Inset(6, 8, 6, 8)}.Layout(gtx, w)
+}
+
+// Hoverable reports hovering over an area, for tooltips.
+type Hoverable struct{ cl widget.Clickable }
+
+// Layout lays w and returns whether the mouse is over it.
+func (h *Hoverable) Layout(gtx C, w layout.Widget) (D, bool) {
+	d := h.cl.Layout(gtx, w)
+	return d, h.cl.Hovered()
+}
+
+// Select is a dropdown (.ro-select): a box with the current choice and a ▾
+// that opens the list of options in a popup.
+type Select struct {
+	popup  Popup
+	btn    widget.Clickable
+	items  []widget.Clickable
+	list   widget.List
+	anchor Anchor
+}
+
+// Anchor finds where a widget is on the desk: the desk sees the mouse in
+// desk coordinates, the widget in its own; the difference is its origin.
+type Anchor struct {
+	tag    bool
+	Origin image.Point
+}
+
+// Track registers the widget's area (size) without taking its events.
+func (a *Anchor) Track(gtx C, d *Desk, size image.Point) {
+	for {
+		ev, ok := gtx.Event(pointer.Filter{Target: &a.tag, Kinds: pointer.Move | pointer.Press | pointer.Enter})
+		if !ok {
+			break
+		}
+		if e, ok := ev.(pointer.Event); ok {
+			a.Origin = d.mouse.Sub(e.Position.Round())
+		}
+	}
+	area := clip.Rect{Max: size}.Push(gtx.Ops)
+	pass := pointer.PassOp{}.Push(gtx.Ops)
+	event.Op(gtx.Ops, &a.tag)
+	pass.Pop()
+	area.Pop()
+}
+
+// Option is one choice: value and label.
+type Option struct {
+	Value string
+	Label string
+}
+
+// Layout draws the select; it returns the chosen value and true when the
+// user picked one.
+func (s *Select) Layout(gtx C, th *Theme, d *Desk, opts []Option, cur string, width unit.Dp) (D, string, bool) {
+	picked, ok := "", false
+	if len(s.items) < len(opts) {
+		s.items = append(s.items, make([]widget.Clickable, len(opts)-len(s.items))...)
+	}
+	for i := range opts {
+		if s.items[i].Clicked(gtx) {
+			picked, ok = opts[i].Value, true
+			d.ClosePopup()
+		}
+	}
+	label := ""
+	for _, o := range opts {
+		if o.Value == cur {
+			label = o.Label
+		}
+	}
+	if s.btn.Clicked(gtx) {
+		if d.PopupOpen(&s.popup) {
+			d.ClosePopup()
+		} else {
+			d.OpenPopup(&s.popup)
+		}
+	}
+	w := gtx.Dp(width)
+	if w == 0 {
+		w = gtx.Constraints.Max.X
+	}
+	w = min(w, gtx.Constraints.Max.X)
+	h := gtx.Dp(BtnH)
+	dims := s.btn.Layout(gtx, func(gtx C) D {
+		r := image.Rectangle{Max: image.Pt(w, h)}
+		Fill(gtx, r, ColWhite)
+		Border(gtx, r, ColBorder, 1, 2)
+		g := gtx
+		g.Constraints = layout.Constraints{Max: image.Pt(w-gtx.Dp(18), h)}
+		st := op.Offset(image.Pt(gtx.Dp(4), (h-gtx.Sp(TextSize)*135/100)/2)).Push(gtx.Ops)
+		T(th, label).Layout(g)
+		st.Pop()
+		st = op.Offset(image.Pt(w-gtx.Dp(13), (h-gtx.Dp(9))/2+1)).Push(gtx.Ops)
+		Caret(gtx, ColTitleText)
+		st.Pop()
+		pointerCursor(gtx, r.Max)
+		return D{Size: r.Max}
+	})
+	// The popup opens under the box.
+	s.anchor.Track(gtx, d, dims.Size)
+	s.popup.Width = max(w, gtx.Dp(120))
+	s.popup.At = s.anchor.Origin.Add(image.Pt(0, dims.Size.Y))
+	s.list.Axis = layout.Vertical
+	s.popup.Content = func(gtx C) D {
+		gtx.Constraints.Max.Y = min(gtx.Constraints.Max.Y, gtx.Dp(300))
+		return s.list.Layout(gtx, len(opts), func(gtx C, i int) D {
+			return s.items[i].Layout(gtx, func(gtx C) D {
+				gtx.Constraints.Min.X = gtx.Constraints.Max.X
+				m := op.Record(gtx.Ops)
+				td := Inset(2, 6, 2, 6).Layout(gtx, T(th, opts[i].Label).W())
+				call := m.Stop()
+				r := image.Rectangle{Max: image.Pt(gtx.Constraints.Max.X, td.Size.Y)}
+				if opts[i].Value == cur {
+					Fill(gtx, r, ColSelect)
+				} else if s.items[i].Hovered() {
+					Fill(gtx, r, ColHover)
+				}
+				call.Add(gtx.Ops)
+				pointerCursor(gtx, r.Max)
+				return D{Size: r.Max}
+			})
+		})
+	}
+	return dims, picked, ok
+}

@@ -1,5 +1,6 @@
 // app is Ragnarok of Building as one program for players: double-click it
-// and the simulator opens in its own window (WebView2, no console).
+// and the simulator opens in its own window (WebView2, no console). The
+// native window (no browser engine, internal/ui) is being built: -native.
 //
 // On first run (and after each game patch) it builds the game catalog from
 // the player's own RO LATAM client, downloading rAthena's tables (GPL-3.0)
@@ -12,6 +13,7 @@
 //	RagnarokOfBuilding.exe             # find the client, import if needed, open the window
 //	RagnarokOfBuilding.exe -import     # rebuild the catalog now
 //	RagnarokOfBuilding.exe -client D:\RO -port 8090
+//	RagnarokOfBuilding.exe -native     # the native window (in progress)
 //	RagnarokOfBuilding.exe -browser    # open in the browser instead of the window
 //
 // The client can also be a copy: a data.grf and the System folder copied
@@ -65,10 +67,14 @@ var showWindow func(url string, debug bool) error
 
 var errNoWindow = errors.New("janela própria indisponível (WebView2 não encontrado)")
 
+// runNative is the native window (native_windows.go); nil where there is
+// none. It never returns.
+var runNative func(st *startup, o options, log *slog.Logger)
+
 type options struct {
-	reimport, browser, noBrowser, debug bool
-	client                              string
-	port                                int
+	reimport, browser, noBrowser, debug, web, native bool
+	client                                           string
+	port                                             int
 }
 
 func main() {
@@ -86,6 +92,9 @@ func run() error {
 	flag.BoolVar(&o.browser, "browser", false, "open in the browser instead of the program's window")
 	flag.BoolVar(&o.noBrowser, "no-browser", false, "only run the server (no window, no browser)")
 	flag.BoolVar(&o.debug, "debug", false, "allow the browser engine's developer tools in the window")
+	flag.BoolVar(&o.web, "web", false, "the old version: the web pages in WebView2 (or the browser)")
+	// The native window is opt-in until it has every window of the web one.
+	flag.BoolVar(&o.native, "native", false, "the native window (in progress)")
 	flag.Parse()
 
 	// Work next to the executable, wherever it was started from.
@@ -102,7 +111,11 @@ func run() error {
 	_ = config.LoadDotEnv(".env")
 
 	st := newStartup(log, pickFolder)
-	// Before the game data is ready the server answers the startup page; the
+	if runNative != nil && o.native && !o.web && !o.browser && !o.noBrowser {
+		runNative(st, o, log)
+		return nil
+	}
+	// The web version. Before the game data is ready the server answers the startup page; the
 	// static files come from a server without a catalog meanwhile.
 	early, err := web.New(web.Options{Log: log})
 	if err != nil {

@@ -1,0 +1,255 @@
+package ui
+
+import (
+	"encoding/json"
+	"image"
+	"os"
+	"sync"
+
+	"gioui.org/io/key"
+	"gioui.org/layout"
+
+	"ragnarok-of-building/internal/calc"
+	"ragnarok-of-building/internal/web"
+)
+
+// App is the native build editor: the same windows as /build, computed by
+// web.Views (so both interfaces agree) and drawn with Gio.
+type App struct {
+	Th    *Theme
+	Desk  *Desk
+	V     *web.Views
+	Icons *Icons
+	Lang  string
+
+	// Invalidate asks the window for a new frame (set by the host).
+	Invalidate func()
+	// Saved is the saved-builds file (builds.json next to the program).
+	SavedFile string
+	// StateFile keeps the window layout, language and last build.
+	StateFile string
+	// OpenFile asks the system for a file to open (replay import).
+	OpenFile func(title, filter string) (string, error)
+	// OpenWeb opens the old (web) version.
+	OpenWeb func()
+
+	mu    sync.Mutex
+	b     calc.Build    // the build being edited (normalized by the last compute)
+	view  web.BuildView // its windows
+	ready bool
+	rev   int
+
+	chat     []chatLine
+	needSave bool
+
+	// Windows.
+	wMenu, wBasic, wStatus, wEquip, wSkills, wBonus, wDamage, wBuffs, wOptimize *Window
+	wSaved, wShare, wHelp, wSlot, wRdmg                                         *Window
+
+	menu   menuState
+	basic  basicState
+	status statusState
+}
+
+type chatLine struct {
+	S     string
+	Error bool
+}
+
+// uiState is what data/ui.json keeps between runs.
+type uiState struct {
+	Lang     string                 `json:"lang"`
+	Floating bool                   `json:"floating"`
+	Build    string                 `json:"build"` // share code of the last build
+	Windows  map[string]windowState `json:"windows"`
+}
+
+type windowState struct {
+	Open   bool `json:"open"`
+	X      int  `json:"x"`
+	Y      int  `json:"y"`
+	Placed bool `json:"placed"`
+}
+
+// NewApp builds the app over the views; it opens the last build (or the
+// default one).
+func NewApp(v *web.Views, th *Theme, stateFile string) *App {
+	a := &App{Th: th, Desk: NewDesk(), V: v, Lang: "pt", StateFile: stateFile}
+	a.makeWindows()
+	b := v.DefaultBuild()
+	if st, ok := a.loadState(); ok {
+		if st.Lang != "" {
+			a.Lang = st.Lang
+		}
+		a.Desk.Floating = st.Floating
+		if d, ok := web.DecodeBuild(st.Build); ok {
+			b = d
+		}
+		for id, ws := range st.Windows {
+			if w := a.Desk.Find(id); w != nil {
+				w.Open, w.Pos, w.Placed = ws.Open, image.Pt(ws.X, ws.Y), ws.Placed
+			}
+		}
+	}
+	a.SetBuild(b)
+	return a
+}
+
+func (a *App) makeWindows() {
+	d := a.Desk
+	a.wMenu = d.Add(&Window{ID: "win-menu", Title: "Menu", Col: 0, Open: true, NoShowAll: true})
+	a.wBasic = d.Add(&Window{ID: "win-basic", Title: "Informações Básicas", Hotkey: "V", Col: 0, Open: true})
+	a.wStatus = d.Add(&Window{ID: "win-status", Title: "Atributos", Hotkey: "A", Col: 0, Open: true})
+	a.wMenu.Body = a.menuBody
+	a.wMenu.TitleExtra = a.gearButton
+	a.wBasic.Body = a.basicBody
+	a.wStatus.Body = a.statusBody
+}
+
+// T translates an interface text.
+func (a *App) T(s string) string { return web.Tr(a.Lang, s) }
+
+// Build returns the build being edited.
+func (a *App) Build() calc.Build {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.b
+}
+
+// SetBuild replaces the build and recomputes every window in the
+// background (a newer change discards an older result).
+func (a *App) SetBuild(b calc.Build) {
+	a.mu.Lock()
+	a.rev++
+	rev := a.rev
+	a.b = b
+	lang := a.Lang
+	a.mu.Unlock()
+	go func() {
+		v := a.V.Build(b, lang)
+		a.mu.Lock()
+		if rev == a.rev {
+			a.view, a.b, a.ready = v, v.Build, true
+			for _, n := range v.Notes {
+				a.chat = append(a.chat, chatLine{S: n})
+			}
+		}
+		a.needSave = true
+		a.mu.Unlock()
+		if a.Invalidate != nil {
+			a.Invalidate()
+		}
+	}()
+}
+
+// Edit applies fn to a copy of the build and recomputes.
+func (a *App) Edit(fn func(b *calc.Build)) {
+	b := a.Build()
+	fn(&b)
+	a.SetBuild(b)
+}
+
+// Say adds a line to the chat log.
+func (a *App) Say(s string, isErr bool) {
+	a.mu.Lock()
+	a.chat = append(a.chat, chatLine{S: s, Error: isErr})
+	if len(a.chat) > 200 {
+		a.chat = a.chat[len(a.chat)-200:]
+	}
+	a.mu.Unlock()
+}
+
+// SetLang changes the interface language.
+func (a *App) SetLang(l string) {
+	a.Lang = l
+	a.SetBuild(a.Build())
+}
+
+// Frame draws one frame.
+func (a *App) Frame(gtx C) D {
+	a.mu.Lock()
+	ready := a.ready
+	a.mu.Unlock()
+	a.Desk.Hotkeys(gtx)
+	a.shortcuts(gtx)
+	a.updateTitles()
+	if !ready {
+		backdrop(gtx, gtx.Constraints.Max)
+		return layout.Center.Layout(gtx, T(a.Th, a.T("Calculando…")).C(ColWhite).W())
+	}
+	d := a.Desk.Layout(gtx, a.Th)
+	a.mu.Lock()
+	save := a.needSave
+	a.needSave = false
+	a.mu.Unlock()
+	if a.Desk.Changed() || save {
+		st := a.snapshot()
+		go a.writeState(st)
+	}
+	return d
+}
+
+// shortcuts are the global keys (Alt+W floating windows...).
+func (a *App) shortcuts(gtx C) {
+	for {
+		ev, ok := gtx.Event(key.Filter{Name: "W", Required: key.ModAlt}, key.Filter{Name: "S", Required: key.ModShortcut})
+		if !ok {
+			break
+		}
+		e, ok := ev.(key.Event)
+		if !ok || e.State != key.Press {
+			continue
+		}
+		switch e.Name {
+		case "W":
+			a.Desk.Floating = !a.Desk.Floating
+			a.Desk.changed = true
+		}
+	}
+}
+
+func (a *App) updateTitles() {
+	a.wMenu.Title = a.T("Menu")
+	a.wBasic.Title = a.T("Informações Básicas")
+	a.wStatus.Title = a.T("Atributos")
+}
+
+// view returns the last computed windows.
+func (a *App) View() web.BuildView {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.view
+}
+
+func (a *App) loadState() (uiState, bool) {
+	var st uiState
+	b, err := os.ReadFile(a.StateFile)
+	if err != nil || json.Unmarshal(b, &st) != nil {
+		return st, false
+	}
+	return st, true
+}
+
+var saveMu sync.Mutex
+
+// snapshot is the state to keep (taken on the UI goroutine).
+func (a *App) snapshot() uiState {
+	st := uiState{Lang: a.Lang, Floating: a.Desk.Floating, Build: web.EncodeBuild(a.Build()), Windows: map[string]windowState{}}
+	for _, w := range a.Desk.Windows {
+		st.Windows[w.ID] = windowState{Open: w.Open, X: w.Pos.X, Y: w.Pos.Y, Placed: w.Placed}
+	}
+	return st
+}
+
+func (a *App) writeState(st uiState) {
+	if a.StateFile == "" {
+		return
+	}
+	b, _ := json.MarshalIndent(st, "", " ")
+	saveMu.Lock()
+	defer saveMu.Unlock()
+	tmp := a.StateFile + ".tmp"
+	if os.WriteFile(tmp, b, 0o644) == nil {
+		os.Rename(tmp, a.StateFile)
+	}
+}

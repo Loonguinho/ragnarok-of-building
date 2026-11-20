@@ -28,6 +28,14 @@ type startup struct {
 	clientCh chan string
 	// pick opens the system's folder picker (nil where there is none).
 	pick func() (string, error)
+	// onChange is called after each change (the native window redraws).
+	onChange func()
+}
+
+func (st *startup) changed() {
+	if st.onChange != nil {
+		st.onChange()
+	}
 }
 
 func newStartup(log *slog.Logger, pick func() (string, error)) *startup {
@@ -47,6 +55,7 @@ func (st *startup) say(msg string) {
 		st.lines = st.lines[len(st.lines)-200:]
 	}
 	st.mu.Unlock()
+	st.changed()
 }
 
 // askClient waits for the player to give the client folder (one with a
@@ -55,6 +64,7 @@ func (st *startup) askClient(note string) string {
 	st.mu.Lock()
 	st.asking, st.askNote = true, note
 	st.mu.Unlock()
+	st.changed()
 	dir := <-st.clientCh
 	st.mu.Lock()
 	st.asking = false
@@ -68,6 +78,7 @@ func (st *startup) fail(err error) {
 	st.mu.Lock()
 	st.errMsg = err.Error()
 	st.mu.Unlock()
+	st.changed()
 }
 
 func (st *startup) ready(next string) {

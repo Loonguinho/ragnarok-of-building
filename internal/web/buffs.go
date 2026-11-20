@@ -195,7 +195,7 @@ func buffGroups(b calc.Build, c *gamedata.Catalog, l string) []buffGroup {
 			for _, it := range calc.Consumables(c) {
 				key := calc.ConsumableKey(it.ID)
 				v := b.Buffs[key]
-				g.Items = append(g.Items, buffItem{Key: key, Label: it.Name.Get(l), ItemID: it.ID, Value: v, ValueStr: strconv.Itoa(v)})
+				g.Items = append(g.Items, buffItem{Key: key, Label: it.Name.Get(l), ItemID: it.ID, Excl: calc.ConsumableExcl(it.ID), Value: v, ValueStr: strconv.Itoa(v)})
 				if v > 0 {
 					g.Active++
 					g.Open = true

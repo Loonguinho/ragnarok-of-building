@@ -238,7 +238,6 @@ var dict = map[string][2]string{
 	"Impositio Manus": {"Impositio Manus", "Impositio Manus"}, "Expiatio": {"Expiatio", "Expiatio"}, "Concentrar": {"Improve Concentration", "Concentración"},
 	"Comida de FOR": {"STR food", "Comida de FUE"}, "Comida de AGI": {"AGI food", "Comida de AGI"}, "Comida de VIT": {"VIT food", "Comida de VIT"},
 	"Comida de INT": {"INT food", "Comida de INT"}, "Comida de DES": {"DEX food", "Comida de DES"}, "Comida de SOR": {"LUK food", "Comida de SUE"},
-	"Poção de velocidade de ataque":  {"Attack speed potion", "Poción de velocidad de ataque"},
 	"Poção da Concentração (+10%)":   {"Concentration Potion (+10%)", "Poción de Concentración (+10%)"},
 	"Poção do Despertar (+15%)":      {"Awakening Potion (+15%)", "Poción del Despertar (+15%)"},
 	"Poção da Fúria Selvagem (+20%)": {"Berserk Potion (+20%)", "Poción de Furia Salvaje (+20%)"},

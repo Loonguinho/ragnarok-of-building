@@ -288,12 +288,6 @@ var Buffs = []BuffDef{
 	{Key: "food_int", Label: "Comida de INT", Group: "Consumíveis", Choices: foods("Palitos de INT", "Coquetel Uivante"), Script: statFood("bInt")},
 	{Key: "food_dex", Label: "Comida de DES", Group: "Consumíveis", Choices: foods("Palitos de DES", "Chá Gelado de Siroma"), Script: statFood("bDex")},
 	{Key: "food_luk", Label: "Comida de SOR", Group: "Consumíveis", Choices: foods("Palitos de SOR", "Macarrão com Petite"), Script: statFood("bLuk")},
-	// ASPD potions: a fixed bonus × AGI ÷ 200 (rAthena SC_ASPDPOTION*, in
-	// status_calc_aspd's fixed group), LATAM values 4/6/9 (latam-ro-calc
-	// aspd-potion-list.ts). The stored values stay 10/15/20 (older builds).
-	{Key: "aspd_potion", Label: "Poção de velocidade de ataque", Group: "Consumíveis",
-		Choices: [][2]string{{"0", "—"}, {"10", "Poção da Concentração"}, {"15", "Poção do Despertar"}, {"20", "Poção da Fúria Selvagem"}},
-		Script:  table(map[int]string{10: "bonus bAspdFixed,4;", 15: "bonus bAspdFixed,6;", 20: "bonus bAspdFixed,9;"})},
 
 	// ---- Outros: anything else, typed in ----
 	{Key: "x_atk", Label: "ATQ", Group: "Outros", Max: 9999, Script: func(v int, _ [6]int) string { return fmt.Sprintf("bonus bBaseAtk,%d;", v) }},
@@ -353,6 +347,7 @@ func (d *BuffDef) valid(v int) bool {
 // normalizeBuffs drops unknown buffs and values, and keeps one buff per
 // exclusive group (the first in display order).
 func normalizeBuffs(b *Build) {
+	migrateAspdPotion(b)
 	for k, v := range b.Buffs {
 		if strings.HasPrefix(k, ItemEffectPrefix) || strings.HasPrefix(k, ConsumablePrefix) {
 			if v <= 0 {

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"image"
+	"strings"
 	"path/filepath"
 	"testing"
 	"time"
@@ -187,12 +188,29 @@ func TestSelectPick(t *testing.T) {
 	if h.a.Desk.popup == nil {
 		t.Fatal("the class select did not open")
 	}
-	h.click(135, 373+40)
+	// A long list: its search box has the focus; Enter picks the first
+	// match.
+	sel := &h.a.status.job
+	if !h.a.Desk.PopupOpen(&sel.popup) || len(sel.shown) < selectSearchMin {
+		t.Fatalf("the class list has no search (%d shown)", len(sel.shown))
+	}
+	n := sel.q.Ed.Len()
+	h.router.Queue(key.EditEvent{Range: key.Range{Start: 0, End: n}, Text: "feiticeiro"})
+	h.frame()
+	h.frame()
+	if len(sel.shown) == 0 || len(sel.shown) > 3 {
+		t.Fatalf("search \"feiticeiro\" shows %d classes", len(sel.shown))
+	}
+	h.router.Queue(key.Event{Name: key.NameReturn, State: key.Press})
+	h.frame()
+	h.frame()
+	h.waitReady()
+	h.frame()
 	if h.a.Desk.popup != nil {
 		t.Error("the popup stayed open after a pick")
 	}
-	if got := h.a.Build().Job; got == before {
-		t.Errorf("class still %d after picking another", got)
+	if got := h.a.Build().Job; got == before || !strings.Contains(h.a.View().Job.Name.Get("pt"), "Feiticeiro") {
+		t.Errorf("class %d (%s) after searching Feiticeiro", got, h.a.View().Job.Name.Get("pt"))
 	}
 	// Informações Básicas ▸ the class name opens the grouped class list.
 	h.click(115, 214)

@@ -5,6 +5,7 @@ import (
 	"image"
 	"maps"
 	"strconv"
+	"strings"
 
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -243,6 +244,7 @@ func (a *App) compareCol(gtx C, res *view.CompareView, i int) D {
 				layout.Rigid(Fixed(52, T(th, label).Sz(SmallText).C(ColMuted).W())),
 				layout.Flexed(1, func(gtx C) D {
 					cs.pos[i][p.Index].Tip = a.itemTipFor
+					cs.pos[i][p.Index].SearchText = a.itemSearchText
 					d, val, ok := cs.pos[i][p.Index].Layout(gtx, th, a.Desk, cs.posOpts[i][p.Index], strconv.Itoa(p.Current), 0)
 					if ok {
 						if cand.Cards == nil {
@@ -406,4 +408,22 @@ func (a *App) itemTipFor(value string) layout.Widget {
 		return nil
 	}
 	return func(gtx C) D { return a.itemTip(gtx, id, nil) }
+}
+
+// itemSearchText is an item's description as plain text (by ID given as
+// text), for the dropdowns' search.
+func (a *App) itemSearchText(value string) string {
+	id, _ := strconv.Atoi(value)
+	it := a.V.Item(id, a.Lang)
+	if it == nil {
+		return ""
+	}
+	var b strings.Builder
+	for _, ln := range it.Desc {
+		for _, sp := range ColorLine(ln, ColText) {
+			b.WriteString(sp.S)
+		}
+		b.WriteByte(' ')
+	}
+	return b.String()
 }

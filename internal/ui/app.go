@@ -318,6 +318,7 @@ func (a *App) updateTitles() {
 	a.wOptimize.Title = a.T("Otimizador")
 	a.wItems.Title = a.T("Banco de Itens")
 	a.wCompare.Title = a.T("Comparar itens")
+	SearchHint = a.T("Buscar…")
 	a.wSlot.Title = a.slotTitle()
 }
 

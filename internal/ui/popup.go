@@ -2,6 +2,7 @@ package ui
 
 import (
 	"image"
+	"strings"
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"
@@ -11,6 +12,8 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/unit"
 	"gioui.org/widget"
+
+	"ragnarok-of-building/internal/gamedata"
 )
 
 // Popup is a box drawn above every window (a dropdown list, the settings
@@ -142,13 +145,30 @@ type Select struct {
 	// mouse is over it in the list, or over the box for the current one;
 	// nil for none.
 	Tip func(value string) layout.Widget
+	// SearchText, when set, is more text of an option (by value) the
+	// search looks in besides its label: an item's description.
+	SearchText func(value string) string
 
 	popup  Popup
 	btn    widget.Clickable
 	items  []widget.Clickable
 	list   widget.List
 	anchor Anchor
+
+	// Search, in lists longer than selectSearchMin.
+	q       Input
+	wasOpen bool
+	norm    []string // each option's label and Search, normalized
+	shown   []int    // the options matching q
+	enter   string   // the first match, picked with Enter
 }
+
+// selectSearchMin is the list length from which a dropdown gets a search
+// box.
+const selectSearchMin = 13
+
+// SearchHint is the dropdowns' search box hint, in the interface language.
+var SearchHint = "Buscar…"
 
 // Anchor finds where a widget is on the desk: the desk sees the mouse in
 // desk coordinates, the widget in its own; the difference is its origin.
@@ -181,12 +201,48 @@ type Option struct {
 	Label string
 }
 
+// matches reports whether every word of the normalized query is in text.
+func matches(text, q string) bool {
+	for _, w := range strings.Fields(q) {
+		if !strings.Contains(text, w) {
+			return false
+		}
+	}
+	return true
+}
+
 // Layout draws the select; it returns the chosen value and true when the
 // user picked one.
 func (s *Select) Layout(gtx C, th *Theme, d *Desk, opts []Option, cur string, width unit.Dp) (D, string, bool) {
 	picked, ok := "", false
 	if len(s.items) < len(opts) {
 		s.items = append(s.items, make([]widget.Clickable, len(opts)-len(s.items))...)
+	}
+	open := d.PopupOpen(&s.popup)
+	search := len(opts) >= selectSearchMin
+	if open && !s.wasOpen && search {
+		// Opening: an empty search with the focus, and the options' text.
+		s.q.Ed.SetText("")
+		gtx.Execute(key.FocusCmd{Tag: &s.q.Ed})
+		s.norm = s.norm[:0]
+		for _, o := range opts {
+			txt := o.Label
+			if s.SearchText != nil {
+				txt += " " + s.SearchText(o.Value)
+			}
+			s.norm = append(s.norm, gamedata.Normalize(txt))
+		}
+	}
+	s.wasOpen = open
+	s.shown = s.shown[:0]
+	q := ""
+	if open && search {
+		q = gamedata.Normalize(s.q.Text())
+	}
+	for i := range opts {
+		if q == "" || (i < len(s.norm) && matches(s.norm[i], q)) {
+			s.shown = append(s.shown, i)
+		}
 	}
 	for i := range opts {
 		if !d.PopupOpen(&s.popup) {
@@ -241,30 +297,58 @@ func (s *Select) Layout(gtx C, th *Theme, d *Desk, opts []Option, cur string, wi
 	s.popup.Width = max(w, gtx.Dp(180))
 	s.popup.At = s.anchor.Origin.Add(image.Pt(0, dims.Size.Y))
 	s.list.Axis = layout.Vertical
+	shown := s.shown
 	s.popup.Content = func(gtx C) D {
 		gtx.Constraints.Max.Y = min(gtx.Constraints.Max.Y, gtx.Dp(300))
-		return s.list.Layout(gtx, len(opts), func(gtx C, i int) D {
-			return s.items[i].Layout(gtx, func(gtx C) D {
-				gtx.Constraints.Min.X = gtx.Constraints.Max.X
-				m := op.Record(gtx.Ops)
-				td := Inset(2, 6, 2, 6).Layout(gtx, T(th, opts[i].Label).W())
-				call := m.Stop()
-				r := image.Rectangle{Max: image.Pt(gtx.Constraints.Max.X, td.Size.Y)}
-				if opts[i].Value == cur {
-					Fill(gtx, r, ColSelect)
-				} else if s.items[i].Hovered() {
-					Fill(gtx, r, ColHover)
-				}
-				call.Add(gtx.Ops)
-				pointerCursor(gtx, r.Max)
-				if s.Tip != nil && s.items[i].Hovered() {
-					if w := s.Tip(opts[i].Value); w != nil {
-						d.ShowTip(w)
+		list := func(gtx C) D {
+			if len(shown) == 0 {
+				return Inset(4, 6, 4, 6).Layout(gtx, T(th, "—").C(ColMuted).W())
+			}
+			return s.list.Layout(gtx, len(shown), func(gtx C, k int) D {
+				i := shown[k]
+				return s.items[i].Layout(gtx, func(gtx C) D {
+					gtx.Constraints.Min.X = gtx.Constraints.Max.X
+					m := op.Record(gtx.Ops)
+					td := Inset(2, 6, 2, 6).Layout(gtx, T(th, opts[i].Label).W())
+					call := m.Stop()
+					r := image.Rectangle{Max: image.Pt(gtx.Constraints.Max.X, td.Size.Y)}
+					if opts[i].Value == cur {
+						Fill(gtx, r, ColSelect)
+					} else if s.items[i].Hovered() {
+						Fill(gtx, r, ColHover)
 					}
-				}
-				return D{Size: r.Max}
+					call.Add(gtx.Ops)
+					pointerCursor(gtx, r.Max)
+					if s.Tip != nil && s.items[i].Hovered() {
+						if w := s.Tip(opts[i].Value); w != nil {
+							d.ShowTip(w)
+						}
+					}
+					return D{Size: r.Max}
+				})
 			})
-		})
+		}
+		if !search {
+			return list(gtx)
+		}
+		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+			layout.Rigid(func(gtx C) D {
+				return Inset(3, 3, 3, 3).Layout(gtx, func(gtx C) D {
+					s.q.Hint = SearchHint
+					_, _, enter := s.q.Layout(gtx, th, 0)
+					if enter && len(shown) > 0 {
+						s.enter = opts[shown[0]].Value
+					}
+					return D{Size: image.Pt(gtx.Constraints.Max.X, gtx.Dp(InputH))}
+				})
+			}),
+			layout.Rigid(list), // as tall as the matches, up to what is left
+		)
+	}
+	if s.enter != "" {
+		picked, ok = s.enter, true
+		s.enter = ""
+		d.ClosePopup()
 	}
 	return dims, picked, ok
 }

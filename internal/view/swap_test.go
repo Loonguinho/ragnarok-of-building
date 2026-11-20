@@ -90,3 +90,46 @@ func TestSwapIntoEmptyBuild(t *testing.T) {
 		t.Errorf("equip into an empty build: %+v", nb.Equip)
 	}
 }
+
+func TestBestItems(t *testing.T) {
+	c := testCatalog()
+	c.Items[1202] = &gamedata.Item{ID: 1202, Name: gamedata.Text{"pt": "Faca Boa"}, Type: "Weapon", SubType: "Dagger",
+		Locations: []string{"Right_Hand"}, Attack: 60, WeaponLv: 1, Refineable: true}
+	c.Items[1203] = &gamedata.Item{ID: 1203, Name: gamedata.Text{"pt": "Faca Ótima"}, Type: "Weapon", SubType: "Dagger",
+		Locations: []string{"Right_Hand"}, Attack: 64, WeaponLv: 1} // can't be refined
+	c.Monsters = map[int]*gamedata.Monster{1002: {ID: 1002, Name: "Poring", Level: 1, HP: 5000, Size: "Medium",
+		Race: "Plant", Element: "Water", ElementLv: 1, Class: "Normal", DamageTaken: 100}}
+	s, err := newTestServer(Options{Catalog: c})
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := &Views{s: s}
+	b := calc.Build{Job: 0, BaseLv: 3, JobLv: 1, Stats: [6]int{1, 1, 1, 1, 1, 1}, Target: 1002,
+		Equip: map[string]calc.Equip{calc.Weapon: {Item: 1201}}}
+	rank := func(refine int) []int {
+		res := v.BestItems(t.Context(), b, calc.Weapon, refine, 0, "pt")
+		if res.NoTarget || len(res.Items) == 0 {
+			t.Fatalf("no ranking: %+v", res)
+		}
+		for i := 1; i < len(res.Items); i++ {
+			if res.Items[i].Ratio > res.Items[i-1].Ratio {
+				t.Errorf("not sorted: %+v", res.Items)
+			}
+		}
+		var ids []int
+		for _, it := range res.Items {
+			ids = append(ids, it.Item.ID)
+		}
+		return ids
+	}
+	if ids := rank(0); ids[0] != 1203 {
+		t.Errorf("at +0 the 64 ATK knife leads: %v", ids)
+	}
+	// At +10 the refinable knife passes the one that can't be refined.
+	if ids := rank(10); ids[0] != 1202 {
+		t.Errorf("at +10 the refinable knife leads: %v", ids)
+	}
+	if b.Equip[calc.Weapon].Refine != 0 || len(b.Equip) != 1 {
+		t.Errorf("the caller's build changed: %+v", b.Equip)
+	}
+}

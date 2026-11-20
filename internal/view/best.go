@@ -1,0 +1,143 @@
+package view
+
+import (
+	"context"
+	"maps"
+	"runtime"
+	"sort"
+	"sync"
+	"time"
+
+	"ragnarok-of-building/internal/calc"
+)
+
+// Best item for a slot: every item that fits the slot and the class, each
+// at the same refine and grade (items that can't take them get none), ranked
+// by the expected damage against the damage window's target.
+
+const (
+	bestTop     = 15
+	bestTimeout = 10 * time.Second
+)
+
+// BestItem is one ranked item.
+type BestItem struct {
+	Item  ItemView
+	Gain  StatLine // expected damage change against the current build
+	Ratio float64
+}
+
+// BestResult is the ranking.
+type BestResult struct {
+	NoTarget bool
+	Items    []BestItem
+	Tested   int
+	Partial  bool // stopped by the time limit
+}
+
+// swapAt is swapItem with the new item at refine and grade (Normalize
+// drops what the item can't take).
+func (s *Server) swapAt(b calc.Build, slot string, id, refine, grade int) calc.Build {
+	nb := s.swapItem(b, slot, id, -1)
+	for k, e := range nb.Equip {
+		if e.Item == id && (k == slot || b.Equip[k].Item != id) {
+			e.Refine, e.Grade = refine, grade
+			nb.Equip[k] = e
+		}
+	}
+	calc.Normalize(&nb, s.opt.Catalog)
+	return nb
+}
+
+// BestItems ranks the items for slot (see above).
+func (v *Views) BestItems(ctx context.Context, b calc.Build, slot string, refine, grade int, l string) BestResult {
+	s := v.s
+	c := s.opt.Catalog
+	var res BestResult
+	if c.Monster(b.Target) == nil {
+		res.NoTarget = true
+		return res
+	}
+	// A copy: Normalize writes to the maps, which are the caller's.
+	b.Equip, b.Skills, b.Buffs = maps.Clone(b.Equip), maps.Clone(b.Skills), maps.Clone(b.Buffs)
+	b.Atk.States = maps.Clone(b.Atk.States)
+	if b.Equip == nil {
+		b.Equip = map[string]calc.Equip{}
+	}
+	calc.Normalize(&b, c)
+	base := s.optExpected(b)
+	if base <= 0 {
+		res.NoTarget = true
+		return res
+	}
+	job := c.Jobs[b.Job]
+	var ids []int
+	for _, it := range c.Items {
+		if it.Type != "" && it.Type != "Card" && calc.Fits(it, slot) && job.CanEquip(it) && it.Name.Get(l) != "" {
+			ids = append(ids, it.ID)
+		}
+	}
+	sort.Ints(ids)
+	ctx, cancel := context.WithTimeout(ctx, bestTimeout)
+	defer cancel()
+	type scored struct {
+		id    int
+		ratio float64
+	}
+	var (
+		mu  sync.Mutex
+		out []scored
+		wg  sync.WaitGroup
+	)
+	ch := make(chan int)
+	for range max(1, runtime.NumCPU()-1) {
+		wg.Go(func() {
+			for id := range ch {
+				e := s.optExpected(s.swapAt(b, slot, id, refine, grade))
+				mu.Lock()
+				out = append(out, scored{id, e / base})
+				mu.Unlock()
+			}
+		})
+	}
+feed:
+	for _, id := range ids {
+		select {
+		case ch <- id:
+		case <-ctx.Done():
+			res.Partial = true
+			break feed
+		}
+	}
+	close(ch)
+	wg.Wait()
+	res.Tested = len(out)
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].ratio != out[j].ratio {
+			return out[i].ratio > out[j].ratio
+		}
+		return out[i].id < out[j].id
+	})
+	for _, sc := range out[:min(len(out), bestTop)] {
+		ln := StatLine{Diff: pctChange(sc.ratio, l), Better: sc.ratio > 1.0005, Same: sc.ratio > 0.9995 && sc.ratio < 1.0005}
+		if ln.Same {
+			ln.Diff = "="
+		}
+		res.Items = append(res.Items, BestItem{Item: viewItem(c.Items[sc.id], l), Gain: ln, Ratio: sc.ratio})
+	}
+	return res
+}
+
+// SwapCompareAt is SwapCompare with the new item at refine and grade.
+func (v *Views) SwapCompareAt(b calc.Build, slot string, id, refine, grade int, l string) SwapView {
+	cur := ""
+	if it := v.s.opt.Catalog.Items[b.Equip[slot].Item]; it != nil {
+		cur = it.Name.Get(l)
+	}
+	return v.s.swapCompare(b, v.s.swapAt(b, slot, id, refine, grade), cur, l)
+}
+
+// SwapAt puts item id in the slot at refine and grade.
+func (v *Views) SwapAt(b calc.Build, slot string, id, refine, grade int) calc.Build {
+	return v.s.swapAt(b, slot, id, refine, grade)
+}

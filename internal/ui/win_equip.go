@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 	"image"
 	"strconv"
@@ -38,6 +39,7 @@ type slotState struct {
 	timer   *time.Timer
 	list    widget.List
 	rows    map[int]*widget.Clickable
+	cmpBtns map[int]*widget.Clickable // ↔: pin to the comparison
 
 	refine, grade Select
 	cardBtns      [4]widget.Clickable
@@ -50,6 +52,15 @@ type slotState struct {
 	addOpt        widget.Clickable
 	pickItem      widget.Clickable
 	unequip       widget.Clickable
+
+	// Best item for the slot: every item ranked at bestRefine/bestGrade.
+	bestBtn               widget.Clickable
+	bestRef, bestGra      Select
+	bestRefine, bestGrade int
+	bestFor               string // the slot bestRefine/bestGrade were set for
+	best                  *view.BestResult
+	bestRunning, bestOn   bool
+	bestSeq               int
 
 	tipMu sync.Mutex
 	tips  map[string]*view.SwapView // swap comparisons by build code + slot + item + card
@@ -183,6 +194,7 @@ func (a *App) equipSlot(gtx C, sv view.SlotView) D {
 func (a *App) openSlot(key string) {
 	s := &a.slot
 	s.key, s.card = key, -1
+	s.bestOn = false
 	s.q.Ed.SetText("")
 	if !a.wSlot.Open {
 		a.Desk.Toggle(a.wSlot)
@@ -248,7 +260,15 @@ func (a *App) slotBody(gtx C) D {
 	setBuild := func(nb calc.Build) { a.SetBuild(nb); a.search(0) }
 
 	// Editor actions.
+	if s.bestFor != s.key {
+		s.bestFor = s.key
+		s.bestRefine, s.bestGrade = sv.Refine, sv.Grade
+	}
+	if s.bestBtn.Clicked(gtx) {
+		a.runBest()
+	}
 	if s.pickItem.Clicked(gtx) {
+		s.bestOn = false
 		s.card = -1
 		s.q.Ed.SetText("")
 		a.search(0)
@@ -259,6 +279,7 @@ func (a *App) slotBody(gtx C) D {
 	}
 	for i := range 4 {
 		if s.cardBtns[i].Clicked(gtx) {
+			s.bestOn = false
 			s.card = i
 			s.q.Ed.SetText("")
 			a.search(0)
@@ -293,15 +314,24 @@ func (a *App) slotBody(gtx C) D {
 			s.q.Hint = a.T("Buscar item…")
 			d, changed, _ := s.q.Layout(gtx, th, 0)
 			if changed && s.q.Text() != s.lastQ {
+				s.bestOn = false
 				s.lastQ = s.q.Text()
 				a.search(150 * time.Millisecond)
 			}
 			return d
 		},
-		Gap(0, 4),
+		func(gtx C) D {
+			if s.card >= 0 {
+				return D{}
+			}
+			return a.bestControls(gtx)
+		},
 		func(gtx C) D { return a.pickList(gtx) },
 		func(gtx C) D {
 			msg := a.T("Escolha um item para") + " " + a.T(label)
+			if s.bestOn {
+				msg = a.bestStatus()
+			}
 			if s.card >= 0 {
 				if s.card < sv.CardSlots {
 					msg = fmt.Sprintf("%s (slot %d)", a.T("Escolha uma carta"), s.card+1)
@@ -531,14 +561,29 @@ func (a *App) pickList(gtx C) D {
 	th, s := a.Th, &a.slot
 	a.mu.Lock()
 	results, gains, pending := s.results, s.gains, s.pending
+	if s.bestOn {
+		results, gains, pending = nil, map[int]view.StatLine{}, s.bestRunning
+		if s.best != nil {
+			for _, bi := range s.best.Items {
+				results = append(results, bi.Item)
+				gains[bi.Item.ID] = bi.Gain
+			}
+		}
+	}
 	a.mu.Unlock()
 	if s.rows == nil {
 		s.rows = map[int]*widget.Clickable{}
+	}
+	if s.cmpBtns == nil {
+		s.cmpBtns = map[int]*widget.Clickable{}
 	}
 	for _, it := range results {
 		cl := s.rows[it.ID]
 		if cl != nil && cl.Clicked(gtx) {
 			a.pick(it.ID)
+		}
+		if cb := s.cmpBtns[it.ID]; cb != nil && cb.Clicked(gtx) {
+			a.addCompare(it.ID)
 		}
 	}
 	h := gtx.Dp(220)
@@ -549,6 +594,8 @@ func (a *App) pickList(gtx C) D {
 			msg := a.T("Nenhum item disponível.")
 			if pending {
 				msg = a.T("Buscando…")
+			} else if s.bestOn && s.best != nil && s.best.NoTarget {
+				msg = a.T("Escolha um monstro na janela de dano (Alt+D) para achar o melhor item.")
 			} else if s.q.Text() != "" {
 				msg = a.T("Nada encontrado para este slot.")
 			}
@@ -562,51 +609,74 @@ func (a *App) pickList(gtx C) D {
 				cl = &widget.Clickable{}
 				s.rows[it.ID] = cl
 			}
-			d := cl.Layout(gtx, func(gtx C) D {
-				gtx.Constraints.Min.X = gtx.Constraints.Max.X
-				m := op.Record(gtx.Ops)
-				d := Inset(2, 6, 2, 6).Layout(gtx, func(gtx C) D {
+			row := func(gtx C) D {
+				return cl.Layout(gtx, func(gtx C) D {
 					gtx.Constraints.Min.X = gtx.Constraints.Max.X
-					name := it.Name
-					if it.Slots > 0 {
-						name += fmt.Sprintf(" [%d]", it.Slots)
+					m := op.Record(gtx.Ops)
+					d := Inset(2, 6, 2, 6).Layout(gtx, func(gtx C) D {
+						gtx.Constraints.Min.X = gtx.Constraints.Max.X
+						name := it.Name
+						if it.Slots > 0 {
+							name += fmt.Sprintf(" [%d]", it.Slots)
+						}
+						if it.MVP {
+							name += " (MVP)"
+						}
+						return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+							layout.Rigid(func(gtx C) D { return a.Icons.Icon(gtx, view.ItemIcon(it.ID), 24) }),
+							layout.Rigid(Gap(6, 0)),
+							layout.Flexed(1, T(th, name).W()),
+							layout.Rigid(func(gtx C) D {
+								g, ok := gains[it.ID]
+								if !ok || g.Diff == "" {
+									return D{}
+								}
+								c := ColMuted
+								switch {
+								case g.Same:
+								case g.Better:
+									c = ColUp
+								default:
+									c = ColDown
+								}
+								return Inset(0, 6, 0, 6).Layout(gtx, B(th, g.Diff).C(c).W())
+							}),
+							layout.Rigid(T(th, fmt.Sprintf("#%d", it.ID)).Sz(SmallText).C(rgb(0x888888)).W()),
+						)
+					})
+					call := m.Stop()
+					if cl.Hovered() {
+						Fill(gtx, image.Rectangle{Max: d.Size}, ColHover)
 					}
-					if it.MVP {
-						name += " (MVP)"
-					}
-					return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-						layout.Rigid(func(gtx C) D { return a.Icons.Icon(gtx, view.ItemIcon(it.ID), 24) }),
-						layout.Rigid(Gap(6, 0)),
-						layout.Flexed(1, T(th, name).W()),
-						layout.Rigid(func(gtx C) D {
-							g, ok := gains[it.ID]
-							if !ok || g.Diff == "" {
-								return D{}
-							}
-							c := ColMuted
-							switch {
-							case g.Same:
-							case g.Better:
-								c = ColUp
-							default:
-								c = ColDown
-							}
-							return Inset(0, 6, 0, 6).Layout(gtx, B(th, g.Diff).C(c).W())
-						}),
-						layout.Rigid(T(th, fmt.Sprintf("#%d", it.ID)).Sz(SmallText).C(rgb(0x888888)).W()),
-					)
+					call.Add(gtx.Ops)
+					pointerCursor(gtx, d.Size)
+					return d
 				})
-				call := m.Stop()
-				if cl.Hovered() {
-					Fill(gtx, image.Rectangle{Max: d.Size}, ColHover)
+			}
+			var d D
+			if s.card >= 0 {
+				d = row(gtx)
+			} else {
+				cb := s.cmpBtns[it.ID]
+				if cb == nil {
+					cb = &widget.Clickable{}
+					s.cmpBtns[it.ID] = cb
 				}
-				call.Add(gtx.Ops)
-				pointerCursor(gtx, d.Size)
-				return d
-			})
+				d = layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+					layout.Flexed(1, row),
+					layout.Rigid(func(gtx C) D {
+						d := Inset(0, 2, 0, 2).Layout(gtx, func(gtx C) D { return Button{Label: "↔"}.Layout(gtx, th, cb) })
+						if cb.Hovered() {
+							a.Desk.ShowTip(func(gtx C) D { return TipBox(gtx, T(th, a.T("Comparar lado a lado (Alt+K)")).W()) })
+						}
+						return d
+					}),
+				)
+			}
 			if cl.Hovered() {
 				id := it.ID
-				a.Desk.ShowTip(func(gtx C) D { return a.itemTip(gtx, id, a.swapTip(id)) })
+				cur := a.slotCurrent()
+				a.Desk.ShowTip(func(gtx C) D { return a.compareTip(gtx, cur, id, a.swapTip(id)) })
 			}
 			return d
 		})
@@ -622,6 +692,10 @@ func (a *App) pick(id int) {
 		a.SetBuild(edit.EditLinked(b, s.key, func(e *calc.Equip) { e.Cards[k] = id }))
 		a.Say(a.T("Carta aplicada."), false)
 		s.card = -1
+	} else if s.bestOn {
+		a.SetBuild(a.V.SwapAt(b, s.key, id, s.bestRefine, s.bestGrade))
+		a.Say(a.T("Item equipado."), false)
+		s.bestOn = false
 	} else {
 		a.SetBuild(a.V.Swap(b, s.key, id, -1))
 		a.Say(a.T("Item equipado."), false)
@@ -636,7 +710,11 @@ func (a *App) pick(id int) {
 func (a *App) swapTip(id int) *view.SwapView {
 	s := &a.slot
 	b := a.Build()
-	key := fmt.Sprintf("%s|%s|%d|%d", view.EncodeBuild(b), s.key, id, s.card)
+	refine, grade := -1, -1
+	if s.bestOn {
+		refine, grade = s.bestRefine, s.bestGrade
+	}
+	key := fmt.Sprintf("%s|%s|%d|%d|%d|%d", view.EncodeBuild(b), s.key, id, s.card, refine, grade)
 	s.tipMu.Lock()
 	defer s.tipMu.Unlock()
 	if s.tips == nil {
@@ -652,6 +730,9 @@ func (a *App) swapTip(id int) *view.SwapView {
 	slot, card, lang := s.key, s.card, a.Lang
 	go func() {
 		sv := a.V.SwapCompare(b, slot, id, card, lang)
+		if refine >= 0 {
+			sv = a.V.SwapCompareAt(b, slot, id, refine, grade, lang)
+		}
 		s.tipMu.Lock()
 		s.tips[key] = &sv
 		s.tipMu.Unlock()
@@ -664,7 +745,35 @@ func (a *App) swapTip(id int) *view.SwapView {
 
 // itemTip is the item tooltip: header (icon, name, slots, ID), the swap
 // comparison when given, and the colored description.
-func (a *App) itemTip(gtx C, id int, sw *view.SwapView) D {
+func (a *App) itemTip(gtx C, id int, sw *view.SwapView) D { return a.itemTipCap(gtx, id, sw, "") }
+
+// slotCurrent is what the picker would replace: the slot's item, or the
+// card in the position being picked (0 when empty).
+func (a *App) slotCurrent() int {
+	s := &a.slot
+	e := a.Build().Equip[s.key]
+	if s.card >= 0 && s.card < 4 {
+		return e.Cards[s.card]
+	}
+	return e.Item
+}
+
+// compareTip shows the equipped item's tooltip next to the hovered one's,
+// both topped by a caption ("Equipado", "Novo").
+func (a *App) compareTip(gtx C, cur, id int, sw *view.SwapView) D {
+	if cur == 0 || cur == id {
+		return a.itemTip(gtx, id, sw)
+	}
+	gtx.Constraints.Max.X = gtx.Dp(610)
+	return layout.Flex{}.Layout(gtx,
+		layout.Rigid(func(gtx C) D { return a.itemTipCap(gtx, cur, nil, a.T("Equipado")) }),
+		layout.Rigid(Gap(6, 0)),
+		layout.Rigid(func(gtx C) D { return a.itemTipCap(gtx, id, sw, a.T("Novo")) }),
+	)
+}
+
+// itemTipCap is itemTip with a caption strip above the header.
+func (a *App) itemTipCap(gtx C, id int, sw *view.SwapView, caption string) D {
 	th := a.Th
 	it := a.V.Item(id, a.Lang)
 	if it == nil {
@@ -674,6 +783,12 @@ func (a *App) itemTip(gtx C, id int, sw *view.SwapView) D {
 	gtx.Constraints.Min.X = gtx.Dp(300)
 	m := op.Record(gtx.Ops)
 	d := Col(0,
+		func(gtx C) D {
+			if caption == "" {
+				return D{}
+			}
+			return Inset(3, 6, 0, 6).Layout(gtx, B(th, caption).Sz(SmallText).C(ColLabel).W())
+		},
 		func(gtx C) D {
 			mm := op.Record(gtx.Ops)
 			hd := Inset(3, 6, 3, 6).Layout(gtx, func(gtx C) D {
@@ -769,4 +884,82 @@ func (a *App) swapBox(gtx C, sw view.SwapView) D {
 	call.Add(gtx.Ops)
 	Fill(gtx, image.Rect(0, d.Size.Y-1, d.Size.X, d.Size.Y), ColListBorder)
 	return d
+}
+
+// bestControls is the "best item" row: the button and the refine and
+// grade every item is ranked at.
+func (a *App) bestControls(gtx C) D {
+	th, s := a.Th, &a.slot
+	var refs []Option
+	for r := 0; r <= 20; r++ {
+		refs = append(refs, Option{strconv.Itoa(r), "+" + strconv.Itoa(r)})
+	}
+	grades := []Option{{"0", a.T("nenhum")}, {"1", "D"}, {"2", "C"}, {"3", "B"}, {"4", "A"}}
+	return Row(4,
+		func(gtx C) D { return Button{Label: a.T("Melhor item")}.Layout(gtx, th, &s.bestBtn) },
+		T(th, a.T("Refino")).W(),
+		func(gtx C) D {
+			d, val, ok := s.bestRef.Layout(gtx, th, a.Desk, refs, strconv.Itoa(s.bestRefine), 56)
+			if ok {
+				s.bestRefine, _ = strconv.Atoi(val)
+				if s.bestOn {
+					a.runBest()
+				}
+			}
+			return d
+		},
+		T(th, a.T("Grau")).W(),
+		func(gtx C) D {
+			d, val, ok := s.bestGra.Layout(gtx, th, a.Desk, grades, strconv.Itoa(s.bestGrade), 70)
+			if ok {
+				s.bestGrade, _ = strconv.Atoi(val)
+				if s.bestOn {
+					a.runBest()
+				}
+			}
+			return d
+		},
+	)(gtx)
+}
+
+// runBest ranks the items for the slot in the background.
+func (a *App) runBest() {
+	s := &a.slot
+	a.mu.Lock()
+	s.bestSeq++
+	seq, slot, b, lang := s.bestSeq, s.key, a.b, a.Lang
+	refine, grade := s.bestRefine, s.bestGrade
+	s.bestOn, s.bestRunning, s.best = true, true, nil
+	a.mu.Unlock()
+	go func() {
+		res := a.V.BestItems(context.Background(), b, slot, refine, grade, lang)
+		a.mu.Lock()
+		if seq == s.bestSeq {
+			s.best, s.bestRunning = &res, false
+		}
+		a.mu.Unlock()
+		if a.Invalidate != nil {
+			a.Invalidate()
+		}
+	}()
+}
+
+// bestStatus is the line under the ranking.
+func (a *App) bestStatus() string {
+	s := &a.slot
+	a.mu.Lock()
+	res := s.best
+	a.mu.Unlock()
+	if res == nil {
+		return a.T("Testando todos os itens do slot…")
+	}
+	g := ""
+	if s.bestGrade > 0 {
+		g = " " + a.T("grau") + " " + string("DCBA"[s.bestGrade-1])
+	}
+	msg := fmt.Sprintf(a.T("Melhores de %d itens a +%d%s, pelo dano esperado."), res.Tested, s.bestRefine, g)
+	if res.Partial {
+		msg += " " + a.T("(parou no limite de tempo)")
+	}
+	return msg
 }

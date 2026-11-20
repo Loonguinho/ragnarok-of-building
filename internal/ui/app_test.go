@@ -234,3 +234,150 @@ func TestStatTyped(t *testing.T) {
 		t.Fatalf("FOR = %d after typing 999, want the cap %d", got, h.a.View().R.MaxStat)
 	}
 }
+
+// TestCompareTip draws the picker's side-by-side tooltip: the equipped
+// weapon next to another one.
+func TestCompareTip(t *testing.T) {
+	h := newHarness(t)
+	a := h.a
+	a.openSlot(calc.Weapon)
+	h.waitSearch()
+	a.mu.Lock()
+	res := a.slot.results
+	a.mu.Unlock()
+	if len(res) < 2 {
+		t.Skip("not enough weapons offered")
+	}
+	a.pick(res[0].ID)
+	h.waitReady()
+	h.waitSearch()
+	if a.slotCurrent() != res[0].ID {
+		t.Fatalf("slotCurrent %d, want %d", a.slotCurrent(), res[0].ID)
+	}
+	var ops op.Ops
+	gtx := layout.Context{Ops: &ops, Metric: unit.Metric{PxPerDp: 1, PxPerSp: 1}, Constraints: layout.Constraints{Max: h.size}}
+	single := a.compareTip(gtx, 0, res[1].ID, nil)
+	both := a.compareTip(gtx, res[0].ID, res[1].ID, nil)
+	if both.Size.X <= single.Size.X {
+		t.Errorf("side by side %v not wider than one tooltip %v", both.Size, single.Size)
+	}
+}
+
+// TestBestItem ranks the weapons for the slot against a target and equips
+// the first at the chosen refine.
+func TestBestItem(t *testing.T) {
+	h := newHarness(t)
+	a := h.a
+	a.SetBuild(a.V.NewBuild(4252))
+	a.Edit(func(b *calc.Build) { b.Target = 1039; b.Stats = [6]int{120, 100, 80, 1, 100, 1} })
+	h.waitReady()
+	a.openSlot(calc.Weapon)
+	h.waitSearch()
+	h.frame()
+	a.slot.bestRefine, a.slot.bestGrade = 10, 0
+	start := time.Now()
+	a.runBest()
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		a.mu.Lock()
+		done := !a.slot.bestRunning
+		a.mu.Unlock()
+		if done || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	res := a.slot.best
+	if res == nil || len(res.Items) == 0 {
+		t.Fatalf("no ranking: %+v", res)
+	}
+	t.Logf("%d weapons ranked in %v (partial %v); best %s %s", res.Tested, time.Since(start), res.Partial, res.Items[0].Item.Name, res.Items[0].Gain.Diff)
+	h.frame()
+	a.pick(res.Items[0].Item.ID)
+	h.waitReady()
+	if e := a.Build().Equip[calc.Weapon]; e.Item != res.Items[0].Item.ID || e.Refine != 10 {
+		t.Errorf("equipped %+v, want %d at +10", e, res.Items[0].Item.ID)
+	}
+}
+
+// TestCompareWindow pins Chapéu de Eddga-LT, turns its effect on and
+// equips the column.
+func TestCompareWindow(t *testing.T) {
+	h := newHarness(t)
+	a := h.a
+	if a.V.Item(400245, "pt") == nil {
+		t.Skip("no Chapéu de Eddga-LT in the catalog")
+	}
+	a.SetBuild(a.V.NewBuild(4252))
+	a.Edit(func(b *calc.Build) { b.Target = 1039 })
+	h.waitReady()
+	a.openSlot(calc.HeadTop)
+	h.waitSearch()
+	a.addCompare(400245)
+	a.addCompare(400245) // already pinned
+	if len(a.cmp.cols) != 2 || !a.wCompare.Open {
+		t.Fatalf("columns %+v, open %v", a.cmp.cols, a.wCompare.Open)
+	}
+	key := calc.ItemEffectKey(400245)
+	a.cmp.cols[1].Fx = map[string]bool{key: true}
+	wait := func() {
+		deadline := time.Now().Add(10 * time.Second)
+		for {
+			h.frame()
+			a.mu.Lock()
+			done := !a.cmp.busy && a.cmp.res != nil
+			a.mu.Unlock()
+			if done || time.Now().After(deadline) {
+				return
+			}
+			time.Sleep(20 * time.Millisecond)
+		}
+	}
+	wait()
+	res := a.cmp.res
+	if len(res.Cols) != 2 || len(res.Cols[1].Effects) == 0 || !res.Cols[1].Effects[0].On {
+		t.Fatalf("columns: %+v", res.Cols)
+	}
+	if res.Rows[0].Better[1] != 1 {
+		t.Errorf("Eddga-LT with its effect should add damage: %+v", res.Rows[0])
+	}
+	if a.Build().Buffs[key] != 0 {
+		t.Error("the column's switch reached the build before Equipar")
+	}
+	a.SetBuild(a.V.CompareBuild(a.Build(), calc.HeadTop, a.cmp.cols[1]))
+	h.waitReady()
+	if b := a.Build(); b.Equip[calc.HeadTop].Item != 400245 || b.Buffs[key] != 1 {
+		t.Errorf("Equipar: %+v %v", b.Equip[calc.HeadTop], b.Buffs)
+	}
+}
+
+// TestOpenFileNonBlocking: frames go on while the file dialog is open (the
+// replay import used to wait for it inside a frame and hang the window).
+func TestOpenFileNonBlocking(t *testing.T) {
+	h := newHarness(t)
+	a := h.a
+	release := make(chan struct{})
+	a.OpenFile = func(title, filter string) (string, error) {
+		<-release
+		return "x.rrf", nil
+	}
+	got := ""
+	a.openFile("t", "f", func(p string) { got = p })
+	a.openFile("t", "f", func(p string) { t.Error("a second dialog opened") })
+	done := make(chan struct{})
+	go func() { h.frame(); h.frame(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("frames blocked by the open dialog")
+	}
+	close(release)
+	deadline := time.Now().Add(5 * time.Second)
+	for got == "" && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+		h.frame()
+	}
+	if got != "x.rrf" {
+		t.Fatalf("callback got %q", got)
+	}
+}

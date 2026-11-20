@@ -138,6 +138,11 @@ func (h *Hoverable) Layout(gtx C, w layout.Widget) (D, bool) {
 // Select is a dropdown (.ro-select): a box with the current choice and a ▾
 // that opens the list of options in a popup.
 type Select struct {
+	// Tip, when set, is the tooltip of an option (by value) shown while the
+	// mouse is over it in the list, or over the box for the current one;
+	// nil for none.
+	Tip func(value string) layout.Widget
+
 	popup  Popup
 	btn    widget.Clickable
 	items  []widget.Clickable
@@ -184,6 +189,9 @@ func (s *Select) Layout(gtx C, th *Theme, d *Desk, opts []Option, cur string, wi
 		s.items = append(s.items, make([]widget.Clickable, len(opts)-len(s.items))...)
 	}
 	for i := range opts {
+		if !d.PopupOpen(&s.popup) {
+			break // the options are only on screen while the list is open
+		}
 		if s.items[i].Clicked(gtx) {
 			picked, ok = opts[i].Value, true
 			d.ClosePopup()
@@ -223,9 +231,14 @@ func (s *Select) Layout(gtx C, th *Theme, d *Desk, opts []Option, cur string, wi
 		pointerCursor(gtx, r.Max)
 		return D{Size: r.Max}
 	})
+	if s.Tip != nil && s.btn.Hovered() && !d.PopupOpen(&s.popup) {
+		if w := s.Tip(cur); w != nil {
+			d.ShowTip(w)
+		}
+	}
 	// The popup opens under the box.
 	s.anchor.Track(gtx, d, dims.Size)
-	s.popup.Width = max(w, gtx.Dp(120))
+	s.popup.Width = max(w, gtx.Dp(180))
 	s.popup.At = s.anchor.Origin.Add(image.Pt(0, dims.Size.Y))
 	s.list.Axis = layout.Vertical
 	s.popup.Content = func(gtx C) D {
@@ -244,6 +257,11 @@ func (s *Select) Layout(gtx C, th *Theme, d *Desk, opts []Option, cur string, wi
 				}
 				call.Add(gtx.Ops)
 				pointerCursor(gtx, r.Max)
+				if s.Tip != nil && s.items[i].Hovered() {
+					if w := s.Tip(opts[i].Value); w != nil {
+						d.ShowTip(w)
+					}
+				}
 				return D{Size: r.Max}
 			})
 		})

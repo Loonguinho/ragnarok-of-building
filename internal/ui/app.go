@@ -6,6 +6,7 @@ import (
 	"image"
 	"os"
 	"sync"
+	"sync/atomic"
 
 	"gioui.org/io/key"
 	"gioui.org/layout"
@@ -32,11 +33,13 @@ type App struct {
 	// OpenFile asks the system for a file to open (replay import).
 	OpenFile func(title, filter string) (string, error)
 
-	mu    sync.Mutex
-	b     calc.Build     // the build being edited (normalized by the last compute)
-	view  view.BuildView // its windows
-	ready bool
-	rev   int
+	mu         sync.Mutex
+	jobs       []func()       // run by the next frame (see later)
+	dialogOpen atomic.Bool    // a file dialog is open
+	b          calc.Build     // the build being edited (normalized by the last compute)
+	view       view.BuildView // its windows
+	ready      bool
+	rev        int
 
 	chat        []chatLine
 	needSave    bool
@@ -46,13 +49,14 @@ type App struct {
 
 	// Windows.
 	wMenu, wBasic, wStatus, wEquip, wSkills, wBonus, wDamage, wBuffs, wOptimize *Window
-	wSaved, wShare, wHelp, wSlot, wRdmg, wItems                                 *Window
+	wSaved, wShare, wHelp, wSlot, wRdmg, wItems, wCompare                       *Window
 
 	menu   menuState
 	basic  basicState
 	status statusState
 	equip  equipState
 	slot   slotState
+	cmp    compareState
 	damage damageState
 	buffs  buffsState
 	skills skillsState
@@ -138,6 +142,8 @@ func (a *App) makeWindows() {
 	a.wOptimize.Body = a.optimizeBody
 	a.wItems = d.Add(&Window{ID: "win-items", Title: "Banco de Itens", Hotkey: "E", Col: 2})
 	a.wItems.Body = a.itemsBody
+	a.wCompare = d.Add(&Window{ID: "win-compare", Title: "Comparar itens", Hotkey: "K", Col: 2})
+	a.wCompare.Body = a.compareBody
 	a.wBonus.Body = a.bonusBody
 	a.wDamage.Body = a.damageBody
 	a.wEquip.Body = a.equipBody
@@ -191,6 +197,34 @@ func (a *App) Edit(fn func(b *calc.Build)) {
 	a.SetBuild(b)
 }
 
+// later runs f on the window's goroutine at the next frame.
+func (a *App) later(f func()) {
+	a.mu.Lock()
+	a.jobs = append(a.jobs, f)
+	a.mu.Unlock()
+	if a.Invalidate != nil {
+		a.Invalidate()
+	}
+}
+
+// openFile shows the file dialog and then calls then with the chosen path,
+// on the window's goroutine. The dialog must not be waited for inside a
+// frame: it is modal to the window and talks to it while open, so a frame
+// holding the window hangs the program (Windows ends it as not
+// responding).
+func (a *App) openFile(title, filter string, then func(path string)) {
+	if a.OpenFile == nil || !a.dialogOpen.CompareAndSwap(false, true) {
+		return
+	}
+	go func() {
+		defer a.dialogOpen.Store(false)
+		path, err := a.OpenFile(title, filter)
+		if err == nil && path != "" {
+			a.later(func() { then(path) })
+		}
+	}()
+}
+
 // Say adds a line to the chat log.
 func (a *App) Say(s string, isErr bool) {
 	a.mu.Lock()
@@ -211,7 +245,12 @@ func (a *App) SetLang(l string) {
 func (a *App) Frame(gtx C) D {
 	a.mu.Lock()
 	ready := a.ready
+	jobs := a.jobs
+	a.jobs = nil
 	a.mu.Unlock()
+	for _, f := range jobs {
+		f()
+	}
 	a.Desk.Hotkeys(gtx)
 	a.shortcuts(gtx)
 	a.updateTitles()
@@ -278,6 +317,7 @@ func (a *App) updateTitles() {
 	a.wRdmg.Title = a.T("Resumo de dano do replay")
 	a.wOptimize.Title = a.T("Otimizador")
 	a.wItems.Title = a.T("Banco de Itens")
+	a.wCompare.Title = a.T("Comparar itens")
 	a.wSlot.Title = a.slotTitle()
 }
 

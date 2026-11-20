@@ -25,14 +25,7 @@ type replayState struct {
 
 // importReplay asks for a .rrf and opens the build it shows.
 func (a *App) importReplay() {
-	if a.OpenFile == nil {
-		return
-	}
-	path, err := a.OpenFile(a.T("Abrir um replay (.rrf) do jogo"), "Replays (*.rrf)|*.rrf")
-	if err != nil {
-		return
-	}
-	a.importReplayFile(path)
+	a.openFile(a.T("Abrir um replay (.rrf) do jogo"), "Replays (*.rrf)|*.rrf", a.importReplayFile)
 }
 
 func (a *App) importReplayFile(path string) {

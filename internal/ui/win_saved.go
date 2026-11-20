@@ -375,13 +375,11 @@ func (a *App) exportSaved() {
 // importSaved merges a backup file (the export, or a plain list): a build
 // with an id already here is replaced when the file's is newer.
 func (a *App) importSaved() {
-	if a.OpenFile == nil {
-		return
-	}
-	path, err := a.OpenFile(a.T("Importar builds"), "JSON (*.json)|*.json")
-	if err != nil {
-		return
-	}
+	a.openFile(a.T("Importar builds"), "JSON (*.json)|*.json", a.importSavedFile)
+}
+
+// importSavedFile merges the backup at path.
+func (a *App) importSavedFile(path string) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		a.Say(err.Error(), true)

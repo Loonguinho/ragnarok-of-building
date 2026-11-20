@@ -24,7 +24,11 @@ type Startup struct {
 	Status    func() StartupStatus
 	Pick      func() (string, error) // folder picker
 	UseClient func(dir string) error
+	// Invalidate asks for a frame (the folder dialog answers from its own
+	// goroutine).
+	Invalidate func()
 
+	picked  chan string // the open folder dialog's answer
 	pick    widget.Clickable
 	ok      widget.Clickable
 	dir     Input
@@ -36,10 +40,31 @@ type Startup struct {
 func (s *Startup) Frame(gtx C) D {
 	th := s.Th
 	st := s.Status()
-	if s.pick.Clicked(gtx) && s.Pick != nil {
-		if dir, err := s.Pick(); err == nil && dir != "" {
-			s.dir.Ed.SetText(dir)
-			s.use(dir)
+	// The folder dialog runs on its own: waiting for it inside a frame
+	// hangs the window (see App.openFile).
+	if s.pick.Clicked(gtx) && s.Pick != nil && s.picked == nil {
+		ch := make(chan string, 1)
+		s.picked = ch
+		go func() {
+			dir, err := s.Pick()
+			if err != nil {
+				dir = ""
+			}
+			ch <- dir
+			if s.Invalidate != nil {
+				s.Invalidate()
+			}
+		}()
+	}
+	if s.picked != nil {
+		select {
+		case dir := <-s.picked:
+			s.picked = nil
+			if dir != "" {
+				s.dir.Ed.SetText(dir)
+				s.use(dir)
+			}
+		default:
 		}
 	}
 	if s.ok.Clicked(gtx) {

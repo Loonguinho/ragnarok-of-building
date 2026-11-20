@@ -33,6 +33,7 @@ func nativeMain(st *startup, o options, log *slog.Logger) {
 		return ui.StartupStatus{Lines: s.Lines, Ask: s.Ask, AskNote: s.AskNote, Error: s.Error}
 	}}
 	st.onChange = w.Invalidate
+	start.Invalidate = w.Invalidate
 
 	go func() {
 		v, err := prepare(st, o, log)

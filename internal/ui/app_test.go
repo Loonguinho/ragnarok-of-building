@@ -442,3 +442,29 @@ func TestOptimizerItems(t *testing.T) {
 	}
 	h.frame()
 }
+
+// TestNewBuildResets: Novo, then a class from the list, starts a blank build
+// (closing the list used to clear the mode first, keeping the old gear).
+func TestNewBuildResets(t *testing.T) {
+	h := newHarness(t)
+	a := h.a
+	a.SetBuild(a.V.NewBuild(4252))
+	a.Edit(func(b *calc.Build) { b.Equip = map[string]calc.Equip{calc.Armor: {Item: 2301}} })
+	h.waitReady()
+	a.basic.newMode = true
+	a.Desk.OpenPopup(&a.basic.classDD)
+	if !a.wBasic.Open {
+		a.Desk.Toggle(a.wBasic)
+	}
+	h.frame()
+	cl := a.basic.jobs[4252]
+	if cl == nil {
+		t.Fatal("class list not drawn")
+	}
+	cl.Click()
+	h.frame()
+	h.waitReady()
+	if n := len(a.Build().Equip); n != 0 {
+		t.Errorf("new build kept %d item(s): %v", n, a.Build().Equip)
+	}
+}

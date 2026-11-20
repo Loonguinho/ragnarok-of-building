@@ -349,9 +349,11 @@ func (a *App) classList(gtx C, v view.BuildView) D {
 	}
 	for id, cl := range s.jobs {
 		if cl.Clicked(gtx) {
+			// Read the mode first: closing the list (OnClose) clears it.
+			fresh := s.newMode
 			a.Desk.ClosePopup()
 			jid := id
-			if s.newMode {
+			if fresh {
 				s.newMode = false
 				a.SetBuild(a.V.NewBuild(jid))
 				continue

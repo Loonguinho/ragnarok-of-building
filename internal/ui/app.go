@@ -32,7 +32,7 @@ type App struct {
 	OpenFile func(title, filter string) (string, error)
 
 	mu    sync.Mutex
-	b     calc.Build    // the build being edited (normalized by the last compute)
+	b     calc.Build     // the build being edited (normalized by the last compute)
 	view  view.BuildView // its windows
 	ready bool
 	rev   int
@@ -49,6 +49,7 @@ type App struct {
 	status statusState
 	equip  equipState
 	slot   slotState
+	damage damageState
 }
 
 type chatLine struct {
@@ -102,6 +103,10 @@ func (a *App) makeWindows() {
 	a.wStatus = d.Add(&Window{ID: "win-status", Title: "Atributos", Hotkey: "A", Col: 0, Open: true})
 	a.wEquip = d.Add(&Window{ID: "win-equip", Title: "Equipamentos", Hotkey: "Q", Col: 1, Open: true})
 	a.wSlot = d.Add(&Window{ID: "win-slot", Title: "Equipamento", Col: 1, NoShowAll: true})
+	a.wBonus = d.Add(&Window{ID: "win-bonus", Title: "Bônus do Equipamento", Hotkey: "B", Col: 1, Open: true})
+	a.wDamage = d.Add(&Window{ID: "win-damage", Title: "Alvo / Dano", Hotkey: "D", Col: 2, Open: true})
+	a.wBonus.Body = a.bonusBody
+	a.wDamage.Body = a.damageBody
 	a.wEquip.Body = a.equipBody
 	a.wSlot.Body = a.slotBody
 	a.wMenu.Body = a.menuBody
@@ -217,6 +222,8 @@ func (a *App) updateTitles() {
 	a.wBasic.Title = a.T("Informações Básicas")
 	a.wStatus.Title = a.T("Atributos")
 	a.wEquip.Title = a.T("Equipamentos")
+	a.wBonus.Title = a.T("Bônus do Equipamento")
+	a.wDamage.Title = a.T("Alvo / Dano")
 	a.wSlot.Title = a.slotTitle()
 }
 

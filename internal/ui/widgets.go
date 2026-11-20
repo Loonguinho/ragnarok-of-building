@@ -285,3 +285,8 @@ func Gear(gtx C, c color.NRGBA, size unit.Dp) D {
 	paint.FillShape(gtx.Ops, c, clip.Stroke{Path: rp.End(), Width: s * 0.16}.Op())
 	return D{Size: image.Pt(int(s), int(s))}
 }
+
+// Pad is an inset around w, as a widget.
+func Pad(in layout.Inset, w layout.Widget) layout.Widget {
+	return func(gtx C) D { return in.Layout(gtx, w) }
+}

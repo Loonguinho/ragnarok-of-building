@@ -65,7 +65,7 @@ func (s *Startup) Frame(gtx C) D {
 			},
 		}
 		if st.Error != "" {
-			kids = append(kids, T(th, "⚠ "+st.Error).C(ColDown).Wrapping().W())
+			kids = append(kids, T(th, "! "+st.Error).C(ColDown).Wrapping().W())
 		}
 		if st.Ask {
 			kids = append(kids,

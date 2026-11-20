@@ -67,4 +67,18 @@ func TestShots(t *testing.T) {
 	h.waitReady()
 	h.waitSearch()
 	h.shot("03-weapon-equipped")
+
+	// A target and learned skills: the damage window and its table.
+	a.Edit(func(b *calc.Build) {
+		b.Target = 1039
+		b.Stats = [6]int{120, 100, 80, 1, 100, 1}
+		b.Skills = map[int]int{}
+		for _, s := range a.V.Catalog().Jobs[4252].Tree {
+			if sk := a.V.Catalog().Skills[s]; sk != nil {
+				b.Skills[s] = sk.MaxLv
+			}
+		}
+	})
+	h.waitReady()
+	h.shot("04-damage")
 }

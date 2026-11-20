@@ -553,7 +553,7 @@ func (a *App) statusBody(gtx C) D {
 		})
 	})
 	for _, w := range r.Warnings {
-		kids = append(kids, T(th, "⚠ "+a.T(w)).C(ColDown).Wrapping().W())
+		kids = append(kids, T(th, "! "+a.T(w)).C(ColDown).Wrapping().W())
 	}
 	return Col(3, kids...)(gtx)
 }

@@ -9,6 +9,7 @@ import (
 	"math"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	"ragnarok-of-building/internal/gamedata"
@@ -294,8 +295,15 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 	// Only the selectors the class shows are kept: formula states and the
 	// class's own buffs (which share their keys).
 	allowed := map[string]bool{}
+	top := map[string]int{} // highest choice of each state (10 when it lists none above)
 	for _, o := range StatesFor(c, b.Job) {
 		allowed[o.Key] = true
+		top[o.Key] = 10
+		for _, ch := range o.Choices {
+			if n, err := strconv.Atoi(ch[0]); err == nil && n > top[o.Key] {
+				top[o.Key] = n
+			}
+		}
 	}
 	own := map[string]*ClassBuff{}
 	for _, cb := range ClassBuffsFor(c, b.Job) {
@@ -308,7 +316,7 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 			delete(at.States, k)
 		case own[k] != nil && own[k].validValue(v):
 		default:
-			at.States[k] = clamp(v, 0, 10)
+			at.States[k] = clamp(v, 0, max(10, top[k]))
 		}
 	}
 	// One class buff per exclusive group (the three Mantras...): the first in order.

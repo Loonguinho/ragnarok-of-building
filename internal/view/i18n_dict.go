@@ -587,6 +587,8 @@ var dict = map[string][2]string{
 	"Pôr da Lua": {"Moonset", "Puesta de la Luna"}, "Elo Celestial": {"Celestial Unity", "Unión Celestial"},
 	"Esferas Espirituais": {"Spirit Spheres", "Esferas Espirituales"}, "Espírito Elemental": {"Elemental Spirit", "Espíritu Elemental"},
 	"Pontos de Foco": {"Focus Points", "Puntos de Foco"}, "Pontos de Rotação": {"Rotation Points", "Puntos de Rotación"},
+	"Encantar com Veneno Mortal": {"Enchant Deadly Poison", "Encantar con Veneno Mortal"},
+	"Profanação no alvo": {"Shadow Scar on target", "Profanación en el objetivo"},
 	"Total de Almas": {"Total Souls", "Total de Almas"}, "Luz Solar": {"Sunlight", "Luz Solar"}, "Luz Lunar": {"Moonlight", "Luz Lunar"},
 	"Luz Estelar": {"Starlight", "Luz Estelar"},
 	// calculation steps

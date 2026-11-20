@@ -121,9 +121,11 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	// Status ATK is neutral, except with an endow (a forced element), which
 	// it takes too, unless the endow is poison (LATAM recordings).
 	statusEle := "Neutral"
-	if a.Element != "" && a.Element != "Poison" {
+	edp := edpActive(b, a.SkillCode)
+	if a.Element != "" && a.Element != "Poison" && !edp {
 		statusEle = a.Element
 	}
+	edpPoison := max(0, attr("Poison"))
 	// Negative values (healing) are treated as no damage.
 	eleStatus, eleAtk := max(0, attr(statusEle)), max(0, attr(ele))
 	sizePct := 100
@@ -200,6 +202,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	}
 
 	bn := r.Bonuses
+	scar := shadowScarPctOn(b, isMelee, false)
 	mastery := int64(bn["bMasteryAtk"] + sum("bMasteryAtkRace", "RC_"+m.Race, "RC_All") + sum("bMasteryAtkEle", "Ele_"+m.Element, "Ele_All"))
 	one := func(weapon int64, crit, rec bool) int64 {
 		step := func(label, format string, args ...any) {
@@ -210,6 +213,12 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		status := int64(r.StatusATK) * int64(eleStatus) / 100 * 2
 		step("ATQ de status", "%d × %d%% (%s) × 2 = %d", r.StatusATK, eleStatus, strings.ToLower(statusEle), status)
 
+		if edp {
+			// Only the +25% share is poison against the target.
+			before := weapon
+			weapon = int64(math.Floor(float64(weapon) * (1 + edpWeaponBonus*float64(edpPoison)/100)))
+			step("EDP (arma)", "%d + 25%% × veneno %d%% = %d", before, edpPoison, weapon)
+		}
 		w := weapon * int64(sizePct) / 100
 		w = w * int64(eleAtk) / 100
 		step("ATQ da arma", "%d × tamanho %d%% × elemento %d%% = %d", weapon, sizePct, eleAtk, w)
@@ -225,6 +234,10 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		w2, eq2 := cardfix(w), cardfix(eq)
 		if w2 != w || eq2 != eq {
 			step("Modificadores de carta", "raça %+d%% · tamanho %+d%% · elemento %+d%% · classe %+d%%", race, size, eleMod, class)
+		}
+		if edp {
+			w2, eq2 = w2*edpCardMul, eq2*edpCardMul
+			step("EDP", "(arma + equip) × %d = %d", edpCardMul, w2+eq2)
 		}
 
 		dmg := status + w2 + eq2 + pct
@@ -296,6 +309,10 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 			step("Crítico", "× %.2f = %d", 1.4+0.01*float64(r.CRATE), dmg)
 		}
 
+		if scar != 0 {
+			dmg += dmg * int64(scar) / 100
+			step("Profanação no alvo", "%+d%% = %d", scar, dmg)
+		}
 		if m.DamageTaken != 100 {
 			dmg = max(1, dmg*int64(m.DamageTaken)/100)
 			step("Dano recebido pelo alvo", "× %d%% = %d", m.DamageTaken, dmg)

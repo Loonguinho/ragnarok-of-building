@@ -73,5 +73,8 @@ func ToBuild(s *Snapshot, c *gamedata.Catalog) (calc.Build, []string) {
 	for id, lv := range s.Skills {
 		b.Skills[id] = lv
 	}
+	if n := applyStatuses(&b, s, c); n > 0 {
+		notes = append(notes, fmt.Sprintf("%d buff(s) ativos no maior golpe da gravação foram ligados (níveis máximos quando o nível não vem na gravação). Efeitos no alvo, como a Profanação, não vêm na gravação.", n))
+	}
 	return b, notes
 }

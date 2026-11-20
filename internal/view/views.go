@@ -171,10 +171,10 @@ func (v *Views) SearchMonsters(q, l string) []MonsterRow {
 	return out
 }
 
-// Optimize runs the card/enchant optimizer (it stops itself after a while).
-func (v *Views) Optimize(ctx context.Context, b calc.Build, enchants bool, l string) OptResult {
-	calc.Normalize(&b, v.s.opt.Catalog)
-	return v.s.optimize(ctx, b, enchants, l)
+// Optimize runs the optimizer: items, cards and enchants, one swap at a
+// time, ranked by the goal (it stops itself after a while).
+func (v *Views) Optimize(ctx context.Context, b calc.Build, o OptOptions, l string) OptResult {
+	return v.s.optimizeWith(ctx, b, o, l)
 }
 
 // ImportReplay reads a .rrf: its build, notes and damage window (nil when

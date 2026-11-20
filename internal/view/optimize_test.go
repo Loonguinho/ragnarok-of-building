@@ -209,3 +209,61 @@ func TestMonsterLocalNames(t *testing.T) {
 		t.Error("monster without a local name")
 	}
 }
+
+func TestEffectiveHP(t *testing.T) {
+	c := testCatalog()
+	c.Items[2301] = &gamedata.Item{ID: 2301, Name: gamedata.Text{"pt": "Couraça"}, Type: "Armor", Locations: []string{"Armor"}, Defense: 500}
+	c.Items[2302] = &gamedata.Item{ID: 2302, Name: gamedata.Text{"pt": "Manto Anti-Planta"}, Type: "Armor", Locations: []string{"Armor"},
+		Script: "bonus2 bSubRace,RC_Plant,20;"}
+	c.Monsters = map[int]*gamedata.Monster{1002: {ID: 1002, Name: "Poring", Level: 1, HP: 5000, Size: "Medium",
+		Race: "Plant", Element: "Water", ElementLv: 1, Class: "Normal", DamageTaken: 100}}
+	s, err := newTestServer(Options{Catalog: c})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := calc.Build{Job: 0, BaseLv: 3, JobLv: 1, Stats: [6]int{1, 1, 1, 1, 1, 1}, Target: 1002}
+	calc.Normalize(&b, c)
+	bare := s.effectiveHP(b, true)
+	hp := float64(calc.Compute(b, c).HP)
+	if bare <= 0 {
+		t.Fatal("no effective HP")
+	}
+	with := func(id int) float64 {
+		nb := cloneBuild(b)
+		nb.Equip[calc.Armor] = calc.Equip{Item: id}
+		calc.Normalize(&nb, c)
+		return s.effectiveHP(nb, true)
+	}
+	// bROWiki: 500 hard DEF halves the damage.
+	if got := with(2301) / float64(calc.Compute(func() calc.Build { nb := cloneBuild(b); nb.Equip[calc.Armor] = calc.Equip{Item: 2301}; return nb }(), c).HP); got < 1.99 || got > 2.01 {
+		t.Errorf("500 DEF: effective HP / HP = %.3f, want 2 (bare %.0f, HP %.0f)", got, bare, hp)
+	}
+	if got := with(2302) / bare; got < 1.249 || got > 1.251 {
+		t.Errorf("20%% vs the target's race: ×%.3f, want ×1.25", got)
+	}
+
+	// The optimizer with items: defense picks the 500 DEF armor; damage
+	// suggests the better weapon at the chosen refine.
+	c.Items[1202] = &gamedata.Item{ID: 1202, Name: gamedata.Text{"pt": "Faca Boa"}, Type: "Weapon", SubType: "Dagger",
+		Locations: []string{"Right_Hand"}, Attack: 60, WeaponLv: 1, Refineable: true}
+	b.Equip = map[string]calc.Equip{calc.Weapon: {Item: 1201}}
+	best := func(r optResult, slot string) *optOption {
+		for _, g := range r.Groups {
+			if g.Kind == "item" && g.Slot == slot && len(g.Options) > 0 {
+				return &g.Options[0]
+			}
+		}
+		return nil
+	}
+	r := s.optimizeWith(context.Background(), b, OptOptions{Goal: GoalPhysDef, Items: true}, "pt")
+	if o := best(r, calc.Armor); o == nil || o.Item.ID != 2301 {
+		t.Errorf("defense: best armor %+v", o)
+	}
+	r = s.optimizeWith(context.Background(), b, OptOptions{Goal: GoalDamage, Items: true, Refine: 10}, "pt")
+	if o := best(r, calc.Weapon); o == nil || o.Item.ID != 1202 || o.Refine != 10 || o.Kind != "item" {
+		t.Errorf("damage: best weapon %+v", o)
+	}
+	if b.Equip[calc.Weapon].Refine != 0 || len(b.Equip) != 1 {
+		t.Errorf("the caller's build changed: %+v", b.Equip)
+	}
+}

@@ -399,3 +399,46 @@ func TestOpenFileNonBlocking(t *testing.T) {
 		t.Fatalf("callback got %q", got)
 	}
 }
+
+// TestOptimizerItems runs the optimizer with items at +10 and applies its
+// best suggestion.
+func TestOptimizerItems(t *testing.T) {
+	h := newHarness(t)
+	a := h.a
+	a.SetBuild(a.V.NewBuild(4252))
+	a.Edit(func(b *calc.Build) { b.Target = 1039 })
+	h.waitReady()
+	a.opt.refine = 10
+	a.runOptimizer()
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		a.mu.Lock()
+		busy := a.opt.busy
+		a.mu.Unlock()
+		if !busy || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	res := a.opt.res
+	if res == nil || len(res.Groups) == 0 || len(res.Groups[0].Options) == 0 {
+		t.Fatalf("no suggestions: %+v", res)
+	}
+	var o *view.OptOption
+	for _, g := range res.Groups {
+		if g.Kind == "item" && len(g.Options) > 0 {
+			o = &g.Options[0]
+			break
+		}
+	}
+	if o == nil {
+		t.Fatal("no item suggested")
+	}
+	a.applyOpt(*o)
+	h.waitReady()
+	e := a.Build().Equip[o.Slot]
+	if e.Item != o.Item.ID || e.Refine != o.Refine {
+		t.Errorf("applied %+v, want %d at +%d", e, o.Item.ID, o.Refine)
+	}
+	h.frame()
+}

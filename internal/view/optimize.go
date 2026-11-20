@@ -25,8 +25,18 @@ const (
 	optTimeout = 8 * time.Second // the rest of the positions are skipped after this
 )
 
+// OptOptions say what the optimizer tries and what it raises.
+type OptOptions struct {
+	Goal                   string // GoalDamage (default), GoalPhysDef, GoalMagDef
+	Items, Cards, Enchants bool
+	Refine, Grade          int // of the items it suggests (those that take them)
+}
+
 type optOption struct {
 	Item     itemView
+	Kind     string // "item", "card" or "enchant"
+	Refine   int    // items: the refine and grade it was measured at
+	Grade    int
 	Value    string // expected damage
 	Gain     string // "+18,4%"
 	Skill    string // skill enchants: the skill the gain is measured on
@@ -36,6 +46,7 @@ type optOption struct {
 }
 
 type optGroup struct {
+	Kind        string // "item", "card" or "enchant"
 	Slot, Label string
 	Index       int
 	Enchant     bool
@@ -53,6 +64,7 @@ type optGroup struct {
 }
 
 type optResult struct {
+	Goal     string
 	NoTarget bool
 	NoItems  bool
 	Base     string
@@ -66,6 +78,7 @@ type optResult struct {
 
 // optPosition is one card position to optimize.
 type optPosition struct {
+	item    bool     // the slot's item itself (index -1)
 	slots   []string // linked slots (one headgear covering several)
 	label   string
 	index   int
@@ -96,9 +109,19 @@ func (s *Server) optExpected(b calc.Build) float64 {
 }
 
 func (s *Server) optimize(ctx context.Context, b calc.Build, enchants bool, l string) optResult {
+	return s.optimizeWith(ctx, b, OptOptions{Goal: GoalDamage, Cards: true, Enchants: enchants}, l)
+}
+
+func (s *Server) optimizeWith(ctx context.Context, b calc.Build, o OptOptions, l string) optResult {
 	c := s.opt.Catalog
+	if o.Goal == "" {
+		o.Goal = GoalDamage
+	}
+	enchants := o.Enchants
+	// A copy: Normalize and the swaps write to the maps, the caller's.
+	b = cloneBuild(b)
 	calc.Normalize(&b, c)
-	var res optResult
+	res := optResult{Goal: o.Goal}
 	m := c.Monster(b.Target)
 	if m == nil {
 		res.NoTarget = true
@@ -109,11 +132,27 @@ func (s *Server) optimize(ctx context.Context, b calc.Build, enchants bool, l st
 	if sk := c.Skills[b.Atk.Skill]; sk != nil {
 		res.Attack = sk.Name.Get(l) + " " + tr(l, "Nv.") + " " + strconv.Itoa(b.Atk.Level)
 	}
-	base := s.optExpected(b)
+	base := s.optScore(b, o.Goal)
 	res.Base = fmtInt(int64(base + 0.5))
 
 	cards := s.optCards()
 	var pos []optPosition
+	if o.Items {
+		job := c.Jobs[b.Job]
+		for _, info := range append(append([]slotInfo{}, equipSlots...), shadowSlots...) {
+			var pool []*gamedata.Item
+			for _, it := range c.Items {
+				if it.Type != "" && it.Type != "Card" && calc.Fits(it, info.Key) && job.CanEquip(it) && it.Name.Get(l) != "" {
+					pool = append(pool, it)
+				}
+			}
+			sort.Slice(pool, func(i, j int) bool { return pool[i].ID < pool[j].ID })
+			if len(pool) > 0 {
+				pos = append(pos, optPosition{item: true, slots: []string{info.Key}, label: info.Label, index: -1,
+					current: b.Equip[info.Key].Item, pool: pool})
+			}
+		}
+	}
 	done := map[string]bool{}
 	for _, info := range append(append([]slotInfo{}, equipSlots...), shadowSlots...) {
 		e, ok := b.Equip[info.Key]
@@ -144,6 +183,9 @@ func (s *Server) optimize(ctx context.Context, b calc.Build, enchants bool, l st
 			p := optPosition{slots: linked, label: info.Label, index: i, current: e.Cards[i]}
 			switch {
 			case i < it.Slots:
+				if !o.Cards {
+					continue
+				}
 				p.pool = pool
 			case enchants && len(ench[i]) > 0:
 				p.enchant = true
@@ -189,6 +231,13 @@ func (s *Server) optimize(ctx context.Context, b calc.Build, enchants bool, l st
 			defer wg.Done()
 			for j := range ch {
 				p := pos[j.p]
+				if p.item {
+					if p.pool[j.k].ID == p.current {
+						continue // the item itself (at another refine) is not a swap
+					}
+					vals[j.p][j.k] = s.optScore(s.swapAt(b, p.slots[0], p.pool[j.k].ID, o.Refine, o.Grade), o.Goal)
+					continue
+				}
 				nb := b
 				nb.Equip = maps.Clone(b.Equip)
 				for _, k := range p.slots {
@@ -196,7 +245,7 @@ func (s *Server) optimize(ctx context.Context, b calc.Build, enchants bool, l st
 					e.Cards[p.index] = p.pool[j.k].ID
 					nb.Equip[k] = e
 				}
-				vals[j.p][j.k] = s.optExpected(nb)
+				vals[j.p][j.k] = s.optScore(nb, o.Goal)
 			}
 		}()
 	}
@@ -228,10 +277,14 @@ feed:
 	}
 	for pi, p := range pos {
 		label := tr(l, p.label) + " · " + tr(l, "Carta") + " " + strconv.Itoa(p.index+1)
-		if p.enchant {
-			label = tr(l, p.label) + " · " + tr(l, "Encantamento") + " (slot " + strconv.Itoa(p.index+1) + ")"
+		kind := "card"
+		switch {
+		case p.item:
+			label, kind = tr(l, p.label), "item"
+		case p.enchant:
+			label, kind = tr(l, p.label)+" · "+tr(l, "Encantamento")+" (slot "+strconv.Itoa(p.index+1)+")", "enchant"
 		}
-		g := optGroup{Slot: p.slots[0], Label: label, Index: p.index, Enchant: p.enchant}
+		g := optGroup{Kind: kind, Slot: p.slots[0], Label: label, Index: p.index, Enchant: p.enchant}
 		if ci := c.Items[p.current]; p.current != 0 && ci != nil {
 			v := viewItem(ci, l)
 			g.Current = &v
@@ -257,12 +310,22 @@ feed:
 				continue
 			}
 			seen[fam] = true
-			g.Options = append(g.Options, optOption{Item: viewItem(p.pool[k], l), Value: fmtInt(int64(vals[pi][k] + 0.5)),
-				Gain: pct(vals[pi][k]), Slot: g.Slot, Index: p.index, Positive: true})
+			opt := optOption{Item: viewItem(p.pool[k], l), Kind: kind, Value: fmtInt(int64(vals[pi][k] + 0.5)),
+				Gain: pct(vals[pi][k]), Slot: g.Slot, Index: p.index, Positive: true}
+			if p.item {
+				// What it was measured at: Normalize drops what the item can't take.
+				if p.pool[k].Refineable {
+					opt.Refine = o.Refine
+				}
+				if p.pool[k].Gradable {
+					opt.Grade = o.Grade
+				}
+			}
+			g.Options = append(g.Options, opt)
 		}
 		// Skill enchants that don't touch the chosen attack: measure each on
 		// the learned skill it boosts.
-		if len(g.Options) == 0 && p.enchant {
+		if len(g.Options) == 0 && p.enchant && o.Goal == GoalDamage {
 			if heldID, held := s.optHeldSkill(b, p.current, l); heldID != 0 {
 				if heldID != b.Atk.Skill { // for the attack itself it is simply the best
 					g.SkillHeld = held

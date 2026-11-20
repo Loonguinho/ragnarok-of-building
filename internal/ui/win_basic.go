@@ -403,6 +403,8 @@ type statusState struct {
 	base, joblv  NumInput
 	plus, minus  [6]widget.Clickable
 	tplus, tminu [6]widget.Clickable
+	// The stat and trait values, typed in.
+	stat, trait [6]NumInput
 }
 
 var statNames = [6]string{"FOR", "AGI", "VIT", "INT", "DES", "SOR"}
@@ -470,14 +472,23 @@ func (a *App) statusBody(gtx C) D {
 			return d
 		},
 	)
-	statTable := func(lines [6]calc.StatLine, names [6]string, plus, minus *[6]widget.Clickable, minBase int, showCost bool) layout.Widget {
+	statTable := func(lines [6]calc.StatLine, names [6]string, plus, minus *[6]widget.Clickable, boxes *[6]NumInput, minBase, maxBase int, set func(b *calc.Build, i, v int), showCost bool) layout.Widget {
 		return func(gtx C) D {
 			var rows []layout.Widget
 			for i := range 6 {
 				st := lines[i]
 				rows = append(rows, Row(0,
 					Fixed(34, T(th, a.T(names[i])).C(ColLabel).W()),
-					Fixed(28, B(th, fmt.Sprint(st.Base)).Right().W()),
+					func(gtx C) D {
+						in := &boxes[i]
+						in.Compact, in.SelectOnFocus = true, true
+						d, x, ok := in.Layout(gtx, th, st.Base, 30)
+						if ok {
+							x = min(max(x, minBase), max(maxBase, minBase))
+							a.Edit(func(b *calc.Build) { set(b, i, x) })
+						}
+						return d
+					},
 					Fixed(30, func(gtx C) D {
 						if st.Bonus == 0 {
 							return D{}
@@ -514,14 +525,14 @@ func (a *App) statusBody(gtx C) D {
 			if n < 0 {
 				c = ColDown
 			}
-			return Row(4, T(th, a.T(label)).W(), B(th, fmt.Sprint(n)).C(c).W(), T(th, a.T("Shift+clique: ±10")).Sz(SmallText).C(ColMuted).W())(gtx)
+			return Row(4, T(th, a.T(label)).W(), B(th, fmt.Sprint(n)).C(c).W(), T(th, a.T("Shift+clique: ±10 · ou digite")).Sz(SmallText).C(ColMuted).W())(gtx)
 		}
 	}
 	kids := []layout.Widget{
 		form,
 		Sep,
 		RowTop(12,
-			statTable(r.Stats, statNames, &s.plus, &s.minus, 1, true),
+			statTable(r.Stats, statNames, &s.plus, &s.minus, &s.stat, 1, maxStat, func(b *calc.Build, i, v int) { b.Stats[i] = v }, true),
 			derived([][2]string{
 				{"ATQ", fmt.Sprintf("%d + %d", r.StatusATK, r.EquipATK)},
 				{"ATQM", fmt.Sprintf("%d + %d", r.MATKMin, r.EquipMATK)},
@@ -539,7 +550,7 @@ func (a *App) statusBody(gtx C) D {
 	if v.Job != nil && v.Job.Fourth {
 		kids = append(kids, Sep,
 			RowTop(12,
-				statTable(r.Traits, traitNames, &s.tplus, &s.tminu, 0, false),
+				statTable(r.Traits, traitNames, &s.tplus, &s.tminu, &s.trait, 0, r.MaxTrait, func(b *calc.Build, i, v int) { b.Traits[i] = v }, false),
 				derived([][2]string{
 					{"P.ATQ", fmt.Sprint(r.PATK)}, {"S.ATQM", fmt.Sprint(r.SMATK)}, {"RES", fmt.Sprint(r.RES)},
 					{"MRES", fmt.Sprint(r.MRES)}, {"H.PLUS", fmt.Sprint(r.HPLUS)}, {"C.RATE", fmt.Sprint(r.CRATE)},

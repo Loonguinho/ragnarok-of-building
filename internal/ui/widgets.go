@@ -21,6 +21,12 @@ type Input struct {
 	Ed      widget.Editor
 	Hint    string
 	changed bool
+	// Compact is the 16px box that fits a table row (stats, traits).
+	Compact bool
+	// SelectOnFocus selects all the text when the box gets the focus, so
+	// typing replaces it.
+	SelectOnFocus bool
+	focused       bool
 }
 
 // Layout draws the box; it returns true when the text changed (submitted
@@ -44,24 +50,31 @@ func (in *Input) Layout(gtx C, th *Theme, width unit.Dp) (d D, changed, submitte
 	if w == 0 || w > gtx.Constraints.Max.X {
 		w = gtx.Constraints.Max.X
 	}
-	h := gtx.Dp(InputH)
+	h, padX, padY := gtx.Dp(InputH), gtx.Dp(6), gtx.Dp(3)
+	if in.Compact {
+		h, padX, padY = gtx.Dp(16), gtx.Dp(3), gtx.Dp(1)
+	}
+	focused := gtx.Focused(&in.Ed)
+	if focused && !in.focused && in.SelectOnFocus {
+		in.Ed.SetCaret(in.Ed.Len(), 0)
+	}
+	in.focused = focused
 	r := image.Rectangle{Max: image.Pt(w, h)}
 	Fill(gtx, r, ColWhite)
 	line := ColBorder
-	if gtx.Focused(&in.Ed) {
+	if focused {
 		line = rgb(0x7f9fd9)
 	}
 	Border(gtx, r, line, 1, 2)
 	g := gtx
-	g.Constraints = layout.Exact(image.Pt(w-gtx.Dp(12), h-gtx.Dp(4)))
-	st := op.Offset(image.Pt(gtx.Dp(6), gtx.Dp(3))).Push(gtx.Ops)
+	g.Constraints = layout.Exact(image.Pt(w-2*padX, h-padY-1))
+	st := op.Offset(image.Pt(padX, padY)).Push(gtx.Ops)
 	if in.Ed.Len() == 0 && in.Hint != "" {
 		T(th, in.Hint).C(rgb(0x999999)).Layout(g)
 	}
 	// Gio's editor text is unhinted (blurry): while the box isn't being
 	// typed in, the editor draws invisible text and the hinted text goes
 	// on top.
-	focused := gtx.Focused(&in.Ed)
 	textCol := ColText
 	if !focused {
 		textCol = color.NRGBA{}

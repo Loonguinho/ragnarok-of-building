@@ -8,6 +8,7 @@ import (
 
 	"gioui.org/f32"
 	"gioui.org/io/input"
+	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -205,5 +206,31 @@ func TestSelectPick(t *testing.T) {
 	}
 	if h.a.Build().Job == job {
 		t.Error("picking in the class list changed nothing")
+	}
+}
+
+// TestStatTyped types a value into FOR's box.
+func TestStatTyped(t *testing.T) {
+	h := newHarness(t)
+	in := &h.a.status.stat[0]
+	h.click(72, 404) // FOR's box (fixed layout)
+	if !in.focused {
+		t.Fatal("FOR's box did not take the focus")
+	}
+	n := in.Ed.Len()
+	h.router.Queue(key.EditEvent{Range: key.Range{Start: 0, End: n}, Text: "77"})
+	h.frame()
+	h.waitReady()
+	h.frame()
+	if got := h.a.Build().Stats[0]; got != 77 {
+		t.Fatalf("FOR = %d after typing 77", got)
+	}
+	// Past the cap: clamped.
+	h.router.Queue(key.EditEvent{Range: key.Range{Start: 0, End: in.Ed.Len()}, Text: "999"})
+	h.frame()
+	h.waitReady()
+	h.frame()
+	if got := h.a.Build().Stats[0]; got != h.a.View().R.MaxStat {
+		t.Fatalf("FOR = %d after typing 999, want the cap %d", got, h.a.View().R.MaxStat)
 	}
 }

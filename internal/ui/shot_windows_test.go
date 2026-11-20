@@ -81,4 +81,7 @@ func TestShots(t *testing.T) {
 	})
 	h.waitReady()
 	h.shot("04-damage")
+	a.Desk.Toggle(a.wBuffs)
+	a.Desk.Toggle(a.wSlot)
+	h.shot("05-buffs")
 }

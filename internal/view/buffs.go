@@ -55,10 +55,12 @@ func itemEffectRows(r calc.Result, c *gamedata.Catalog, l string) []effectItem {
 		}
 		var gives []string
 		for _, k := range sortedKeys(ef.Bonus) {
-			gives = append(gives, tr(l, bonusLabel(k))+" "+signed(ef.Bonus[k], k))
+			lb, v := bonusText(k, ef.Bonus[k], c, l)
+			gives = append(gives, strings.TrimSpace(lb+" "+v))
 		}
 		for _, k := range sortedKeys(ef.Extra) {
-			gives = append(gives, extraLabel(k, c, l)+" "+signed(ef.Extra[k], k))
+			lb, v := bonusText(k, ef.Extra[k], c, l)
+			gives = append(gives, strings.TrimSpace(lb+" "+v))
 		}
 		row := effectItem{Key: ef.Key, Label: it.Name.Get(l), Gives: strings.Join(gives, ", "), ItemID: ef.Item}
 		if ef.On {

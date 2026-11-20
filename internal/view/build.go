@@ -246,7 +246,8 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 		v.Costume = append(v.Costume, mk(info))
 	}
 	for _, kv := range r.SortedBonuses() {
-		v.Bonuses = append(v.Bonuses, bonusLine{Label: bonusLabel(kv[0].(string)), Value: signed(kv[1].(int), kv[0].(string))})
+		lb, val := bonusText(kv[0].(string), kv[1].(int), c, l)
+		v.Bonuses = append(v.Bonuses, bonusLine{Label: lb, Value: val})
 	}
 	keys := make([]string, 0, len(r.Extra))
 	for k, val := range r.Extra {
@@ -256,7 +257,8 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		v.Extras = append(v.Extras, bonusLine{Label: extraLabel(k, c, l), Value: signed(r.Extra[k], k)})
+		lb, val := bonusText(k, r.Extra[k], c, l)
+		v.Extras = append(v.Extras, bonusLine{Label: lb, Value: val})
 	}
 	for _, ce := range r.ComboEffects {
 		names := make([]string, 0, len(ce.Items))
@@ -267,10 +269,12 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 		}
 		cv := comboView{Name: strings.Join(names, " + "), Skipped: ce.Skipped}
 		for _, k := range sortedKeys(ce.Bonus) {
-			cv.Lines = append(cv.Lines, bonusLine{Label: bonusLabel(k), Value: signed(ce.Bonus[k], k)})
+			lb, val := bonusText(k, ce.Bonus[k], c, l)
+			cv.Lines = append(cv.Lines, bonusLine{Label: lb, Value: val})
 		}
 		for _, k := range sortedKeys(ce.Extra) {
-			cv.Lines = append(cv.Lines, bonusLine{Label: extraLabel(k, c, l), Value: signed(ce.Extra[k], k)})
+			lb, val := bonusText(k, ce.Extra[k], c, l)
+			cv.Lines = append(cv.Lines, bonusLine{Label: lb, Value: val})
 		}
 		v.Combos = append(v.Combos, cv)
 	}

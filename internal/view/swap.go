@@ -22,6 +22,9 @@ func (s *Server) swapItem(b calc.Build, slot string, id, card int) calc.Build {
 	// many items in parallel from one build.
 	nb := b
 	nb.Equip = maps.Clone(b.Equip)
+	if nb.Equip == nil { // a build with nothing equipped yet
+		nb.Equip = map[string]calc.Equip{}
+	}
 	nb.Skills = maps.Clone(b.Skills)
 	nb.Buffs = maps.Clone(b.Buffs)
 	nb.Atk.States = maps.Clone(b.Atk.States)

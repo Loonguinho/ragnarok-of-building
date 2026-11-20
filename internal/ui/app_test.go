@@ -13,6 +13,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 
+	"ragnarok-of-building/internal/calc"
 	"ragnarok-of-building/internal/gamedata"
 	"ragnarok-of-building/internal/view"
 )
@@ -106,4 +107,71 @@ func TestStatPlus(t *testing.T) {
 	if got := h.a.Build().Stats[0]; got != before+1 {
 		t.Fatalf("FOR %d -> %d, want +1", before, got)
 	}
+}
+
+// waitSearch waits for the item picker's results.
+func (h *harness) waitSearch() {
+	deadline := time.Now().Add(20 * time.Second)
+	for time.Now().Before(deadline) {
+		h.a.mu.Lock()
+		done := !h.a.slot.pending
+		h.a.mu.Unlock()
+		if done {
+			h.frame()
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	h.t.Fatal("the picker never answered")
+}
+
+func TestEquipFlow(t *testing.T) {
+	h := newHarness(t)
+	a := h.a
+	a.openSlot(calc.Weapon)
+	h.waitSearch()
+	h.frame()
+	a.mu.Lock()
+	results := a.slot.results
+	a.mu.Unlock()
+	if len(results) == 0 {
+		t.Fatal("no weapons offered")
+	}
+	var weapon view.ItemView
+	for _, it := range results {
+		if it.Slots > 0 {
+			weapon = it
+			break
+		}
+	}
+	if weapon.ID == 0 {
+		t.Skip("no slotted weapon in the first results")
+	}
+	a.pick(weapon.ID)
+	h.waitReady()
+	h.waitSearch()
+	if got := a.Build().Equip[calc.Weapon].Item; got != weapon.ID {
+		t.Fatalf("weapon %d, want %d", got, weapon.ID)
+	}
+	// A card in its first slot.
+	a.slot.card = 0
+	a.search(0)
+	h.waitSearch()
+	a.mu.Lock()
+	cards := a.slot.results
+	a.mu.Unlock()
+	if len(cards) == 0 {
+		t.Fatal("no cards offered")
+	}
+	a.pick(cards[0].ID)
+	h.waitReady()
+	h.frame()
+	if got := a.Build().Equip[calc.Weapon].Cards[0]; got != cards[0].ID {
+		t.Errorf("card %d, want %d", got, cards[0].ID)
+	}
+	// The tooltip with its comparison draws.
+	a.Desk.ShowTip(func(gtx C) D {
+		return a.itemTip(gtx, weapon.ID, &view.SwapView{Current: "x", Lines: []view.StatLine{{Label: "ATQ", Old: "1", New: "2", Diff: "+1", Better: true}}})
+	})
+	h.frame()
 }

@@ -82,3 +82,11 @@ func TestHiddenJobs(t *testing.T) {
 		t.Error("a 2nd class build keeps its class listed")
 	}
 }
+
+func TestSwapIntoEmptyBuild(t *testing.T) {
+	s, _ := newTestServer(Options{Catalog: testCatalog()})
+	nb := s.swapItem(calc.Build{Job: 0, BaseLv: 3, JobLv: 1, Stats: [6]int{1, 1, 1, 1, 1, 1}}, calc.Weapon, 1201, -1)
+	if nb.Equip[calc.Weapon].Item != 1201 {
+		t.Errorf("equip into an empty build: %+v", nb.Equip)
+	}
+}

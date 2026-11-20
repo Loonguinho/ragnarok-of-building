@@ -47,6 +47,8 @@ type App struct {
 	menu   menuState
 	basic  basicState
 	status statusState
+	equip  equipState
+	slot   slotState
 }
 
 type chatLine struct {
@@ -98,6 +100,10 @@ func (a *App) makeWindows() {
 	a.wMenu = d.Add(&Window{ID: "win-menu", Title: "Menu", Col: 0, Open: true, NoShowAll: true})
 	a.wBasic = d.Add(&Window{ID: "win-basic", Title: "Informações Básicas", Hotkey: "V", Col: 0, Open: true})
 	a.wStatus = d.Add(&Window{ID: "win-status", Title: "Atributos", Hotkey: "A", Col: 0, Open: true})
+	a.wEquip = d.Add(&Window{ID: "win-equip", Title: "Equipamentos", Hotkey: "Q", Col: 1, Open: true})
+	a.wSlot = d.Add(&Window{ID: "win-slot", Title: "Equipamento", Col: 1, NoShowAll: true})
+	a.wEquip.Body = a.equipBody
+	a.wSlot.Body = a.slotBody
 	a.wMenu.Body = a.menuBody
 	a.wMenu.TitleExtra = a.gearButton
 	a.wBasic.Body = a.basicBody
@@ -210,6 +216,8 @@ func (a *App) updateTitles() {
 	a.wMenu.Title = a.T("Menu")
 	a.wBasic.Title = a.T("Informações Básicas")
 	a.wStatus.Title = a.T("Atributos")
+	a.wEquip.Title = a.T("Equipamentos")
+	a.wSlot.Title = a.slotTitle()
 }
 
 // view returns the last computed windows.

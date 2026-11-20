@@ -58,7 +58,18 @@ func (in *Input) Layout(gtx C, th *Theme, width unit.Dp) (d D, changed, submitte
 	if in.Ed.Len() == 0 && in.Hint != "" {
 		T(th, in.Hint).C(rgb(0x999999)).Layout(g)
 	}
-	in.Ed.Layout(g, th.Shaper, th.Font, TextSize, colorMat(gtx, ColText), colorMat(gtx, ColSelect))
+	// Gio's editor text is unhinted (blurry): while the box isn't being
+	// typed in, the editor draws invisible text and the hinted text goes
+	// on top.
+	focused := gtx.Focused(&in.Ed)
+	textCol := ColText
+	if !focused {
+		textCol = color.NRGBA{}
+	}
+	in.Ed.Layout(g, th.Shaper, th.Font, TextSize, colorMat(gtx, textCol), colorMat(gtx, ColSelect))
+	if !focused && in.Ed.Len() > 0 {
+		T(th, in.Ed.Text()).Layout(g)
+	}
 	st.Pop()
 	return D{Size: r.Max}, changed, submitted
 }

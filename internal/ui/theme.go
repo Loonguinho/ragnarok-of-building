@@ -14,6 +14,10 @@ import (
 	"gioui.org/font/opentype"
 	"gioui.org/text"
 	"gioui.org/unit"
+	"github.com/golang/freetype/truetype"
+	"golang.org/x/image/font/gofont/gobold"
+	"golang.org/x/image/font/gofont/gomono"
+	"golang.org/x/image/font/gofont/goregular"
 )
 
 // Colors of ro-ui.css (:root).
@@ -66,9 +70,21 @@ const (
 	InputH    = unit.Dp(20)
 )
 
+// mustTT parses an embedded TrueType font.
+func mustTT(b []byte) *truetype.Font {
+	f, err := truetype.Parse(b)
+	if err != nil {
+		panic(err)
+	}
+	return f
+}
+
 // Theme holds the text shaper and the fonts.
 type Theme struct {
+	// Shaper is Gio's text, still used by the text inputs; Text draws
+	// everything else (see Hinted).
 	Shaper *text.Shaper
+	Text   *Hinted
 	Font   font.Font
 	Bold   font.Font
 	Mono   font.Font
@@ -78,11 +94,17 @@ type Theme struct {
 // (as the web pages do), else Gio's Go fonts.
 func NewTheme() *Theme {
 	var faces []font.FontFace
+	goReg, goBold, goMono := mustTT(goregular.TTF), mustTT(gobold.TTF), mustTT(gomono.TTF)
+	hinted := newHinted(fontPair{goReg, goReg})
+	hinted.Add(font.Font{Typeface: "Go"}, fontPair{goReg, goReg})
+	hinted.Add(font.Font{Typeface: "Go", Weight: font.Bold}, fontPair{goBold, goBold})
+	hinted.Add(font.Font{Typeface: "Go Mono"}, fontPair{goMono, goReg})
 	dir := filepath.Join(os.Getenv("WINDIR"), "Fonts")
 	for _, f := range []struct {
 		file   string
 		weight font.Weight
-	}{{"tahoma.ttf", font.Normal}, {"tahomabd.ttf", font.Bold}} {
+		alt    *truetype.Font
+	}{{"tahoma.ttf", font.Normal, goReg}, {"tahomabd.ttf", font.Bold, goBold}} {
 		b, err := os.ReadFile(filepath.Join(dir, f.file))
 		if err != nil {
 			continue
@@ -91,10 +113,16 @@ func NewTheme() *Theme {
 		if err != nil {
 			continue
 		}
-		faces = append(faces, font.FontFace{Font: font.Font{Typeface: "Tahoma", Weight: f.weight}, Face: face})
+		tt, err := truetype.Parse(b)
+		if err != nil {
+			continue
+		}
+		ff := font.Font{Typeface: "Tahoma", Weight: f.weight}
+		faces = append(faces, font.FontFace{Font: ff, Face: face})
+		hinted.Add(ff, fontPair{tt, f.alt})
 	}
 	faces = append(faces, gofont.Collection()...)
-	th := &Theme{Shaper: text.NewShaper(text.NoSystemFonts(), text.WithCollection(faces))}
+	th := &Theme{Shaper: text.NewShaper(text.NoSystemFonts(), text.WithCollection(faces)), Text: hinted}
 	th.Font = font.Font{Typeface: "Tahoma"}
 	if len(faces) == len(gofont.Collection()) {
 		th.Font = font.Font{Typeface: "Go"}

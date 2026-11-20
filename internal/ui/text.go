@@ -11,7 +11,6 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/unit"
-	"gioui.org/widget"
 )
 
 // Txt is a text run: Label(...).Layout or the shorthand T(th, s).
@@ -51,15 +50,12 @@ func colorMat(gtx C, c color.NRGBA) op.CallOp {
 }
 
 func (t Txt) layout(gtx C) D {
-	l := widget.Label{MaxLines: t.MaxLines, Alignment: t.Align}
-	if t.MaxLines == 0 && !t.Wrap {
-		l.MaxLines = 1
-	}
 	minX := gtx.Constraints.Min.X
 	if t.Align == text.Start {
 		gtx.Constraints.Min.X = 0
 	}
-	d := l.Layout(gtx, t.th.Shaper, t.Font, t.Size, t.S, colorMat(gtx, t.Color))
+	gtx.Constraints.Min.Y = 0
+	d := t.th.Text.Layout(gtx, t.Font, t.Size, t.S, t.Color, t.MaxLines, t.Wrap, t.Align)
 	d.Size.X = max(d.Size.X, minX)
 	return d
 }

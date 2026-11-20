@@ -84,4 +84,7 @@ func TestShots(t *testing.T) {
 	a.Desk.Toggle(a.wBuffs)
 	a.Desk.Toggle(a.wSlot)
 	h.shot("05-buffs")
+	a.Desk.Toggle(a.wSkills)
+	a.Desk.Toggle(a.wDamage)
+	h.shot("06-skills")
 }

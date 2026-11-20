@@ -51,6 +51,7 @@ type App struct {
 	slot   slotState
 	damage damageState
 	buffs  buffsState
+	skills skillsState
 }
 
 type chatLine struct {
@@ -108,6 +109,9 @@ func (a *App) makeWindows() {
 	a.wDamage = d.Add(&Window{ID: "win-damage", Title: "Alvo / Dano", Hotkey: "D", Col: 2, Open: true})
 	a.wBuffs = d.Add(&Window{ID: "win-buffs", Title: "Buffs e Consumíveis", Hotkey: "U", Col: 1})
 	a.wBuffs.Body = a.buffsBody
+	a.wSkills = d.Add(&Window{ID: "win-skills", Title: "Habilidades", Hotkey: "S", Col: 2})
+	a.wSkills.Body = a.skillsBody
+	a.wSkills.Footer = a.skillsFooter
 	a.wBonus.Body = a.bonusBody
 	a.wDamage.Body = a.damageBody
 	a.wEquip.Body = a.equipBody
@@ -228,6 +232,7 @@ func (a *App) updateTitles() {
 	a.wBonus.Title = a.T("Bônus do Equipamento")
 	a.wDamage.Title = a.T("Alvo / Dano")
 	a.wBuffs.Title = a.T("Buffs e Consumíveis")
+	a.wSkills.Title = a.T("Habilidades")
 	a.wSlot.Title = a.slotTitle()
 }
 

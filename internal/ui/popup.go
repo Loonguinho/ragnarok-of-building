@@ -91,11 +91,13 @@ func (d *Desk) layoutOverlay(gtx C, size image.Point) {
 			}
 			off := op.Offset(at).Push(gtx.Ops)
 			Shadow(gtx, image.Rectangle{Max: pd.Size}, 0)
-			call.Add(gtx.Ops)
-			// Clicks on the popup itself don't reach the catcher.
+			// Clicks on the popup itself don't reach the catcher. This
+			// area goes under the content: above it, it would swallow the
+			// clicks meant for the options.
 			area := clip.Rect{Max: pd.Size}.Push(gtx.Ops)
 			event.Op(gtx.Ops, p)
 			area.Pop()
+			call.Add(gtx.Ops)
 			off.Pop()
 		}
 	}

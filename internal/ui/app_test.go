@@ -175,3 +175,35 @@ func TestEquipFlow(t *testing.T) {
 	})
 	h.frame()
 }
+
+// TestSelectPick opens dropdowns and picks an option: the popup used to
+// lay a click catcher over its own content, so options ignored clicks.
+func TestSelectPick(t *testing.T) {
+	h := newHarness(t)
+	// Atributos ▸ Classe (fixed layout, as in the screenshot).
+	before := h.a.Build().Job
+	h.click(135, 373)
+	if h.a.Desk.popup == nil {
+		t.Fatal("the class select did not open")
+	}
+	h.click(135, 373+40)
+	if h.a.Desk.popup != nil {
+		t.Error("the popup stayed open after a pick")
+	}
+	if got := h.a.Build().Job; got == before {
+		t.Errorf("class still %d after picking another", got)
+	}
+	// Informações Básicas ▸ the class name opens the grouped class list.
+	h.click(115, 214)
+	if h.a.Desk.popup == nil {
+		t.Fatal("the class list did not open")
+	}
+	job := h.a.Build().Job
+	h.click(115, 214+60)
+	if h.a.Desk.popup != nil {
+		t.Error("the class list stayed open after a pick")
+	}
+	if h.a.Build().Job == job {
+		t.Error("picking in the class list changed nothing")
+	}
+}

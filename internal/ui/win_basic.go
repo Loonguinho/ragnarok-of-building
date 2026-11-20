@@ -407,6 +407,9 @@ type statusState struct {
 	tplus, tminu [6]widget.Clickable
 	// The stat and trait values, typed in.
 	stat, trait [6]NumInput
+	// Tooltips: what each attribute gives; casting; tolerances.
+	statTip, traitTip [6]Hoverable
+	castTip, tolTip   Hoverable
 }
 
 var statNames = [6]string{"FOR", "AGI", "VIT", "INT", "DES", "SOR"}
@@ -474,13 +477,30 @@ func (a *App) statusBody(gtx C) D {
 			return d
 		},
 	)
-	statTable := func(lines [6]calc.StatLine, names [6]string, plus, minus *[6]widget.Clickable, boxes *[6]NumInput, minBase, maxBase int, set func(b *calc.Build, i, v int), showCost bool) layout.Widget {
+	// attrTip is the tooltip of an attribute: its value and what it gives.
+	attrTip := func(name string, st calc.StatLine, lines []view.AttrLine) layout.Widget {
+		return func(gtx C) D {
+			head := fmt.Sprintf("%s %d", a.T(name), st.Base+st.Bonus)
+			if st.Bonus != 0 {
+				head = fmt.Sprintf("%s %d (%d %+d)", a.T(name), st.Base+st.Bonus, st.Base, st.Bonus)
+			}
+			rows := append([]layout.Widget{B(th, head).W()}, tipRows(th, lines)...)
+			return TipBox(gtx, Col(2, rows...))
+		}
+	}
+	statTable := func(lines [6]calc.StatLine, names [6]string, plus, minus *[6]widget.Clickable, boxes *[6]NumInput, minBase, maxBase int, set func(b *calc.Build, i, v int), showCost bool, hov *[6]Hoverable, trait bool) layout.Widget {
 		return func(gtx C) D {
 			var rows []layout.Widget
 			for i := range 6 {
 				st := lines[i]
 				rows = append(rows, Row(0,
-					Fixed(34, T(th, a.T(names[i])).C(ColLabel).W()),
+					Fixed(34, func(gtx C) D {
+						d, over := hov[i].Layout(gtx, T(th, a.T(names[i])).C(ColLabel).W())
+						if over {
+							a.Desk.ShowTip(attrTip(names[i], st, view.AttrEffects(r, i, trait, a.Lang)))
+						}
+						return d
+					}),
 					func(gtx C) D {
 						in := &boxes[i]
 						in.Compact, in.SelectOnFocus = true, true
@@ -521,6 +541,23 @@ func (a *App) statusBody(gtx C) D {
 			return Col(2, ws...)(gtx)
 		}
 	}
+	// tipped is a derived row whose tooltip lists lines under a title.
+	tipped := func(h *Hoverable, label, value, title string, lines []view.AttrLine) layout.Widget {
+		return func(gtx C) D {
+			d, over := h.Layout(gtx, Row(0, Fixed(64, T(th, a.T(label)).C(ColLabel).W()), T(th, value).C(ColLink).W()))
+			if over {
+				a.Desk.ShowTip(func(gtx C) D {
+					return TipBox(gtx, Col(2, append([]layout.Widget{B(th, a.T(title)).W()}, tipRows(th, lines)...)...))
+				})
+			}
+			return d
+		}
+	}
+	ci := r.Cast()
+	castVal := a.T("instantânea")
+	if ci.VarLeft > 0.05 {
+		castVal = fmt.Sprintf("−%.0f%%", 100-ci.VarLeft)
+	}
 	points := func(label string, n int) layout.Widget {
 		return func(gtx C) D {
 			c := ColText
@@ -534,8 +571,8 @@ func (a *App) statusBody(gtx C) D {
 		form,
 		Sep,
 		RowTop(12,
-			statTable(r.Stats, statNames, &s.plus, &s.minus, &s.stat, 1, maxStat, func(b *calc.Build, i, v int) { b.Stats[i] = v }, true),
-			derived([][2]string{
+			statTable(r.Stats, statNames, &s.plus, &s.minus, &s.stat, 1, maxStat, func(b *calc.Build, i, v int) { b.Stats[i] = v }, true, &s.statTip, false),
+			Col(2, derived([][2]string{
 				{"ATQ", fmt.Sprintf("%d + %d", r.StatusATK, r.EquipATK)},
 				{"ATQM", fmt.Sprintf("%d + %d", r.MATKMin, r.EquipMATK)},
 				{"Precisão", fmt.Sprint(r.HIT)},
@@ -545,6 +582,9 @@ func (a *App) statusBody(gtx C) D {
 				{"Esquiva", fmt.Sprintf("%d + %d", r.FLEE, r.FLEE2)},
 				{"ASPD", fmt.Sprint(r.ASPD)},
 			}),
+				tipped(&s.castTip, "Conj. var.", castVal, "Conjuração variável", view.CastLines(r, a.Lang)),
+				tipped(&s.tolTip, "Tolerâncias", a.T("ver"), "Tolerâncias a status", view.ToleranceLines(r, a.Lang)),
+			),
 		),
 		Sep,
 		points("Pontos de atributo:", r.Points),
@@ -552,7 +592,7 @@ func (a *App) statusBody(gtx C) D {
 	if v.Job != nil && v.Job.Fourth {
 		kids = append(kids, Sep,
 			RowTop(12,
-				statTable(r.Traits, traitNames, &s.tplus, &s.tminu, &s.trait, 0, r.MaxTrait, func(b *calc.Build, i, v int) { b.Traits[i] = v }, false),
+				statTable(r.Traits, traitNames, &s.tplus, &s.tminu, &s.trait, 0, r.MaxTrait, func(b *calc.Build, i, v int) { b.Traits[i] = v }, false, &s.traitTip, true),
 				derived([][2]string{
 					{"P.ATQ", fmt.Sprint(r.PATK)}, {"S.ATQM", fmt.Sprint(r.SMATK)}, {"RES", fmt.Sprint(r.RES)},
 					{"MRES", fmt.Sprint(r.MRES)}, {"H.PLUS", fmt.Sprint(r.HPLUS)}, {"C.RATE", fmt.Sprint(r.CRATE)},
@@ -576,4 +616,13 @@ func (a *App) statusBody(gtx C) D {
 		kids = append(kids, T(th, "! "+a.T(w)).C(ColDown).Wrapping().W())
 	}
 	return Col(3, kids...)(gtx)
+}
+
+// tipRows lays attribute effect lines as "label  value" rows of a tooltip.
+func tipRows(th *Theme, lines []view.AttrLine) []layout.Widget {
+	var ws []layout.Widget
+	for _, l := range lines {
+		ws = append(ws, Row(0, Fixed(150, T(th, l.Label).C(ColLabel).W()), T(th, l.Value).W()))
+	}
+	return ws
 }

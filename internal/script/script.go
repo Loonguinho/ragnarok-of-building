@@ -763,7 +763,7 @@ var known = map[string]bool{
 	"bAspd": true, "bAspdRate": true, "bLongAtkRate": true, "bShortAtkRate": true, "bCritAtkRate": true,
 	"bNonCritAtkRate": true, "bPerfectHitRate": true, "bPerfectHitAddRate": true, "bHealPower": true, "bHealPower2": true,
 	"bPAtk": true, "bSMatk": true, "bRes": true, "bMRes": true, "bHPlus": true, "bCRate": true,
-	"bVariableCastrate": true, "bFixedCastrate": true, "bFixedCast": true, "bDelayrate": true,
+	"bVariableCastrate": true, "bCastrate": true, "bFixedCastrate": true, "bFixedCast": true, "bDelayrate": true,
 	"bHPrecovRate": true, "bSPrecovRate": true, "bUseSPrate": true, "bSpeedRate": true, "bSpeedAddRate": true,
 	// The simulator's own: mastery ATK of class passives (not an rAthena bonus;
 	// the generated passives write it, the damage engine adds it after the ATK

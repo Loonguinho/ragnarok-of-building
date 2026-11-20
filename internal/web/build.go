@@ -365,16 +365,31 @@ func (s *Server) handleBuildItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	l := lang(r)
-	slot := r.URL.Query().Get("slot")
-	card := r.URL.Query().Get("card") == "1"
-	job := s.opt.Catalog.Jobs[atoi(r.URL.Query().Get("job"))]
-	q := r.URL.Query().Get("q")
-	// An enchant position of an item the client's enchant list covers
-	// offers only the enchants listed for it.
+	q := r.URL.Query()
+	slot := q.Get("slot")
+	card := q.Get("card") == "1"
+	idx := -1
+	if card && q.Has("idx") {
+		idx = atoi(q.Get("idx"))
+	}
+	out := s.pickItems(slot, card, idx, atoi(q.Get("item")), atoi(q.Get("job")), q.Get("q"), l)
+	// With the build (b=), each result shows how the expected damage changes.
+	var gains map[int]statLine
+	if b, _, _, cardIdx, ok := s.swapRequest(r); ok && slot != "" {
+		gains = s.pickGains(b, slot, out, cardIdx, l)
+	}
+	s.fragment(w, r, "build", "pick_results", map[string]any{"Results": out, "Q": q.Get("q"), "Slot": slot, "Card": card, "Gains": gains})
+}
+
+// pickItems lists the items (or cards, card = true) a slot takes, matching
+// q. idx >= 0 is the card position being picked on item; an enchant
+// position of an item the client's enchant list covers offers only the
+// enchants listed for it.
+func (s *Server) pickItems(slot string, card bool, idx, item, jobID int, q, l string) []itemView {
+	job := s.opt.Catalog.Jobs[jobID]
 	var allowed map[int]bool
-	if card && r.URL.Query().Has("idx") {
-		idx := atoi(r.URL.Query().Get("idx"))
-		if it := s.opt.Catalog.Items[atoi(r.URL.Query().Get("item"))]; it != nil && idx >= it.Slots {
+	if card && idx >= 0 {
+		if it := s.opt.Catalog.Items[item]; it != nil && idx >= it.Slots {
 			if ench, ok := s.opt.Catalog.Enchants[it.ID]; ok {
 				allowed = map[int]bool{}
 				for _, id := range ench[idx] {
@@ -406,12 +421,7 @@ func (s *Server) handleBuildItems(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	// With the build (b=), each result shows how the expected damage changes.
-	var gains map[int]statLine
-	if b, _, _, cardIdx, ok := s.swapRequest(r); ok && slot != "" {
-		gains = s.pickGains(b, slot, out, cardIdx, l)
-	}
-	s.fragment(w, r, "build", "pick_results", map[string]any{"Results": out, "Q": q, "Slot": slot, "Card": card, "Gains": gains})
+	return out
 }
 
 func atoi(s string) int {

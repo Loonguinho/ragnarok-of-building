@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"ragnarok-of-building/internal/gamedata"
 )
 
 // GET /build/randomopts?lang=&item=&pos=: the random options as <option>
@@ -18,41 +20,43 @@ func (s *Server) handleRandomOpts(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "catalog not loaded", http.StatusServiceUnavailable)
 		return
 	}
-	l := lang(r)
-	type opt struct {
-		id, min, max int
-		label        string
-	}
-	var list []opt
-	allowed := c.ItemOpts[atoi(r.URL.Query().Get("item"))].At(atoi(r.URL.Query().Get("pos")))
-	if allowed != nil {
-		for _, a := range allowed {
-			if o := c.RandomOpts[a.ID]; o != nil {
-				list = append(list, opt{a.ID, a.Min, a.Max, o.Label(l, 0)})
-			}
-		}
-	} else {
-		for id, o := range c.RandomOpts {
-			list = append(list, opt{id, 0, 0, o.Label(l, 0)})
-		}
-	}
-	sort.Slice(list, func(i, j int) bool {
-		if list[i].label != list[j].label {
-			return list[i].label < list[j].label
-		}
-		return list[i].id < list[j].id
-	})
+	list := randomOptList(c, atoi(r.URL.Query().Get("item")), atoi(r.URL.Query().Get("pos")), lang(r))
 	var b strings.Builder
 	for _, o := range list {
-		b.WriteString(`<option value="` + strconv.Itoa(o.id) + `"`)
-		label := o.label
-		if o.max > 0 {
-			b.WriteString(` data-min="` + strconv.Itoa(o.min) + `" data-max="` + strconv.Itoa(o.max) + `"`)
-			label += " (" + strconv.Itoa(o.min) + "–" + strconv.Itoa(o.max) + ")"
+		b.WriteString(`<option value="` + strconv.Itoa(o.ID) + `"`)
+		label := o.Label
+		if o.Max > 0 {
+			b.WriteString(` data-min="` + strconv.Itoa(o.Min) + `" data-max="` + strconv.Itoa(o.Max) + `"`)
+			label += " (" + strconv.Itoa(o.Min) + "–" + strconv.Itoa(o.Max) + ")"
 		}
 		b.WriteString(">" + template.HTMLEscapeString(label) + "</option>")
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	w.Write([]byte(b.String()))
+}
+
+// randomOptList is the random options an item position can roll, sorted by
+// name, with their value range when the item's options are known; every
+// option otherwise.
+func randomOptList(c *gamedata.Catalog, item, pos int, l string) []optLine {
+	var list []optLine
+	if allowed := c.ItemOpts[item].At(pos); allowed != nil {
+		for _, a := range allowed {
+			if o := c.RandomOpts[a.ID]; o != nil {
+				list = append(list, optLine{ID: a.ID, Min: a.Min, Max: a.Max, Label: o.Label(l, 0)})
+			}
+		}
+	} else {
+		for id, o := range c.RandomOpts {
+			list = append(list, optLine{ID: id, Label: o.Label(l, 0)})
+		}
+	}
+	sort.Slice(list, func(i, j int) bool {
+		if list[i].Label != list[j].Label {
+			return list[i].Label < list[j].Label
+		}
+		return list[i].ID < list[j].ID
+	})
+	return list
 }

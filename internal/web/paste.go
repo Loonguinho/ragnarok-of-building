@@ -46,33 +46,41 @@ func (s *Server) handlePasteCreate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid build code", http.StatusBadRequest)
 		return
 	}
-	text := strings.TrimSpace(r.FormValue("text"))
+	link, err := s.createPaste(r.Context(), code, r.FormValue("text"))
+	if err != nil {
+		s.opt.Log.Warn("paste", "err", err)
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	writeJSON(w, map[string]string{"url": link})
+}
+
+// createPaste stores text and the build code on the paste service and
+// returns the paste's link.
+func (s *Server) createPaste(ctx context.Context, code, text string) (string, error) {
+	text = strings.TrimSpace(text)
 	if len(text) > maxPasteText {
 		text = text[:maxPasteText]
 	}
 	// The code always goes in, on its own line, so Import finds it.
 	body := text + "\n\n" + code + "\n"
-	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, s.pasteBase()+"/", strings.NewReader(body))
 	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
 	req.Header.Set("User-Agent", "ragnarok-of-building")
 	res, err := pasteHTTP.Do(req)
 	if err != nil {
-		s.opt.Log.Warn("paste", "err", err)
-		http.Error(w, "paste service unreachable", http.StatusBadGateway)
-		return
+		return "", fmt.Errorf("paste service unreachable: %w", err)
 	}
 	defer res.Body.Close()
 	out, _ := io.ReadAll(io.LimitReader(res.Body, 1024))
 	link := strings.TrimSpace(string(out))
 	// 201: stored whole (206 would be a truncated paste: useless).
 	if res.StatusCode != http.StatusCreated || !s.isPasteLink(link) {
-		s.opt.Log.Warn("paste", "status", res.StatusCode, "body", link)
-		http.Error(w, "paste service refused", http.StatusBadGateway)
-		return
+		return "", fmt.Errorf("paste service refused (%d)", res.StatusCode)
 	}
-	writeJSON(w, map[string]string{"url": link})
+	return link, nil
 }
 
 // isPasteLink reports whether u is a paste on the paste service.
@@ -106,32 +114,39 @@ func (s *Server) pasteRawURL(link string) (string, error) {
 // handlePasteRead (GET u=paste link) answers {"code": ...}: the build code
 // found in the paste.
 func (s *Server) handlePasteRead(w http.ResponseWriter, r *http.Request) {
-	raw, err := s.pasteRawURL(r.URL.Query().Get("u"))
+	code, status, err := s.readPaste(r.Context(), r.URL.Query().Get("u"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), status)
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	writeJSON(w, map[string]string{"code": code})
+}
+
+// readPaste fetches a paste and returns the build code in it; on error,
+// the HTTP status that fits.
+func (s *Server) readPaste(ctx context.Context, link string) (string, int, error) {
+	raw, err := s.pasteRawURL(link)
+	if err != nil {
+		return "", http.StatusBadRequest, err
+	}
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, raw, nil)
 	req.Header.Set("User-Agent", "ragnarok-of-building")
 	res, err := pasteHTTP.Do(req)
 	if err != nil {
-		http.Error(w, "paste service unreachable", http.StatusBadGateway)
-		return
+		return "", http.StatusBadGateway, errors.New("paste service unreachable")
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		http.Error(w, fmt.Sprintf("paste not found (%d)", res.StatusCode), http.StatusNotFound)
-		return
+		return "", http.StatusNotFound, fmt.Errorf("paste not found (%d)", res.StatusCode)
 	}
 	text, _ := io.ReadAll(io.LimitReader(res.Body, maxBuildBody*2))
 	code := findBuildCode(text)
 	if code == "" {
-		http.Error(w, "no build code in the paste", http.StatusUnprocessableEntity)
-		return
+		return "", http.StatusUnprocessableEntity, errors.New("no build code in the paste")
 	}
-	writeJSON(w, map[string]string{"code": code})
+	return code, 0, nil
 }
 
 // findBuildCode returns the first valid build code in a text: from a

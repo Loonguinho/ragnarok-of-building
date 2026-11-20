@@ -101,16 +101,11 @@ func (s *Server) handleImport(w http.ResponseWriter, r *http.Request) {
 		fail(http.StatusRequestEntityTooLarge, tr(lang(r), "Arquivo grande demais (máx. 16 MB)."))
 		return
 	}
-	snap, err := replay.Decode(buf)
+	b, notes, dv, err := s.importReplay(buf, lang(r))
 	if err != nil {
 		s.opt.Log.Info("replay import rejected", "err", err)
 		fail(http.StatusUnprocessableEntity, tr(lang(r), "Não consegui ler este replay. Ele é um .rrf gravado pelo cliente do RO LATAM?"))
 		return
-	}
-	b, notes := replay.ToBuild(snap, s.opt.Catalog)
-	notes = append(notes, calc.Normalize(&b, s.opt.Catalog)...)
-	for i := range notes {
-		notes[i] = tr(lang(r), notes[i])
 	}
 	jobName := ""
 	if j := s.opt.Catalog.Jobs[b.Job]; j != nil {
@@ -125,7 +120,7 @@ func (s *Server) handleImport(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	// The damage window, only when the recording has damage dealt to monsters.
-	if dv := replayDamageView(snap, s.opt.Catalog, lang(r)); dv != nil {
+	if dv != nil {
 		if html, err := s.fragmentString(lang(r), "build", "replay_damage", dv); err == nil {
 			out["damage"] = html
 		} else {
@@ -134,6 +129,21 @@ func (s *Server) handleImport(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(out)
+}
+
+// importReplay reads a .rrf: the build it shows (normalized), notes for the
+// player (translated) and the damage window (nil without damage data).
+func (s *Server) importReplay(buf []byte, l string) (calc.Build, []string, *rdmgView, error) {
+	snap, err := replay.Decode(buf)
+	if err != nil {
+		return calc.Build{}, nil, nil, err
+	}
+	b, notes := replay.ToBuild(snap, s.opt.Catalog)
+	notes = append(notes, calc.Normalize(&b, s.opt.Catalog)...)
+	for i := range notes {
+		notes[i] = tr(l, notes[i])
+	}
+	return b, notes, replayDamageView(snap, s.opt.Catalog, l), nil
 }
 
 // listedTiers are the class tiers offered in class lists: 3rd and 4th

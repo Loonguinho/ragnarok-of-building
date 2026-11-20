@@ -1,6 +1,8 @@
 package web
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -52,43 +54,48 @@ func (s *Server) handleImgCache(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	c := s.imgs
-	file := filepath.Join(c.dir, filepath.FromSlash(rel))
-	serve := func() bool {
-		f, err := os.Open(file)
-		if err != nil {
-			return false
-		}
-		defer f.Close()
-		w.Header().Set("Content-Type", "image/png")
-		w.Header().Set("Cache-Control", "public, max-age=604800")
-		io.Copy(w, f)
-		return true
-	}
-	if serve() {
-		return
-	}
-	mu, _ := c.locks.LoadOrStore(rel, &sync.Mutex{})
-	mu.(*sync.Mutex).Lock()
-	defer mu.(*sync.Mutex).Unlock()
-	if serve() { // fetched by another request meanwhile
-		return
-	}
-	if st, err := os.Stat(file + ".miss"); err == nil && time.Since(st.ModTime()) < missTTL {
-		http.NotFound(w, r)
-		return
-	}
-	if err := c.fetch(r, rel, file); err != nil {
+	file, err := s.imgs.get(r.Context(), rel)
+	if err != nil {
 		w.Header().Set("Cache-Control", "no-store")
 		http.NotFound(w, r)
 		return
 	}
-	serve()
+	f, err := os.Open(file)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer f.Close()
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "public, max-age=604800")
+	io.Copy(w, f)
+}
+
+// get returns the cached file of an icon, fetching it once when missing.
+func (c *imgCache) get(ctx context.Context, rel string) (string, error) {
+	file := filepath.Join(c.dir, filepath.FromSlash(rel))
+	have := func() bool { _, err := os.Stat(file); return err == nil }
+	if have() {
+		return file, nil
+	}
+	mu, _ := c.locks.LoadOrStore(rel, &sync.Mutex{})
+	mu.(*sync.Mutex).Lock()
+	defer mu.(*sync.Mutex).Unlock()
+	if have() { // fetched by another request meanwhile
+		return file, nil
+	}
+	if st, err := os.Stat(file + ".miss"); err == nil && time.Since(st.ModTime()) < missTTL {
+		return "", os.ErrNotExist
+	}
+	if err := c.fetch(ctx, rel, file); err != nil {
+		return "", err
+	}
+	return file, nil
 }
 
 // fetch downloads one icon into file (only PNG/image responses, size-capped).
-func (c *imgCache) fetch(r *http.Request, rel, file string) error {
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, c.origin+"/"+rel, nil)
+func (c *imgCache) fetch(ctx context.Context, rel, file string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.origin+"/"+rel, nil)
 	if err != nil {
 		return err
 	}
@@ -118,3 +125,25 @@ func (c *imgCache) fetch(r *http.Request, rel, file string) error {
 	}
 	return os.Rename(tmp, file)
 }
+
+// IconCache is the icon cache for the native app: the same folder and
+// rules as the web app's /img/dp.
+type IconCache struct{ c *imgCache }
+
+// NewIconCache keeps icons in dir.
+func NewIconCache(dir string) *IconCache { return &IconCache{newImgCache(dir)} }
+
+// Get returns the PNG file of an icon path (ItemIcon, SkillIcon...),
+// downloading it once when missing.
+func (ic *IconCache) Get(ctx context.Context, rel string) (string, error) {
+	if !dpImgPath.MatchString(rel) {
+		return "", os.ErrNotExist
+	}
+	return ic.c.get(ctx, rel)
+}
+
+// Icon paths, as Divine Pride's static site has them.
+func ItemIcon(id int) string    { return fmt.Sprintf("images/items/item/%d.png", id) }
+func SkillIcon(id int) string   { return fmt.Sprintf("images/skill/%d.png", id) }
+func MonsterIcon(id int) string { return fmt.Sprintf("images/mobs/png/%d.png", id) }
+func JobIcon(id int) string     { return fmt.Sprintf("images/jobs/icon_jobs_%d.png", id) }

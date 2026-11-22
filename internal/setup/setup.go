@@ -45,6 +45,7 @@ var RathenaFiles = []string{
 	"db/re/laphine_upgrade.yml",
 	"db/re/item_combos.yml",
 	"db/re/item_db_usable.yml",
+	"db/re/pet_db.yml",
 	"src/common/mmo.hpp", // e_job enum: job name -> ID
 }
 

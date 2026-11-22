@@ -15,6 +15,7 @@ type buffsView struct {
 	Active   []buffItem   // class buffs and formula states (data-atk-state)
 	Passives []learnItem  // passives with bonuses, at the learned level
 	Groups   []buffGroup  // party buffs, consumables, other
+	Pet      petView
 }
 
 type buffGroup struct {

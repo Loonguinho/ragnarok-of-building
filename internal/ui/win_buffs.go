@@ -18,9 +18,9 @@ import (
 // ---- Buffs e Consumíveis (win-buffs) ----
 
 type buffsState struct {
-	q      Input
-	rows   map[string]*buffRow
-	groups map[string]*Details
+	q       Input
+	rows    map[string]*buffRow
+	groups  map[string]*Details
 }
 
 type buffRow struct {
@@ -311,3 +311,4 @@ func (a *App) buffItemRow(it view.BuffItem, b calc.Build, stateExcl, buffExcl ma
 		return d
 	}
 }
+

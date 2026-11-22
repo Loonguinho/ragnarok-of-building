@@ -73,7 +73,23 @@ func ToBuild(s *Snapshot, c *gamedata.Catalog) (calc.Build, []string) {
 	for id, lv := range s.Skills {
 		b.Skills[id] = lv
 	}
-	if n := applyStatuses(&b, s, c); n > 0 {
+	if s.Pet != nil {
+		found := false
+		for egg, p := range c.Pets {
+			if s.Pet.Mob != 0 && p.Mob == s.Pet.Mob {
+				b.Pet, b.PetIntimacy, found = egg, s.Pet.Intimacy, true
+				break
+			}
+		}
+		if !found {
+			notes = append(notes, "O pet da gravação não foi reconhecido: escolha-o na janela de Buffs.")
+		}
+	}
+	n := applyStatuses(&b, s, c)
+	if b.Atk.Element == "Poison" {
+		notes = append(notes, "O ataque ficou com elemento Veneno, como estava no maior golpe da gravação: contra monstros de Veneno, troque o elemento.")
+	}
+	if n > 0 {
 		notes = append(notes, fmt.Sprintf("%d buff(s) ativos no maior golpe da gravação foram ligados (níveis máximos quando o nível não vem na gravação). Efeitos no alvo, como a Profanação, não vêm na gravação.", n))
 	}
 	return b, notes

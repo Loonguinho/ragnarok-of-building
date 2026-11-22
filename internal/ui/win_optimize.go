@@ -47,7 +47,7 @@ func (a *App) runOptimizer() {
 		return
 	}
 	s.busy = true
-	b, lang := a.b, a.Lang
+	b, lang := a.b.Clone(), a.Lang
 	o := view.OptOptions{Goal: s.goalVal, Items: !s.noItems, Cards: !s.noCards, Enchants: !s.noEnch, Refine: s.refine, Grade: s.grade}
 	a.mu.Unlock()
 	go func() {

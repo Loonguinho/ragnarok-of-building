@@ -11,6 +11,7 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/unit"
 	"gioui.org/widget"
 
 	"ragnarok-of-building/internal/calc"
@@ -24,6 +25,8 @@ type equipState struct {
 	tabs  Tabs
 	tab   int
 	slots map[string]*widget.Clickable
+	// The pet under the character.
+	pet, petTier Select
 	at    map[string]*Anchor // where each slot is on the desk
 }
 
@@ -104,8 +107,13 @@ func (a *App) equipBody(gtx C) D {
 					return Col(4, ws...)(gtx)
 				}
 			}
+			// The middle: the character, and its pet under it (Equip tab).
+			midW := unit.Dp(96)
+			if s.tab == 0 {
+				midW = 150
+			}
 			sprite := func(gtx C) D {
-				sz := image.Pt(gtx.Dp(96), max(gtx.Dp(150), gtx.Constraints.Min.Y))
+				sz := image.Pt(gtx.Dp(midW), gtx.Dp(150))
 				Fill(gtx, image.Rectangle{Max: sz}, rgb(0xfafafa))
 				Border(gtx, image.Rectangle{Max: sz}, ColSep, 1, 0)
 				g := gtx
@@ -116,7 +124,13 @@ func (a *App) equipBody(gtx C) D {
 			return layout.Flex{}.Layout(gtx,
 				layout.Flexed(1, col("L")),
 				layout.Rigid(Gap(6, 0)),
-				layout.Rigid(sprite),
+				layout.Rigid(func(gtx C) D {
+					if s.tab != 0 {
+						return sprite(gtx)
+					}
+					gtx.Constraints.Max.X = gtx.Dp(midW)
+					return Col(6, sprite, a.petBlock(v.Buffs.Pet, midW))(gtx)
+				}),
 				layout.Rigid(Gap(6, 0)),
 				layout.Flexed(1, col("R")),
 			)
@@ -233,7 +247,7 @@ func (a *App) search(delay time.Duration) {
 	s := &a.slot
 	a.mu.Lock()
 	s.seq++
-	seq, slot, card, q, b, lang := s.seq, s.key, s.card, s.q.Text(), a.b, a.Lang
+	seq, slot, card, q, b, lang := s.seq, s.key, s.card, s.q.Text(), a.b.Clone(), a.Lang
 	s.pending = true
 	a.mu.Unlock()
 	if s.timer != nil {
@@ -953,7 +967,7 @@ func (a *App) runBest() {
 	s := &a.slot
 	a.mu.Lock()
 	s.bestSeq++
-	seq, slot, b, lang := s.bestSeq, s.key, a.b, a.Lang
+	seq, slot, b, lang := s.bestSeq, s.key, a.b.Clone(), a.Lang
 	refine, grade := s.bestRefine, s.bestGrade
 	s.bestOn, s.bestRunning, s.best = true, true, nil
 	a.mu.Unlock()
@@ -988,4 +1002,72 @@ func (a *App) bestStatus() string {
 		msg += " " + a.T("(parou no limite de tempo)")
 	}
 	return msg
+}
+
+// petBlock is the pet under the character: the pet (by its egg, with the
+// item tooltip), its intimacy and what it gives.
+func (a *App) petBlock(pv view.PetView, w unit.Dp) layout.Widget {
+	th, s := a.Th, &a.equip
+	return func(gtx C) D {
+		opts := []Option{{"0", a.T("Nenhum pet")}}
+		for _, o := range pv.Options {
+			opts = append(opts, Option{o[0], o[1]})
+		}
+		s.pet.Tip = func(v string) layout.Widget {
+			id, _ := strconv.Atoi(v)
+			if id == 0 {
+				return nil
+			}
+			return func(gtx C) D { return a.itemTip(gtx, id, nil) }
+		}
+		ws := []layout.Widget{
+			func(gtx C) D {
+				return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+					layout.Rigid(func(gtx C) D {
+						if pv.Egg == 0 {
+							return D{}
+						}
+						return a.Icons.Icon(gtx, view.ItemIcon(pv.Egg), 20)
+					}),
+					layout.Rigid(Gap(4, 0)),
+					layout.Rigid(B(th, a.T("Pet")).C(ColTitleText).W()),
+				)
+			},
+			func(gtx C) D {
+				d, val, ok := s.pet.Layout(gtx, th, a.Desk, opts, strconv.Itoa(pv.Egg), w)
+				if ok {
+					egg, _ := strconv.Atoi(val)
+					a.Edit(func(b *calc.Build) {
+						if b.Pet == 0 || egg == 0 {
+							b.PetIntimacy = 1000 // a new pet starts loyal
+						}
+						b.Pet = egg
+					})
+				}
+				return d
+			},
+		}
+		if pv.Egg > 0 {
+			tiers := make([]Option, 0, len(view.PetTiers))
+			for _, t := range view.PetTiers {
+				tiers = append(tiers, Option{t[0], a.T(t[1])})
+			}
+			gives := pv.Gives
+			if gives == "" {
+				gives = a.T("Nada nesta intimidade.")
+			}
+			ws = append(ws,
+				func(gtx C) D {
+					d, val, ok := s.petTier.Layout(gtx, th, a.Desk, tiers, pv.Tier, w)
+					if ok {
+						x, _ := strconv.Atoi(val)
+						a.Edit(func(b *calc.Build) { b.PetIntimacy = x })
+					}
+					return d
+				},
+				T(th, gives).Sz(SmallText).C(ColMuted).Wrapping().W(),
+			)
+		}
+		return Col(3, ws...)(gtx)
+	}
 }

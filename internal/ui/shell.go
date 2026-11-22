@@ -29,6 +29,8 @@ type shellState struct {
 	target widget.Clickable
 	cmds   [5]widget.Clickable
 	midFor *Window // the tab the middle scroll is at
+	// weaponEle: the summary's "use the weapon's element" button.
+	weaponEle widget.Clickable
 }
 
 type shellTab struct {
@@ -360,6 +362,9 @@ func (a *App) resumoBody(gtx C) D {
 				Row(4, label("Acerto"), B(th, strconv.FormatFloat(dm.HitChance, 'f', 0, 64)+"%").W()),
 			)
 			ws = append(ws, Row(14, extra...))
+			if w := a.elementWarning(d); w != nil {
+				ws = append(ws, w)
+			}
 			return Col(2, ws...)(gtx)
 		})
 	}
@@ -436,4 +441,26 @@ func (a *App) resumoBody(gtx C) D {
 		func(gtx C) D { return card(gtx, twoCols) },
 		func(gtx C) D { return card(gtx, extras) },
 	)(gtx)
+}
+
+// elementWarning is shown when the attack's forced element (an endow, often
+// imported from a replay against another monster) does no weapon damage to
+// the target, with a button back to the weapon's element.
+func (a *App) elementWarning(d view.DamageView) layout.Widget {
+	b := a.View().Build
+	if d.Target == nil || b.Atk.Element == "" || d.Dmg.EleAtkPct > 0 {
+		return nil
+	}
+	th := a.Th
+	msg := fmt.Sprintf(a.T("O ataque está com elemento %s, que não causa dano em %s (%s %d)."),
+		a.T(view.ElementName(b.Atk.Element)), d.Target.NameIn(a.Lang), a.T(view.ElementName(d.Target.Element)), d.Target.ElementLv)
+	return func(gtx C) D {
+		if a.shell.weaponEle.Clicked(gtx) {
+			a.Edit(func(b *calc.Build) { b.Atk.Element = "" })
+		}
+		return Col(4,
+			T(th, msg).C(ColDown).Wrapping().W(),
+			func(gtx C) D { return Button{Label: a.T("Usar o elemento da arma")}.Layout(gtx, th, &a.shell.weaponEle) },
+		)(gtx)
+	}
 }

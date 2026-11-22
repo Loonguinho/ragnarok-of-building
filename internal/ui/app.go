@@ -187,11 +187,13 @@ func (a *App) makeWindows() {
 
 func (a *App) T(s string) string { return view.Tr(a.Lang, s) }
 
-// Build returns the build being edited.
+// Build returns a copy of the build being edited: background work (the
+// recompute, tooltips' comparisons) writes to the maps of the builds it is
+// given, so the window's own never goes out.
 func (a *App) Build() calc.Build {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	return a.b
+	return a.b.Clone()
 }
 
 // SetBuild replaces the build and recomputes every window in the
@@ -200,14 +202,14 @@ func (a *App) SetBuild(b calc.Build) {
 	a.mu.Lock()
 	a.rev++
 	rev := a.rev
-	a.b = b
+	a.b = b.Clone()
 	lang := a.Lang
 	a.mu.Unlock()
 	go func() {
 		v := a.V.Build(b, lang)
 		a.mu.Lock()
 		if rev == a.rev {
-			a.view, a.b, a.ready = v, v.Build, true
+			a.view, a.b, a.ready = v, v.Build.Clone(), true
 			for _, n := range v.Notes {
 				a.chat = append(a.chat, chatLine{S: n})
 			}

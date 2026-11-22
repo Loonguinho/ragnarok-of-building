@@ -221,7 +221,14 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 					n = max(n, min(k+1, 4))
 				}
 				if calc.IsCostume(info.Key) {
-					n = 1 // one enchant stone
+					// One enchant stone, up to the position it sits in.
+					n = 1
+					for i := 3; i > 0; i-- {
+						if e.Cards[i] != 0 {
+							n = i + 1
+							break
+						}
+					}
 				}
 				sv.CardSlots = it.Slots
 				for i := 0; i < n; i++ {
@@ -280,6 +287,7 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 	}
 	v.Buffs = buffsWindow(b, c, l)
 	v.Buffs.Items = itemEffectRows(r, c, l)
+	v.Buffs.Pet = petWindow(b, r, c, l)
 	v.HPPct, v.SPPct = 100, 100
 	v.D = s.damageView(b, r, l)
 	v.D.Table = s.skillTable(b, r, l)

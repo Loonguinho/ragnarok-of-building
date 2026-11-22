@@ -40,6 +40,13 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 			c.MonsterStubs[id] = m.Aegis
 		}
 	}
+	// Pets whose egg the client has.
+	c.Pets = map[int]*gamedata.Pet{}
+	for egg, p := range db.Pets {
+		if c.Items[egg] != nil {
+			c.Pets[egg] = &gamedata.Pet{Mob: p.Mob, Egg: egg, Script: p.Script}
+		}
+	}
 	if db.Commit != "" {
 		c.Source += " + rAthena " + db.Commit[:min(8, len(db.Commit))]
 	}

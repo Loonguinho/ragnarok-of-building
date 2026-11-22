@@ -32,6 +32,14 @@ type Context struct {
 	// BaseJob (the line's 2nd class), BaseClass (its 1st), Upper (1 trans, 2 baby).
 	EAClass, BaseJob, BaseClass, Upper int
 	Skills                             map[string]int // getskilllv("CODE"): learned levels by code
+	PetIntimacy                        int            // getpetinfo(PETINFO_INTIMATE): 0-1000, pet scripts
+}
+
+// Pet intimacy steps (rAthena's PET_INTIMATE_*): a pet script's bonuses
+// change at each.
+var PetIntimacySteps = map[string]int{
+	"PET_INTIMATE_NONE": 0, "PET_INTIMATE_AWKWARD": 1, "PET_INTIMATE_SHY": 100,
+	"PET_INTIMATE_NEUTRAL": 250, "PET_INTIMATE_CORDIAL": 750, "PET_INTIMATE_LOYAL": 900, "PET_INTIMATE_MAX": 1000,
 }
 
 // EAJL flags and EAJ masks of eaclass() (the simulator's encoding, consistent
@@ -634,6 +642,16 @@ func (p *parser) unary() int {
 				return 0
 			}
 			return p.ctx.Skills[arg]
+		case t.s == "getpetinfo":
+			if a := p.rawArgs(); len(a) == 1 && a[0] == "PETINFO_INTIMATE" {
+				return p.ctx.PetIntimacy
+			}
+			p.bad = true
+			return 0
+		case strings.HasPrefix(t.s, "PET_INTIMATE_"):
+			if v, ok := PetIntimacySteps[t.s]; ok {
+				return v
+			}
 		case t.s == "getrefine":
 			p.args()
 			return p.ctx.Refine
@@ -769,7 +787,7 @@ var known = map[string]bool{
 	// the generated passives write it, the damage engine adds it after the ATK
 	// multipliers).
 	"bMasteryAtk": true,
-	"bNoSizeFix": true, "bCriticalLong": true,
+	"bNoSizeFix":  true, "bCriticalLong": true,
 	"bCritTenths": true, // CRIT in tenths (skill tables write "+12,5")
 	"bAspdFixed":  true, // ASPD potions and quicken skills: × AGI ÷ 200 before the ASPD %
 }

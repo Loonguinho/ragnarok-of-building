@@ -6,6 +6,7 @@ package calc
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"slices"
 	"sort"
@@ -93,6 +94,17 @@ type Build struct {
 	Target int              `json:"m,omitempty"` // monster ID for the damage window
 	Atk    AttackChoice     `json:"a,omitempty"`
 	Buffs  map[string]int   `json:"bf,omitempty"` // BuffDef.Key -> level/value
+	// Pet: its egg item ID (0 = none) and intimacy, 0-1000.
+	Pet         int `json:"p,omitempty"`
+	PetIntimacy int `json:"pi,omitempty"`
+}
+
+// Clone copies the build's maps (Normalize and Compute write to them), so
+// the copy can go to another goroutine.
+func (b Build) Clone() Build {
+	b.Equip, b.Skills, b.Buffs = maps.Clone(b.Equip), maps.Clone(b.Skills), maps.Clone(b.Buffs)
+	b.Atk.States = maps.Clone(b.Atk.States)
+	return b
 }
 
 // AttackChoice is what the damage window uses against the target.
@@ -167,7 +179,9 @@ type Result struct {
 	Extra                map[string]int // bonus2..5 effects (damage modifiers), for display/damage
 	SkippedScriptEffects int            // bonuses the evaluator could not apply
 	ItemEffects          []ItemEffect   // triggered item bonuses the build can turn on
-	Warnings             []string
+	// PetBonus and PetExtra: what the pet gives (already in Bonuses/Extra).
+	PetBonus, PetExtra map[string]int
+	Warnings           []string
 }
 
 // Normalize clamps a build to the job's limits so the calculation and the UI
@@ -240,11 +254,15 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 			}
 		}
 		e.Opts = opts
-		// A costume holds one stone, of its own slot.
+		// A costume holds enchant stones: those of its own slot, or the
+		// older enchants that name no slot (Fixa, Ganância...). LATAM keeps
+		// the stone in a slot's own position (the 3rd on a lower costume),
+		// so any position counts.
 		if IsCostume(slot) {
 			e.Refine, e.Grade, e.Opts = 0, 0, nil
 			for i := range e.Cards {
-				if card := c.Items[e.Cards[i]]; i > 0 || card == nil || !CardFits(card, slot) {
+				card := c.Items[e.Cards[i]]
+				if card == nil || !(CardFits(card, slot) || card.Type == "Card" && card.SubType == "Enchant" && len(card.Locations) == 0) {
 					e.Cards[i] = 0
 				}
 			}
@@ -275,6 +293,10 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 		delete(b.Equip, Shield)
 	}
 	normalizeSkills(b, c)
+	if c.Pets[b.Pet] == nil {
+		b.Pet, b.PetIntimacy = 0, 0
+	}
+	b.PetIntimacy = clamp(b.PetIntimacy, 0, 1000)
 	if c.Monster(b.Target) == nil {
 		b.Target = 0
 	}
@@ -668,6 +690,14 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			addAll(bonus, ef.Bonus)
 			addAll(extra, ef.Extra)
 		}
+	}
+	if p := c.Pets[b.Pet]; p != nil {
+		ctx := sbase
+		ctx.PetIntimacy = b.PetIntimacy
+		res := script.Eval(p.Script, ctx)
+		r.PetBonus, r.PetExtra = res.Bonus, res.Extra
+		addAll(bonus, res.Bonus)
+		addAll(extra, res.Extra)
 	}
 	var baseJob [6]int
 	for i := range baseJob {

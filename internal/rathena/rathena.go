@@ -114,6 +114,8 @@ type DB struct {
 	Combos []Combo
 	// Aegis maps AegisName to item ID (equipment and etc items).
 	Aegis map[string]int
+	// Pets by egg item ID (pet_db.yml).
+	Pets map[int]*Pet
 
 	optDrops [][2]string // (item AegisName, RandomOptionGroup) from monster drops
 }
@@ -275,6 +277,9 @@ func Load(dir string) (*DB, error) {
 		return nil, err
 	}
 	if err := db.loadCombos(filepath.Join(re, "item_combos.yml"), aegis); err != nil {
+		return nil, err
+	}
+	if err := db.loadPets(filepath.Join(re, "pet_db.yml"), aegis); err != nil {
 		return nil, err
 	}
 	return db, nil

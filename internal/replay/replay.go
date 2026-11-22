@@ -33,6 +33,7 @@ const (
 	ctReplayData     = 2
 	ctSession        = 3
 	ctItems          = 8
+	ctCompanions     = 9 // homunculus, mercenary, pet (53xx), elemental: one field per chunk
 	ctInitialPackets = 14
 	ctInitialObjects = 15 // 0x0857: objects in view when the recording started
 	ctEfstList       = 18 // statuses up when the recording started: EFST id u32 first
@@ -64,9 +65,21 @@ type Snapshot struct {
 	// Client status (EFST) ids up on the character at its biggest hit on a
 	// monster (at the end of the recording when it hit none).
 	Statuses []int
+	// The pet out when the recording started; nil when none.
+	Pet *Pet
 	// Damage dealt to monsters by each character in the recording (the
 	// recording one first); empty when none.
 	Damage []*DamageSummary
+}
+
+// Pet is the recording character's pet, from the companions container:
+// chunk 5301 its ID, 5305 its monster (0xffffffff when off screen), 5308
+// intimacy (0-1000). Intimacy is in no packet, only here.
+// rrfparser: extractPet.
+type Pet struct {
+	ID       int // the pet's game object ID
+	Mob      int // monster ID; 0 when unknown
+	Intimacy int
 }
 
 type chunk struct {
@@ -106,6 +119,7 @@ func Decode(buf []byte) (s *Snapshot, err error) {
 	if tableOffset+containerCount*descriptorBytes > len(buf) {
 		return nil, errors.New("replay: truncated container table")
 	}
+	var companions []chunk
 	var session, items, initial, replayData, objects, efst []chunk
 	var stream [][]byte
 	for i := 0; i < containerCount; i++ {
@@ -131,6 +145,8 @@ func Decode(buf []byte) (s *Snapshot, err error) {
 			session = generic(body, declared, k1, k2)
 		case ctItems:
 			items = generic(body, declared, k1, k2)
+		case ctCompanions:
+			companions = generic(body, declared, k1, k2)
 		case ctInitialPackets:
 			initial = generic(body, declared, k1, k2)
 		case ctReplayData:
@@ -159,6 +175,13 @@ func Decode(buf []byte) (s *Snapshot, err error) {
 	}
 	if s.Job == 0 && s.BaseLv == 0 {
 		return nil, errors.New("replay: no character snapshot in this file")
+	}
+
+	if id := u32(companions, 5301); id != 0 {
+		s.Pet = &Pet{ID: id, Intimacy: u32(companions, 5308)}
+		if m := u32(companions, 5305); m > 0 && m < 1<<24 {
+			s.Pet.Mob = m
+		}
 	}
 
 	worn := false // the worn-gear chunk (4601) was there

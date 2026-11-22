@@ -269,6 +269,9 @@ type Catalog struct {
 	// Enchants[item][card index] = enchant item IDs the item accepts there
 	// (client enchant list). Items missing here have no known enchant data.
 	Enchants map[int]map[int][]int `json:"enchants,omitempty"`
+	// Pets by egg item ID (rAthena pet_db.yml): the monster and the bonus
+	// script, whose tiers depend on intimacy (0-1000).
+	Pets map[int]*Pet `json:"pets,omitempty"`
 	// MonsterStubs are monsters rAthena knows only by ID (ID -> AegisName);
 	// their stats are fetched on demand (Divine Pride) and kept with AddMonster.
 	MonsterStubs map[int]string `json:"monsterStubs,omitempty"`
@@ -442,4 +445,12 @@ func (s *Skill) RatioAt(lv int) (int, bool) {
 		}
 	}
 	return 0, false
+}
+
+// Pet is a pet: its monster, its egg and the bonus script it gives its owner
+// (getpetinfo(PETINFO_INTIMATE) picks the tier).
+type Pet struct {
+	Mob    int    `json:"mob"`
+	Egg    int    `json:"egg"`
+	Script string `json:"script"`
 }

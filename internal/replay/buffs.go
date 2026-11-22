@@ -45,6 +45,7 @@ var efstStates = map[int]struct {
 const (
 	efstConcentration   = 3   // Concentrar, at the learned level
 	efstPoisoningWeapon = 341 // Aplicar Toxina: the weapon takes the poison element
+	efstEnchantPoison   = 6   // Encantar com Veneno (AS_ENCHANTPOISON): poison endow
 )
 
 // applyStatuses turns the recording's statuses into buffs and attack states
@@ -91,7 +92,7 @@ func applyStatuses(b *calc.Build, s *Snapshot, c *gamedata.Catalog) int {
 				b.Buffs["concentration"] = lv
 				n++
 			}
-		case efstPoisoningWeapon:
+		case efstPoisoningWeapon, efstEnchantPoison:
 			b.Atk.Element = "Poison"
 			n++
 		}

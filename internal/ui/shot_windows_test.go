@@ -53,6 +53,11 @@ func TestShots(t *testing.T) {
 	a.SetBuild(a.V.NewBuild(4252))
 	h.waitReady()
 	h.shot("01-start")
+	a.Edit(func(b *calc.Build) { b.Pet, b.PetIntimacy = 9121, 850 }) // Orc Herói, Cordial
+	h.waitReady()
+	h.shot("01-pet")
+	a.Edit(func(b *calc.Build) { b.Pet, b.PetIntimacy = 0, 0 })
+	h.waitReady()
 	a.openSlot(calc.Weapon)
 	h.waitSearch()
 	h.shot("02-slot-weapon")

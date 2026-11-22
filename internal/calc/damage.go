@@ -34,6 +34,7 @@ type DamageResult struct {
 	Expected      float64 // average per use counting misses and crits
 	HitsToKill    int     // uses to kill at the average normal damage
 	Element       string
+	EleAtkPct     int     // weapon ATK % of the attack's element on the target (0 = no damage)
 	Ratio         float64 // skill % actually used
 	Hits          int
 	Steps         []Step
@@ -128,6 +129,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	edpPoison := max(0, attr("Poison"))
 	// Negative values (healing) are treated as no damage.
 	eleStatus, eleAtk := max(0, attr(statusEle)), max(0, attr(ele))
+	d.EleAtkPct = eleAtk
 	sizePct := 100
 	if r.Bonuses["bNoSizeFix"] > 0 {
 		// battle_calc_sizefix: no_sizefix (Carta Drake...) skips the size penalty.

@@ -25,6 +25,7 @@ type (
 	BuffsView    = buffsView
 	BuffGroup    = buffGroup
 	BuffItem     = buffItem
+	PetView      = petView
 	EffectItem   = effectItem
 	LearnItem    = learnItem
 	JobOption    = jobOption
@@ -220,6 +221,14 @@ func DecodeBuild(code string) (calc.Build, bool) { return decodeBuild(code) }
 
 // Tr translates an interface text (Portuguese key) to the language l.
 func Tr(l, s string) string { return tr(l, s) }
+
+// ElementName is an element's Portuguese name (Poison -> Veneno).
+func ElementName(e string) string {
+	if n, ok := elementPT[e]; ok {
+		return n
+	}
+	return e
+}
 
 // FmtInt formats with the simulator's thousands separator.
 func FmtInt(n int64) string { return fmtInt(n) }

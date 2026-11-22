@@ -257,6 +257,9 @@ func Load(dir string) (*DB, error) {
 			if f == "item_db_etc.yml" && e.Type != "Card" {
 				continue // only cards matter from the etc table
 			}
+			if GMItems[e.ID] {
+				continue
+			}
 			db.Items[e.ID] = e.item()
 		}
 	}
@@ -276,6 +279,10 @@ func Load(dir string) (*DB, error) {
 	}
 	return db, nil
 }
+
+// GMItems are the GM test set (in the client's files, but no player can
+// get them): Angra Mainyu, Ahura Mazdah and Amesha Spenta.
+var GMItems = map[int]bool{1599: true, 2199: true, 15065: true}
 
 // loadCombos reads item_combos.yml (optional: older downloads lack it).
 func (db *DB) loadCombos(path string, aegis map[string]int) error {

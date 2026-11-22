@@ -5,8 +5,8 @@ package setup
 
 import (
 	"context"
-	"errors"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -179,6 +179,9 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 		return nil, fmt.Errorf("rAthena: %w", err)
 	}
 	clientimport.MergeRathena(c, db)
+	for id := range rathena.GMItems { // in the client's files, but nobody gets them
+		delete(c.Items, id)
+	}
 	progress("Aplicando as tabelas do LATAM atual (HP/SP, bônus de classe, ASPD) do latam-ro-calc…")
 	clientimport.ApplyLatamTables(c)
 	progress("Juntando os monstros do LATAM (latam-ro-calc)…")

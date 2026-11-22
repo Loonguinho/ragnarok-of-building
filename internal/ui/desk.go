@@ -24,6 +24,9 @@ type Desk struct {
 	// Below is drawn under the first column (the chat log); floating, at
 	// the bottom left.
 	Below layout.Widget
+	// Main, when set, is drawn instead of the columns (the single window);
+	// Float windows stay above it.
+	Main layout.Widget
 
 	z       int
 	scroll  widget.List
@@ -240,6 +243,17 @@ func (d *Desk) Layout(gtx C, th *Theme) D {
 	d.syncGroups()
 	if d.Floating {
 		d.layoutFloating(gtx, th, size)
+	} else if d.Main != nil {
+		g := gtx
+		g.Constraints = layout.Exact(size)
+		d.Main(g)
+		var floats []*Window
+		for _, w := range d.Windows {
+			if w.Open && w.parent == nil && w.Float {
+				floats = append(floats, w)
+			}
+		}
+		d.layoutFloats(gtx, th, size, floats)
 	} else {
 		d.layoutFixed(gtx, th)
 	}

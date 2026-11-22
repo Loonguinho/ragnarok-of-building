@@ -21,9 +21,8 @@ type menuState struct {
 	cmds     [5]widget.Clickable
 	gear     widget.Clickable
 	settings Popup
-	setRows  [3]widget.Clickable
+	setRows  [1]widget.Clickable
 	langs    []widget.Clickable
-	float    Checkbox
 	anchor   Anchor
 }
 
@@ -161,8 +160,6 @@ func rgbA(c uint32, alpha uint8) color.NRGBA { x := rgb(c); x.A = alpha; return 
 func (a *App) settingsMenu(gtx C) D {
 	th, m := a.Th, &a.menu
 	rowsActions := []func(){
-		func() { a.Desk.ResetLayout() },
-		func() { a.Desk.ShowAll() },
 		func() {
 			if a.wHelp != nil {
 				a.Desk.Toggle(a.wHelp)
@@ -207,30 +204,7 @@ func (a *App) settingsMenu(gtx C) D {
 		}
 	}
 	return Col(0,
-		func(gtx C) D {
-			gtx.Constraints.Min.X = gtx.Constraints.Max.X
-			mm := op.Record(gtx.Ops)
-			d := Inset(2, 8, 2, 8).Layout(gtx, B(th, a.T("Configurações")).C(ColTitleText).W())
-			call := mm.Stop()
-			r := image.Rectangle{Max: image.Pt(gtx.Constraints.Max.X, d.Size.Y)}
-			Fill(gtx, r, rgb(0xe8edf6))
-			call.Add(gtx.Ops)
-			Fill(gtx, image.Rect(0, r.Max.Y-1, r.Max.X, r.Max.Y), ColSep)
-			return D{Size: r.Max}
-		},
-		func(gtx C) D {
-			return Inset(4, 8, 4, 8).Layout(gtx, func(gtx C) D {
-				d, toggled := m.float.Layout(gtx, th, a.Desk.Floating, a.T("Janelas flutuantes")+"  (Alt+W)")
-				if toggled {
-					a.Desk.Floating = !a.Desk.Floating
-					a.Desk.changed = true
-				}
-				return d
-			})
-		},
-		row(&m.setRows[0], a.T("Reorganizar as janelas"), ""),
-		row(&m.setRows[1], a.T("Abrir todas as janelas"), ""),
-		row(&m.setRows[2], a.T("Atalhos e comandos"), "Alt+H"),
+		row(&m.setRows[0], a.T("Atalhos e comandos"), "Alt+H"),
 		func(gtx C) D {
 			return Inset(4, 8, 4, 8).Layout(gtx, func(gtx C) D {
 				kids := []layout.Widget{T(th, a.T("Idioma")+":").W()}

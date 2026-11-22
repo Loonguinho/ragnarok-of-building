@@ -104,8 +104,8 @@ func (h *harness) click(x, y float32, mods ...func(*pointer.Event)) {
 func TestStatPlus(t *testing.T) {
 	h := newHarness(t)
 	before := h.a.Build().Stats[0]
-	// FOR's "+" in the Atributos window (fixed layout, as in the screenshot).
-	h.click(147, 375)
+	// FOR's "+" in the attributes card (single window).
+	h.click(304, 181)
 	if got := h.a.Build().Stats[0]; got != before+1 {
 		t.Fatalf("FOR %d -> %d, want +1", before, got)
 	}
@@ -191,7 +191,7 @@ func TestSelectPick(t *testing.T) {
 	}
 	opts = append(opts, Option{Value: "x", Label: "Feiticeiro"})
 	val := "0"
-	w := h.a.Desk.Add(&Window{ID: "test-select", Title: "Teste", Col: 3, Open: true})
+	w := h.a.Desk.Add(&Window{ID: "test-select", Title: "Teste", Col: 3, Open: true, Float: true})
 	w.Body = func(gtx C) D {
 		d, v, ok := sel.Layout(gtx, h.a.Th, h.a.Desk, opts, val, 120)
 		if ok {
@@ -225,12 +225,12 @@ func TestSelectPick(t *testing.T) {
 	w.Open = false
 	h.frame()
 	// Informações Básicas ▸ the class name opens the grouped class list.
-	h.click(115, 214)
+	h.click(258, 41)
 	if h.a.Desk.popup == nil {
 		t.Fatal("the class list did not open")
 	}
 	job := h.a.Build().Job
-	h.click(115, 214+60)
+	h.click(258, 41+60)
 	if h.a.Desk.popup != nil {
 		t.Error("the class list stayed open after a pick")
 	}
@@ -243,7 +243,7 @@ func TestSelectPick(t *testing.T) {
 func TestStatTyped(t *testing.T) {
 	h := newHarness(t)
 	in := &h.a.status.stat[0]
-	h.click(72, 375) // FOR's box (fixed layout)
+	h.click(226, 181) // FOR's box (single window)
 	if !in.focused {
 		t.Fatal("FOR's box did not take the focus")
 	}
@@ -481,44 +481,37 @@ func TestNewBuildResets(t *testing.T) {
 	}
 }
 
-// TestGroups: a member's hotkey opens its group on its tab, again closes
-// the group; a member opened from elsewhere becomes the tab shown; only
-// the group is drawn.
-func TestGroups(t *testing.T) {
+// TestShellTabs: one tab window shows at a time; a hotkey or a window
+// opened from elsewhere (the replay import) becomes the tab shown, and
+// Comparar floats above the single window.
+func TestShellTabs(t *testing.T) {
 	h := newHarness(t)
 	a, d := h.a, h.a.Desk
-	g := a.gTools
-	if !g.Open || g.Current() != a.wOptimize {
-		t.Fatalf("Ferramentas open %v on %v, want open on Otimizador", g.Open, g.Current().ID)
+	h.frame()
+	if a.shell.cur != a.wEquip {
+		t.Fatalf("first tab %s, want Equipamento", a.shell.cur.ID)
 	}
 	d.Toggle(a.wSaved) // Alt+C
 	h.frame()
-	if !g.Open || g.Current() != a.wSaved || !a.wSaved.Open || a.wOptimize.Open {
-		t.Fatalf("after Alt+C: open %v on %s", g.Open, g.Current().ID)
+	if a.shell.cur != a.wSaved || !a.wSaved.Open || a.wEquip.Open {
+		t.Fatalf("after Alt+C the tab is %s", a.shell.cur.ID)
 	}
-	d.Toggle(a.wSaved) // again: closes the group
+	d.Toggle(a.wSaved) // again: the tab stays
 	h.frame()
-	if g.Open || a.wSaved.Open {
-		t.Fatal("Alt+C on the tab shown did not close Ferramentas")
+	if a.shell.cur != a.wSaved || !a.wSaved.Open {
+		t.Fatal("Alt+C on the tab shown closed it")
 	}
 	a.wRdmg.Open = true // the replay import opens its window directly
 	h.frame()
-	if !g.Open || g.Current() != a.wRdmg {
-		t.Fatalf("opening a member did not show its tab: open %v on %s", g.Open, g.Current().ID)
+	if a.shell.cur != a.wRdmg {
+		t.Fatalf("opening a tab window did not show it: %s", a.shell.cur.ID)
 	}
-	if a.wRdmg.rect != (image.Rectangle{}) {
-		t.Error("a member was drawn as a window of its own")
-	}
-	if !a.wDamage.Open || a.wDamage.parent != nil {
-		t.Error("Alvo / Dano should be a window of its own")
-	}
-	// Comparar: closed until asked, then floating over the columns.
-	if a.wCompare.Open || a.wCompare.parent != nil {
-		t.Fatal("Comparar should start closed, outside Ferramentas")
+	if a.wCompare.Open {
+		t.Fatal("Comparar should start closed")
 	}
 	a.showCompare()
 	h.frame()
-	if !a.wCompare.Open || a.wCompare.rect.Empty() || a.wCompare.rect.Min.Y < 1 {
+	if !a.wCompare.Open || a.wCompare.rect.Empty() {
 		t.Errorf("Comparar did not float when asked: open %v at %v", a.wCompare.Open, a.wCompare.rect)
 	}
 }

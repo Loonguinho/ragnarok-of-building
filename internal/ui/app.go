@@ -52,8 +52,8 @@ type App struct {
 
 	// Windows.
 	wMenu, wBasic, wStatus, wEquip, wSkills, wBonus, wDamage, wBuffs, wOptimize *Window
-	gTools                                                                      *Window // Ferramentas: a window with side tabs
 	wSaved, wShare, wHelp, wSlot, wRdmg, wItems, wCompare                       *Window
+	wSettings                                                                   *Window // a tab of the single window
 
 	menu   menuState
 	basic  basicState
@@ -69,6 +69,7 @@ type App struct {
 	replay replayState
 	opt    optimizeState
 	items  itemsState
+	shell  shellState
 
 	showReplayDamage bool // a replay with damage was just imported: open its window
 }
@@ -105,7 +106,6 @@ func NewApp(v *view.Views, th *Theme, stateFile string) *App {
 		if st.Lang != "" {
 			a.Lang = st.Lang
 		}
-		a.Desk.Floating = st.Floating
 		if d, ok := view.DecodeBuild(st.Build); ok {
 			b = d
 		}
@@ -164,14 +164,15 @@ func (a *App) makeWindows() {
 	// The RO-client layout, four columns (1920 px wide): the character,
 	// the gear and its bonuses, the Ferramentas window with side tabs
 	// (members keep their hotkeys and open their tab), then the item windows.
-	icon := func(w *Window, item int) { w.Icon = view.ItemIcon(item) }
-	icon(a.wOptimize, 984)
-	icon(a.wRdmg, 603)
-	icon(a.wSaved, 617)
-	icon(a.wShare, 610)
-	a.gTools = d.Group(&Window{ID: "grp-tools", Title: "Ferramentas", Col: 2, Open: true}, a.wOptimize, a.wRdmg, a.wSaved, a.wShare)
-	a.gTools.Body = a.groupBody(a.gTools)
-	a.gTools.Footer = a.groupFooter(a.gTools)
+	// The single window (shell.go) takes the place of the columns; the
+	// Float windows (the slot's dropdown, Comparar, the help) stay above it.
+	a.wSettings = d.Add(&Window{ID: "win-settings", Title: "Configurações", NoShowAll: true})
+	a.wSettings.Body = a.settingsMenu
+	d.Main = a.shellLayout
+	for _, t := range a.shellTabs() { // the first run opens on Equipamento
+		t.w.Open = t.w == a.wEquip
+	}
+	a.wHelp.Float = true
 	// Personagem and Equipamento stay windows of their own (the bonuses
 	// next to the gear, not behind a tab).
 	a.wBuffs.Col = 1
@@ -184,34 +185,6 @@ func (a *App) makeWindows() {
 	a.wSlot.Float, a.wSlot.AutoClose, a.wSlot.Dropdown, a.wSlot.Width = true, true, true, 430
 }
 
-// groupBody draws a group's side tabs with the current member's body.
-func (a *App) groupBody(g *Window) layout.Widget {
-	return func(gtx C) D {
-		var tabs []SideTab
-		for _, m := range g.Members {
-			tabs = append(tabs, SideTab{Icon: m.Icon, Label: m.Title})
-		}
-		d, _ := g.side.Layout(gtx, a, tabs, func(gtx C) D {
-			if g.cur == nil || g.cur.Body == nil {
-				return D{}
-			}
-			return Inset(2, 3, 2, 3).Layout(gtx, g.cur.Body)
-		})
-		return d
-	}
-}
-
-// groupFooter is the current member's footer (none when it has none).
-func (a *App) groupFooter(g *Window) layout.Widget {
-	return func(gtx C) D {
-		if g.cur == nil || g.cur.Footer == nil {
-			return D{}
-		}
-		return g.cur.Footer(gtx)
-	}
-}
-
-// T translates an interface text.
 func (a *App) T(s string) string { return view.Tr(a.Lang, s) }
 
 // Build returns the build being edited.
@@ -348,7 +321,7 @@ func (a *App) Frame(gtx C) D {
 // shortcuts are the global keys (Alt+W floating windows...).
 func (a *App) shortcuts(gtx C) {
 	for {
-		ev, ok := gtx.Event(key.Filter{Name: "W", Required: key.ModAlt}, key.Filter{Name: "S", Required: key.ModShortcut})
+		ev, ok := gtx.Event(key.Filter{Name: "S", Required: key.ModShortcut})
 		if !ok {
 			break
 		}
@@ -357,9 +330,6 @@ func (a *App) shortcuts(gtx C) {
 			continue
 		}
 		switch e.Name {
-		case "W":
-			a.Desk.Floating = !a.Desk.Floating
-			a.Desk.changed = true
 		case "S":
 			a.saveBuild(false)
 		}
@@ -381,16 +351,13 @@ func (a *App) updateTitles() {
 	}
 	a.wShare.Title = a.T("Compartilhar Build")
 	a.wHelp.Title = a.T("Atalhos e comandos")
+	a.wSettings.Title = a.T("Configurações")
 	a.wRdmg.Title = a.T("Resumo de dano do replay")
 	a.wOptimize.Title = a.T("Otimizador")
 	a.wItems.Title = a.T("Banco de Itens")
 	a.wCompare.Title = a.T("Comparar itens")
 	SearchHint = a.T("Buscar…")
 	a.wSlot.Title = a.slotTitle()
-	a.gTools.Title = a.T("Ferramentas")
-	if c := a.gTools.Current(); c != nil {
-		a.gTools.Title += " · " + c.Title
-	}
 }
 
 // view returns the last computed windows.

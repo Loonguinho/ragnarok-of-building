@@ -1,6 +1,7 @@
 // buildexe builds the Windows program as released: RagnarokOfBuilding.exe
 // with its icon, version details and manifest (Windows resources), as a
-// windowed app (no console), plus the zip with LEIAME and LICENSE.
+// windowed app (no console), plus the zip with LEIAME, LICENSE and the game
+// data (catalog.json.gz, built by cmd/import), so the program opens ready.
 //
 //	go run ./tools/buildexe                          # version from git describe
 //	go run ./tools/buildexe -version v0.1.0-beta.3   # the release workflow passes the tag
@@ -37,21 +38,30 @@ func main() {
 	ver := flag.String("version", "", "version tag (default: git describe --tags, else dev)")
 	repo := flag.String("repo", envOr("GITHUB_REPOSITORY", "Loonguinho/ragnarok-of-building"), "GitHub repository whose release holds the ready catalog")
 	out := flag.String("out", "dist", "output folder")
+	catalog := flag.String("catalog", "data/gen/catalog.json.gz", "game data shipped next to the program (go run ./cmd/import)")
 	flag.Parse()
 	if *ver == "" {
 		*ver = gitVersion()
 	}
-	if err := run(*ver, *repo, *out); err != nil {
+	if err := run(*ver, *repo, *out, *catalog); err != nil {
 		fmt.Fprintln(os.Stderr, "buildexe:", err)
 		os.Exit(1)
 	}
 }
 
-func run(ver, repo, out string) error {
+func run(ver, repo, out, catalog string) error {
+	if _, err := os.Stat(catalog); err != nil {
+		return fmt.Errorf("game data: %w (build it with go run ./cmd/import)", err)
+	}
 	if err := writeResources(ver, sysoOut); err != nil {
 		return fmt.Errorf("resources: %w", err)
 	}
+	// Start from an empty folder: running the program from it leaves logs,
+	// caches and settings that must not go in the zip.
 	dir := filepath.Join(out, "RagnarokOfBuilding")
+	if err := os.RemoveAll(dir); err != nil {
+		return err
+	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
@@ -67,6 +77,10 @@ func run(ver, repo, out string) error {
 		if err := copyFile(f, filepath.Join(dir, filepath.Base(f))); err != nil {
 			return err
 		}
+	}
+	// The program uses a catalog.json.gz in its own folder as is.
+	if err := copyFile(catalog, filepath.Join(dir, "catalog.json.gz")); err != nil {
+		return err
 	}
 	zipPath := filepath.Join(out, "RagnarokOfBuilding-"+ver+"-windows.zip")
 	if err := zipDir(dir, zipPath); err != nil {

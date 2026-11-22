@@ -6,9 +6,13 @@ COMO USAR
 2. Dê dois cliques em RagnarokOfBuilding.exe.
 3. O simulador abre na janela dele. Para sair, feche a janela.
 
-Na primeira vez, se você não tem o jogo instalado, o programa baixa os dados
-do jogo (catalog.json.gz, uns 4 MB) da página dele no GitHub e guarda nesta
-pasta. Precisa de internet só nessa hora.
+Os dados do jogo (itens, habilidades, classes, monstros) já vêm junto, no
+arquivo catalog.json.gz desta pasta: não precisa ter o jogo instalado nem
+internet. Cada versão nova do programa traz os dados atualizados.
+
+Saiu um patch do jogo e a versão nova do programa ainda não? Apague o
+catalog.json.gz desta pasta (ou abra com -import): o programa lê os dados
+direto do seu cliente, como explicado abaixo.
 
 USANDO UMA CÓPIA DOS ARQUIVOS DO JOGO (sem procurar o jogo instalado)
 Copie para a pasta do RagnarokOfBuilding.exe:
@@ -39,5 +43,4 @@ Os builds salvos ficam no arquivo builds.json, nesta pasta. Na janela Builds dá
 importar de volta. Para mandar um build a um amigo, use o botão
 Compartilhar (link, código ou paste).
 
-Nenhum dado do jogo vem junto com o programa: tudo é lido do seu próprio
-cliente. Ragnarok Online é marca da Gravity; este projeto não é oficial.
+Os dados do jogo vêm do cliente do RO LATAM. Ragnarok Online é marca da Gravity; este projeto não é oficial.

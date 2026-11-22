@@ -1,12 +1,12 @@
 // app is Ragnarok of Building as one program for players: double-click it
 // and the simulator opens in its own window (no console, no browser).
 //
-// On first run (and after each game patch) it builds the game catalog from
-// the player's own RO LATAM client, downloading rAthena's tables (GPL-3.0)
-// and latam-ro-calc's monster list (MIT) once. No game data ships with the
-// program: everything is read from the client already installed. The
-// window shows that progress, and asks for the client folder when it is
-// not found.
+// The release zip ships the game catalog (catalog.json.gz next to the
+// executable), used as is. Without it, on first run (and after each game
+// patch) it builds the catalog from the player's own RO LATAM client,
+// downloading rAthena's tables (GPL-3.0) and latam-ro-calc's monster list
+// (MIT) once. The window shows that progress, and asks for the client
+// folder when it is not found.
 //
 //	go run ./tools/buildexe            # the .exe with its icon, as released
 //	RagnarokOfBuilding.exe             # find the client, import if needed, open the window

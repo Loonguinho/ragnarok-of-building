@@ -1,9 +1,32 @@
 # Simulador × bROWiki
 
-Iguais: 200 · diferença conferida: 17 · diferentes: 0 · sem fórmula no simulador: 3 · sem dados no wiki: 40
+Iguais: 207 · diferença conferida: 18 · diferentes: 0 · coeficientes diferentes: 0 · sem fórmula no simulador: 1 · sem dados no wiki: 40
 
 ## Diferentes (wiki, simulador) por nível
 
+
+## Coeficientes de atributos diferentes (wiki × simulador, por ponto)
+
+
+## Coeficientes conferidos à mão
+
+- CD_FRAMEN: FEI × 5 contra Demônio e Morto-vivo, que o simulador aplica
+- EM_CONFLAGRATION: o 2º coeficiente vale com o estado Elemental ativo, que o simulador aplica
+- EM_DIAMOND_STORM: o 2º coeficiente vale com o estado Elemental ativo, que o simulador aplica
+- EM_LIGHTNING_LAND: o 2º coeficiente vale com o estado Elemental ativo, que o simulador aplica
+- EM_TERRA_DRIVE: o 2º coeficiente vale com o estado Elemental ativo, que o simulador aplica
+- EM_VENOM_SWAMP: o 2º coeficiente vale com o estado Elemental ativo, que o simulador aplica
+- LG_HESPERUSLIT: o 2º coeficiente vale com o estado Consagração, que o simulador aplica
+- LG_RAYOFGENESIS: página anterior ao cliente de 28/10/2026; vale o rebalanceamento medido pelo latam-ro-calc (INT × 2)
+- NC_AXETORNADO: o 2º coeficiente vale com o estado Esmagador, que o simulador aplica
+- RA_CLUSTERBOMB: INT × 5 está na fórmula, multiplicado pelo nível de Perícia com Armadilhas (0 na comparação)
+- SC_FATALMENACE: o 2º coeficiente vale com o estado Ameaça, que o simulador aplica
+- SHC_ETERNAL_SLASH: o 2º coeficiente vale com o estado Carrasco Sombrio, que o simulador aplica
+- SHC_SAVAGE_IMPACT: o 2º coeficiente vale com o estado Carrasco Sombrio, que o simulador aplica
+- SJ_PROMINENCEKICK: a fórmula com AGI/DES da página é do tempo de recarga, não do dano
+- TR_METALIC_FURY: FEI × 1,5 multiplicado pelo nível de Presença de Palco (0 na comparação)
+- TR_RHYTHMSHOOTING: CON × 3 multiplicado pelo nível de Presença de Palco (0 na comparação)
+- TR_ROSEBLOSSOM: CON × 3 multiplicado pelo nível de Presença de Palco (0 na comparação)
 
 ## Diferença conferida (o simulador mantém o seu valor)
 
@@ -12,6 +35,7 @@ Iguais: 200 · diferença conferida: 17 · diferentes: 0 · sem fórmula no simu
 - **Retaliação** (GC_COUNTERSLASH): a tabela lista o dano base sem o ÷120 da fórmula; a fórmula bate
 - **Rajada Certeira** (GS_RAPIDSHOWER): erro na tabela do wiki (contradiz a fórmula da própria página) (Nv9)
 - **Lâminas Devastadoras** (HN_MEGA_SONIC_BLOW): erro na tabela do wiki (contradiz a fórmula da própria página) (Nv6)
+- **Cortar em Espiral** (HN_SPIRAL_PIERCE_MAX): a tabela é o dano base antes do multiplicador de tamanho (×1,3 no médio da comparação); a fórmula bate
 - **Turbilhão de Kunais** (KO_HAPPOKUNAI): tabela do wiki anterior ao cliente de 28/10/2026; vale o rebalanceamento medido pelo latam-ro-calc (tabela de 2024)
 - **Toque do Oblívio** (LG_BANISHINGPOINT): tabela do wiki anterior ao cliente de 28/10/2026; vale o rebalanceamento medido pelo latam-ro-calc (tabela de 06/2026)
 - **Luz da Criação** (LG_RAYOFGENESIS): tabela do wiki anterior ao cliente de 28/10/2026; vale o rebalanceamento medido pelo latam-ro-calc (tabela de 06/2026)
@@ -27,10 +51,6 @@ Iguais: 200 · diferença conferida: 17 · diferentes: 0 · sem fórmula no simu
 
 ## Sem fórmula no simulador
 
-- **Tornado de Carrinho** (GN_CART_TORNADO): Nv1: 200, Nv2: 400, Nv3: 600, Nv4: 800, Nv5: 1000, Nv6: 1200, Nv7: 1400, Nv8: 1600, Nv9: 1800, Nv10: 2000
-  - `Dano = {Dano base + [Peso atual do Carrinho ÷ (150 - FOR base)] + (Nv. de Aprimorar Carrinho × 50)}%`
-- **Cortar em Espiral** (HN_SPIRAL_PIERCE_MAX): Nv1: 900, Nv2: 1250, Nv3: 1600, Nv4: 1950, Nv5: 2300, Nv6: 2650, Nv7: 3000, Nv8: 3350, Nv9: 3700, Nv10: 4050
-  - `Dano = {[Dano base + (Nv. Físico Autodidata × Fator)] × Tamanho + (POD × 3)} × (Nv. de base ÷ 100)`
 - **Ruína** (SR_FALLENEMPIRE): Nv1: 400, Nv2: 700, Nv3: 1000, Nv4: 1300, Nv5: 1600, Nv6: 1900, Nv7: 2200, Nv8: 2500, Nv9: 2800, Nv10: 3100
   - `ATQ = [Dano base × (Nv. de base ÷ 100)] + (FOR × 100)]%`
 

@@ -159,6 +159,46 @@ func importSkills(a *grf.Archive, base env, c *gamedata.Catalog) error {
 		}
 		c.Skills[id] = s
 	}
+	// skillinfolist_data.lub (SkillInfoList_data) is the current table since
+	// the 2026 rebalance: new skills (Espinhos Caóticos, Baforada
+	// Draconiana...) are only there, and it has the new SP costs. Its rows
+	// have no name (the localized lists give it).
+	if g, err := loadGRF(a, base, `data\`+luaDir+`skillinfoz\skillinfolist_data.lub`); err == nil {
+		if data, ok := g["SkillInfoList_data"].(*lua51.Table); ok {
+			for _, id := range data.IntKeys() {
+				row, ok := data.Get(float64(id)).(*lua51.Table)
+				if !ok {
+					continue
+				}
+				s := c.Skills[id]
+				if s == nil {
+					s = &gamedata.Skill{ID: id, Code: str(row.Get(1.0)), Name: gamedata.Text{}, Desc: gamedata.Lines{}}
+					c.Skills[id] = s
+				}
+				if v := num(row.Get("MaxLv")); v > 0 {
+					s.MaxLv = v
+				}
+				if v := ints(row.Get("SpAmount")); len(v) > 0 {
+					s.SP = v
+				}
+				if v := ints(row.Get("AttackRange")); len(v) > 0 {
+					s.Range = v
+				}
+				if row.Get("_NeedSkillList") != nil {
+					s.Needs = reqs(row.Get("_NeedSkillList"))
+				}
+				if byJob, ok := row.Get("NeedSkillList").(*lua51.Table); ok {
+					s.NeedsByJob = map[int][]gamedata.Req{}
+					for _, job := range byJob.IntKeys() {
+						s.NeedsByJob[job] = reqs(byJob.Get(float64(job)))
+					}
+				}
+				if t := str(row.Get("Type")); t != "" {
+					s.Type = t
+				}
+			}
+		}
+	}
 
 	for _, l := range langDirs {
 		// Localized names.

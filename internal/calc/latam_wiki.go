@@ -54,12 +54,50 @@ func init() {
 	// Infiltrar: 700/Nv + CON x 3 (latam-ro-calc treats it as no damage).
 	wikiFix("SS_SHIMIRU", func(f *SkillFormula) {
 		f.Ratio = func(in FormulaInput) float64 {
-			return (float64(in.Lv)*700 + in.S(CON)*3) * float64(in.BaseLv) / 100
+			return (float64(in.Lv)*700 + in.T(CON)*3) * float64(in.BaseLv) / 100
 		}
 		f.Melee = meleeAlways
 	})
+	// Golpe da Palma em Fúria: (200/Nv + FOR x 2) x Nv. de base / 100.
+	wikiFix("CH_PALMSTRIKE", func(f *SkillFormula) {
+		f.Ratio = func(in FormulaInput) float64 {
+			return (float64(in.Lv)*200 + in.S(STR)*2) * float64(in.BaseLv) / 100
+		}
+	})
+	// Impacto Sísmico: (300/Nv + FOR x 3) x Nv. de base / 100 on visible
+	// targets; (400/Nv + FOR x 5) on hidden ones (variant added below).
+	wikiFix("SR_EARTHSHAKER", func(f *SkillFormula) {
+		f.Ratio = func(in FormulaInput) float64 {
+			return (float64(in.Lv)*300 + in.S(STR)*3) * float64(in.BaseLv) / 100
+		}
+		f.Variant = "Alvo visível"
+	})
+	// Zona Gravitacional: the zone hits once, 3000 + 1500/Nv + Mágico
+	// Autodidata x 4/Nv + FEI x 5; the gravity then hits every 0,5 s for 5 s,
+	// 800 + 700/Nv + Mágico Autodidata x 2/Nv + FEI x 2.
+	wikiFix("HN_GROUND_GRAVITATION", func(f *SkillFormula) {
+		zone := f.Variant == "Inicial"
+		f.Ratio = func(in FormulaInput) float64 {
+			lv, sorc := float64(in.Lv), float64(in.LearnName("Self Study Sorcery"))
+			if zone {
+				return genRebalance_hyper(in, 3000+lv*(1500+sorc*4)+in.T(SPL)*5, true, 1.5, 1, 0)
+			}
+			return genRebalance_hyper(in, 800+lv*(700+sorc*2)+in.T(SPL)*2, true, 1.5, 1, 0)
+		}
+		if zone {
+			f.Variant, f.Hits = "Zona (1º dano)", constHits(1)
+		} else {
+			f.Variant = "Gravidade (contínuo)"
+		}
+	})
 
 	// ---- skills latam-ro-calc's formulas don't cover ----
+	for _, j := range []string{"JT_SURA", "JT_SURA_H"} {
+		if latamByJob[j]["SR_EARTHSHAKER"] != nil {
+			regJob(j, &SkillFormula{Code: "SR_EARTHSHAKER", Name: "Earth Shaker", Variant: "Alvo oculto", Melee: meleeAlways, Source: wikiSource,
+				Ratio: func(in FormulaInput) float64 { return (float64(in.Lv)*400 + in.S(STR)*5) * float64(in.BaseLv) / 100 }})
+		}
+	}
 
 	bl := func(in FormulaInput) float64 { return float64(in.BaseLv) / 100 }
 	lv := func(in FormulaInput) float64 { return float64(in.Lv) }
@@ -76,6 +114,34 @@ func init() {
 		}})
 	wikiAdd([]string{"JT_GENETIC", "JT_GENETIC_H"}, &SkillFormula{Code: "GN_SPORE_EXPLOSION", Name: "Spore Explosion", Melee: meleeNever,
 		Ratio: func(in FormulaInput) float64 { return (400 + lv(in)*200 + in.S(INT)) * bl(in) }})
+	// Tornado de Carrinho: 200/Nv (400/Nv with Cultivar Bárbaro) + Aprimorar
+	// Carrinho x 50 + cart weight / (150 - base STR); the cart's weight is
+	// not simulated.
+	cart := func(per float64) func(FormulaInput) float64 {
+		return func(in FormulaInput) float64 {
+			return lv(in)*per + float64(in.LearnLv("GN_REMODELING_CART"))*50
+		}
+	}
+	cartJobs := []string{"JT_GENETIC", "JT_GENETIC_H", "JT_BIOLO"}
+	wikiAdd(cartJobs, &SkillFormula{Code: "GN_CART_TORNADO", Name: "Cart Tornado", Variant: "Normal", Melee: meleeAlways,
+		Partial: "peso do carrinho", Ratio: cart(200)})
+	wikiAdd(cartJobs, &SkillFormula{Code: "GN_CART_TORNADO", Name: "Cart Tornado", Variant: "Cultivar Bárbaro", Melee: meleeAlways,
+		Partial: "peso do carrinho", Ratio: cart(400)})
+	// Cortar em Espiral (Hiperaprendiz): {[550 + 350/Nv + Físico Autodidata
+	// x 3/Nv] x tamanho + POD x 3} x Nv. de base / 100; tamanho 1,5
+	// pequeno, 1,3 médio, 1,2 grande.
+	wikiAdd([]string{"JT_HYPER_NOVICE"}, &SkillFormula{Code: "HN_SPIRAL_PIERCE_MAX", Name: "Spiral Pierce Max", Melee: meleeNever,
+		Ratio: func(in FormulaInput) float64 {
+			size := 1.3
+			switch {
+			case in.MonIs("size", "small"):
+				size = 1.5
+			case in.MonIs("size", "large"):
+				size = 1.2
+			}
+			tactics := float64(in.LearnName("Self Study Tactics"))
+			return genRebalance_hyper(in, (550+lv(in)*(350+tactics*3))*size+in.T(POW)*3, false, 1.5, 2, 10)
+		}})
 	wikiAdd([]string{"JT_IMPERIAL_GUARD"}, &SkillFormula{Code: "IG_SHIELD_SHOOTING", Name: "Shield Shooting", Melee: meleeNever,
 		Ratio: func(in FormulaInput) float64 {
 			return (400 + lv(in)*2300 + float64(in.LearnLv("IG_SHIELD_MASTERY"))*15 + shieldWt(in) + float64(in.ShieldRefine)*4 + in.T(POW)*5) * bl(in)

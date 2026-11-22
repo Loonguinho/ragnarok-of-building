@@ -24,6 +24,32 @@ func TestDumpRatios(t *testing.T) {
 		Ratios   []float64            `json:"ratios"`
 		Variants map[string][]float64 `json:"variants,omitempty"`
 		Races    map[string][]float64 `json:"races"` // ratios vs other races (race bonuses)
+		// Coefs: % each point of a stat or trait adds at Nv 10, base level
+		// 100 (STR..LUK as FOR, AGI, VIT, INT, DES, SOR; traits as POW..CRT),
+		// per variant ("" = the first).
+		Coefs map[string]map[string]float64 `json:"coefs,omitempty"`
+	}
+	statNames := []string{"FOR", "AGI", "VIT", "INT", "DES", "SOR"}
+	traitNames := []string{"POD", "VIG", "SAB", "FEI", "CON", "PRE"}
+	coefs := func(f *SkillFormula) map[string]float64 {
+		mk := func() FormulaInput {
+			return FormulaInput{Lv: 10, BaseLv: 100, States: map[string]int{}, Monster: &gamedata.Monster{Race: "Formless", Element: "Neutral", Size: "Medium"}}
+		}
+		base := f.Ratio(mk())
+		out := map[string]float64{}
+		for i := 0; i < 6; i++ {
+			in := mk()
+			in.Stats[i] = 100
+			if d := (f.Ratio(in) - base) / 100; d != 0 {
+				out[statNames[i]] = d
+			}
+			in = mk()
+			in.Traits[i] = 100
+			if d := (f.Ratio(in) - base) / 100; d != 0 {
+				out[traitNames[i]] = d
+			}
+		}
+		return out
 	}
 	ratios := func(f *SkillFormula, race string) []float64 {
 		var out []float64
@@ -60,7 +86,9 @@ func TestDumpRatios(t *testing.T) {
 			for _, race := range []string{"Brute", "Demihuman", "Demon", "Undead", "Angel", "Fish", "Plant", "Insect", "Dragon"} {
 				e.Races[race] = ratios(f, race)
 			}
+			e.Coefs = map[string]map[string]float64{"": coefs(f)}
 			for _, alt := range f.Alts {
+				e.Coefs[alt.Variant] = coefs(alt)
 				if e.Variants == nil {
 					e.Variants = map[string][]float64{}
 				}

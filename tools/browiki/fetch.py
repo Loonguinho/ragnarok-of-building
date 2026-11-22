@@ -32,6 +32,10 @@ def get(params):
 def codes_wanted():
     gen = open(os.path.join(ROOT, 'internal', 'calc', 'latam_gen.go'), encoding='utf-8').read()
     codes = set(re.findall(r'Code:\s+"([A-Z0-9_]+)"', gen))
+    for extra in ('latam_wiki.go', 'latam_wiki_2026.go'):  # formulas written from the wiki
+        path = os.path.join(ROOT, 'internal', 'calc', extra)
+        if os.path.exists(path):
+            codes |= set(re.findall(r'Code:\s+"([A-Z0-9_]+)"', open(path, encoding='utf-8').read()))
     rep = open(os.path.join(ROOT, 'tools', 'latamgen', 'REPORT.md'), encoding='utf-8').read()
     codes |= set(re.findall(r'\(([A-Z][A-Z0-9_]+)\): not translated', rep))
     return sorted(codes)

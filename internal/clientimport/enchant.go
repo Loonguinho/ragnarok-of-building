@@ -126,10 +126,62 @@ func ImportEnchants(dir string, c *gamedata.Catalog, aegis map[string]int) (int,
 			}
 		}
 	}
+	addNPCEnchants(c)
 	for _, slots := range c.Enchants {
 		for k := range slots {
 			slices.Sort(slots[k])
 		}
 	}
 	return len(c.Enchants), nil
+}
+
+// addNPCEnchants adds enchants an NPC gives that the client's enchant list
+// does not have.
+//
+// The Memoráveis (Old headgears of the Nightmare Biolabs, 18971-18984) are
+// enchanted by Wandering Grudge (lhz_dun_n): the 3rd and 4th positions take
+// a stat +1 to +5, the 2nd a stat +1 to +5 or a special enchant Lv 1-10
+// (Mettle, Magic Essence, Acute, Master Archer, Adamantine, Affection,
+// Tenacity). https://irowiki.org/wiki/Bio5
+func addNPCEnchants(c *gamedata.Catalog) {
+	var stats, special []int
+	for base := 4700; base <= 4750; base += 10 { // STR, INT, DEX, AGI, VIT, LUK
+		for lv := 0; lv < 5; lv++ {
+			stats = append(stats, base+lv)
+		}
+	}
+	for _, base := range []int{29061, 29071, 29081, 29091, 29101, 29111, 29706} {
+		for lv := 0; lv < 10; lv++ {
+			special = append(special, base+lv)
+		}
+	}
+	known := func(ids []int) []int {
+		var out []int
+		for _, id := range ids {
+			if c.Items[id] != nil {
+				out = append(out, id)
+			}
+		}
+		return out
+	}
+	stats, special = known(stats), known(special)
+	for id := 18971; id <= 18984; id++ {
+		if c.Items[id] == nil {
+			continue
+		}
+		if c.Enchants[id] == nil {
+			c.Enchants[id] = map[int][]int{}
+		}
+		add := func(k int, ids []int) {
+			for _, e := range ids {
+				if !slices.Contains(c.Enchants[id][k], e) {
+					c.Enchants[id][k] = append(c.Enchants[id][k], e)
+				}
+			}
+		}
+		add(1, stats)
+		add(1, special)
+		add(2, stats)
+		add(3, stats)
+	}
 }

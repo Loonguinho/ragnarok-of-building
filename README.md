@@ -1,93 +1,77 @@
+<div align="center">
+
+<img src="docs/img/icon.png" width="96" alt="">
+
 # Ragnarok of Building
 
-A build simulator for **Ragnarok Online LATAM**, with a UI modeled on the game client: client-style windows in fixed columns (or floating), Alt hotkeys and NPC dialogs.
+**Monte sua build de Ragnarok Online LATAM, veja o dano e descubra o que melhorar.**
 
-Stack: Go · native window drawn with [Gio](https://gioui.org) (no browser engine) · data from the LATAM client itself (+ Divine Pride for item icons) · PT-BR / ES / EN.
+[![Versão](https://img.shields.io/github/v/release/Loonguinho/ragnarok-of-building?include_prereleases&label=vers%C3%A3o&color=3f6fb5)](../../releases)
+[![Downloads](https://img.shields.io/github/downloads/Loonguinho/ragnarok-of-building/total?label=downloads&color=3f6fb5)](../../releases)
+[![Testes](https://img.shields.io/github/actions/workflow/status/Loonguinho/ragnarok-of-building/ci.yml?branch=main&label=testes)](../../actions)
+[![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-lightgrey)](LICENSE)
 
-The old web version (HTMX pages, the hosted server and its Docker image) was retired in November 2026; its last state is the `legacy-web` branch.
+### [⬇️ Baixar para Windows](../../releases)
 
-## For players: the Windows program
+Português · English · Español
 
-Download `RagnarokOfBuilding-<version>-windows.zip` from the [Releases](../../releases) page, extract it and double-click `RagnarokOfBuilding.exe`: the simulator opens in its own window. The zip ships the game data (`catalog.json.gz`, built with `go run ./cmd/import`), so it opens ready, without the game or internet. The game data is read from, in order: a `data.grf` and `System` folder copied next to the executable; the `catalog.json.gz` there; the installed client; the `catalog.json.gz` attached to the program's release, downloaded once. Without a catalog it finds the RO LATAM client (or asks for its folder), downloads rAthena's tables and latam-ro-calc's monster list once, and builds the catalog from that client; after each game patch it rebuilds it by itself. Details for players are in [docs/LEIAME.txt](docs/LEIAME.txt), which goes in the zip.
+</div>
 
-To publish a version, push a tag: `git tag v0.1.0` then `git push origin v0.1.0`. The `release` workflow tests, builds `cmd/app` for Windows and attaches the zip to a new release. GitHub has no game client, so the catalog the zip ships is the committed `data/gen/catalog.json.gz`: after a game patch, run `go run ./cmd/import` and commit it before tagging. To build it locally: `go run ./tools/buildexe` (or `go build -ldflags -H=windowsgui -o RagnarokOfBuilding.exe ./cmd/app`).
+![Tela de equipamentos](docs/img/equipamento.png)
 
-## Running from source
+## O que ele faz
 
-You need the RO LATAM client installed (default `C:\Gravity\Ragnarok`; set `RO_CLIENT=<folder>` in `.env` to read a copy of it instead, so the installed game is never touched). Then, once:
+- **Build completa:** atributos, talentos, árvore de habilidades, equipamentos, cartas, encantamentos, refino, grau, sombras, visuais, munição e pet.
+- **Dano contra qualquer monstro do catálogo:** normal, crítico, chance de acerto e usos para matar, com a tabela das suas habilidades.
+- **Importa replay (`.rrf`):** lê o personagem gravado e resume o dano da gravação.
+- **Otimizador:** testa itens, cartas e encantamentos e mostra o ganho de cada troca.
+- **Melhor carta:** ordena as opções de uma posição por dano ou defesa, contando conjuntos.
+- **Comparações:** itens lado a lado e distribuições de talentos.
+- **Compartilhar:** link, código ou paste para mandar a um amigo.
+- **Dados do LATAM:** itens, textos e habilidades vêm do cliente LATAM.
 
-```powershell
-go run ./cmd/fetchrathena   # downloads rAthena's tables (GPL-3.0) to data/rathena (not committed)
-go run ./cmd/import         # client + rAthena -> data/gen/catalog.json.gz (~3 s)
-```
+| Cálculo de dano | Comparar talentos |
+|---|---|
+| ![Cálculo de dano](docs/img/calculos.png) | ![Comparar talentos](docs/img/comparar-talentos.png) |
 
-and every time:
+<details>
+<summary>Árvore de habilidades</summary>
 
-```powershell
-go run ./cmd/app            # the program's window
-go test ./...
-```
+![Árvore de habilidades](docs/img/habilidades.png)
 
-Re-run `go run ./cmd/import` after each game patch.
+</details>
 
-**Languages.** The settings menu (the gear in the Menu window) has a PT / EN / ES picker, kept in `data/ui.json`. Game data (items, skills, classes, monsters) comes in each language from the client; the interface texts are in `internal/view/i18n_dict.go`, keyed by the Portuguese text.
+## Como usar
 
-**Code.** `internal/calc` is the formula engine; `internal/view` computes what each window shows (build, equipment, buffs, damage, skill tree, optimizer, replay recap) as plain structs; `internal/edit` holds the editing rules (linked headgear slots, exclusive buffs, skill tree points); `internal/ui` draws the windows with Gio; `cmd/app` is the program (startup, import, window).
+1. Baixe o `.zip` da [última versão](../../releases) e extraia em qualquer pasta.
+2. Abra o `RagnarokOfBuilding.exe`.
+3. Escolha sua classe ou clique em **Importar replay**.
 
-**Windows:** Menu (gear: floating windows Alt+W, reset layout, open all, language), Basic Info (Alt+V, class list Alt+J), Status (Alt+A), Equipment (Alt+Q), Skills (Alt+S), Bonuses (Alt+B), Target/Damage (Alt+D), Buffs (Alt+U), Optimizer (Alt+O), Item database (Alt+E), Saved builds (Alt+C), Share (Alt+L), Shortcuts (Alt+H), and the replay damage recap after importing a `.rrf`. Saved builds live in `builds.json` next to the program.
+Não precisa instalar nada nem ter o jogo: os dados já vêm no zip. Os ícones são baixados uma vez, quando aparecem pela primeira vez.
 
+> O programa não é assinado, então o Windows pode mostrar um aviso: **Mais informações → Executar assim mesmo**. O código está todo aqui para quem quiser conferir.
 
-### Regenerating the LATAM formulas
+Mais detalhes no [LEIAME](docs/LEIAME.txt). Aperte **Alt+H** no programa para ver os atalhos.
 
-```powershell
-git clone --depth 1 https://github.com/adsonpleal/latam-ro-calc tmp/latam-ro-calc
-python -I tools/latamgen/latamgen.py      # writes internal/calc/latam_gen.go + tools/latamgen/REPORT.md
-python -I tools/latamgen/buffgen.py       # each class's own buffs -> internal/calc/latam_buffs_gen.go + tools/latamgen/BUFFS.md
-python -I tools/latamgen/tablegen.py      # LATAM class tables (HP/SP, job bonus, ASPD) -> internal/clientimport/latam_tables_gen.go
-go test ./internal/calc
-```
+## O dano confere com o jogo?
 
-### Checking formulas against bROWiki
+As fórmulas vêm do latam-ro-calc, do bROWiki e do rAthena, e são conferidas com replays do servidor LATAM. Algumas habilidades já batem com a gravação; outras ainda precisam de mais dados. É uma versão **beta**.
 
-```powershell
-python -I tools/browiki/fetch.py                                   # fetches missing pages only
-$env:DUMP_RATIOS="tmp/ours.json"; go test -run TestDumpRatios ./internal/calc
-python -I tools/browiki/compare.py tmp/ours.json                   # writes tools/browiki/COMPARE.md
-```
+Achou um dano errado? [Abra uma issue](../../issues) com o **replay (`.rrf`)** e um print dos **atributos (Alt+A)** com os talentos.
 
-### Data tools
+## Para quem programa
 
-```powershell
-go run ./cmd/grftool C:/Gravity/Ragnarok/data.grf find skilltree       # list files in the GRF
-go run ./cmd/lubdump C:/Gravity/Ragnarok/System/iteminfo_new.lub tbl 4001
-go run ./cmd/dpcheck                                                   # test the Divine Pride key (.env)
-go run ./cmd/scriptcov                                                 # how much of the item scripts the calculator applies
-```
+Feito em Go, com janela nativa em [Gio](https://gioui.org). Como compilar, importar os dados, regenerar as fórmulas e publicar uma versão: [docs/DESENVOLVIMENTO.md](docs/DESENVOLVIMENTO.md) (em inglês).
 
-## Roadmap
+## Créditos
 
-- [x] Phase 0: scaffold + RO UI kit
-- [x] Phase 1: client data import (items, skills, trees, jobs in PT/ES/EN)
-- [x] Phase 2: build model, stats, HP/SP/ASPD, traits (rAthena renewal formulas)
-- [x] Phase 3: in-game-style skill tree with skill point limits per class step
-- [x] Phase 4: equipment, cards, enchants, refine, enchant grades (D–A: refine bonus and the items' own grade bonuses), random options (the client's option texts + rAthena scripts, also read from replays), class restrictions, item combos (rAthena + LATAM-only items read from the client descriptions)
-- [x] Phase 5: physical and magic damage vs monsters with LATAM formulas for every class, checked against bROWiki; buffs and consumables
-- [x] Phase 6: share links, last build restored, saved builds (Builds window)
-- [x] Phase 6b: import a character from a replay (`.rrf`)
-- [~] Phase 7: item comparison in the equipment picker (damage change per result, stat changes in the tooltip) and card/enchant optimizer done; stat and gear optimizer pending
-- [ ] Phase 8: polish
+- **[latam-ro-calc](https://github.com/adsonpleal/latam-ro-calc)** e **[rrfparser](https://github.com/adsonpleal/rrfparser)**, de Adson Leal (MIT): fórmulas e monstros do LATAM, e referência do formato de replay.
+- **[bROWiki](https://browiki.org)**: tabelas das habilidades, usadas para conferir as fórmulas.
+- **[rAthena](https://github.com/rathena/rathena)** (GPL-3.0): tabelas de classes, itens e monstros.
+- **[Divine Pride](https://www.divine-pride.net)**: ícones e atributos de alguns monstros.
 
-The full design doc is in `docs/design.md`.
+O que vem de cada fonte está detalhado em [docs/DESENVOLVIMENTO.md](docs/DESENVOLVIMENTO.md#credits).
 
-## Credits
+## Licença
 
-- **[latam-ro-calc](https://github.com/adsonpleal/latam-ro-calc)** by Adson Leal (MIT): the LATAM monster list (`src/assets/demo/data/monster.json`, downloaded at import at a pinned commit into `data/latam-ro-calc/`, not committed: stats checked against LATAM, including monsters rAthena has no stats for, such as Betelgeuse) and the damage reductions it measured; the LATAM skill formulas (all classes, including the 2022 rebalance LATAM uses since the 28/10/2026 client) are translated to Go by `tools/latamgen` into `internal/calc/latam_gen.go`; the physical/magic pipeline adjustments in `damage.go`/`magic.go` follow its measurements against real LATAM recordings. Coverage: `tools/latamgen/REPORT.md`.
-- **[bROWiki](https://browiki.org)**: skill pages are read through its MediaWiki API (1 request/second, cached in `data/browiki/`, not committed) to check every formula against the per-level tables of the current LATAM server. Where a table was rewritten for the 28/10/2026 client and disagrees, or a skill has no latam-ro-calc formula, `internal/calc/latam_wiki.go` follows the wiki. Report: `tools/browiki/COMPARE.md`.
-- **[rrfparser](https://github.com/adsonpleal/rrfparser)** by Adson Leal (MIT): format reference for the `.rrf` replay reader in `internal/replay` (independent Go implementation).
-- **[rAthena](https://github.com/rathena/rathena)** (GPL-3.0): job tables, items, monsters and renewal formulas. Its data files are downloaded locally by `cmd/fetchrathena` and not redistributed.
-- **[Divine Pride](https://www.divine-pride.net)** (optional): stats of the remaining monsters that neither rAthena nor latam-ro-calc has, fetched one ID at a time when chosen as a target, only if you set your own `DP_API_KEY` in `.env`; cached in `data/cache/dp/` (not committed).
-- Game names, descriptions and skill trees are read from the user's own RO LATAM client. Ragnarok Online is © Gravity Co., Ltd.
-
-## License
-
-The code is under the [MIT License](LICENSE). Game data is not part of it: the catalog is built from the RO LATAM client (© Gravity) and rAthena's tables are downloaded at import, never committed.
+O código está sob a [licença MIT](LICENSE). Os dados e as imagens do jogo não fazem parte dela: Ragnarok Online é © Gravity Co., Ltd. Este é um projeto de fãs, sem ligação com a Gravity.

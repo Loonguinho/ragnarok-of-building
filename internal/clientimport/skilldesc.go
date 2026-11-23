@@ -450,5 +450,18 @@ func SkillDescEffects(c *gamedata.Catalog) int {
 			}
 		}
 	}
+	// Skills whose "ATQ +N%" is a multiplier on the finished damage, not
+	// the ATK % of the status: Perícia com Katar Avançada (rAthena
+	// ATK_ADDRATE; latam-ro-calc's advKatar, checked on an Executor replay).
+	for code, key := range finalDamageSkills {
+		if s := byCode[code]; s != nil && s.Effects != nil {
+			for lv, src := range s.Effects.Levels {
+				s.Effects.Levels[lv] = strings.ReplaceAll(src, "bonus bAtkRate,", "bonus "+key+",")
+			}
+		}
+	}
 	return n
 }
+
+// finalDamageSkills: skill code -> the bonus its description's ATK % is.
+var finalDamageSkills = map[string]string{"ASC_KATAR": "bKatarDmgRate"}

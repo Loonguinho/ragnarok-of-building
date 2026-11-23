@@ -40,12 +40,15 @@ var efstStates = map[int]struct {
 	1192: {"Shadow Exceed", 10, ""},
 	1194: {"Potent Venom", 10, "SHC_POTENT_VENOM"},
 	334:  {"Hallucination Walk", 5, "GC_HALLUCINATIONWALK"},
+	722:  {"Unlimit", 5, "RA_UNLIMIT"}, // Ilimitar, 150 s
 }
 
 const (
-	efstConcentration   = 3   // Concentrar, at the learned level
-	efstPoisoningWeapon = 341 // Aplicar Toxina: the weapon takes the poison element
-	efstEnchantPoison   = 6   // Encantar com Veneno (AS_ENCHANTPOISON): poison endow
+	efstConcentration = 3 // Concentrar, at the learned level
+	// Aplicar Toxina (341) coats the weapon with a toxin but keeps its
+	// element: an Executor replay with it up hit a Poison 3 Rgan for
+	// 48 million.
+	efstEnchantPoison = 6 // Encantar com Veneno (AS_ENCHANTPOISON): poison endow
 )
 
 // applyStatuses turns the recording's statuses into buffs and attack states
@@ -92,7 +95,7 @@ func applyStatuses(b *calc.Build, s *Snapshot, c *gamedata.Catalog) int {
 				b.Buffs["concentration"] = lv
 				n++
 			}
-		case efstPoisoningWeapon, efstEnchantPoison:
+		case efstEnchantPoison:
 			b.Atk.Element = "Poison"
 			n++
 		}

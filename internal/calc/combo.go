@@ -64,6 +64,9 @@ func applyCombos(c *gamedata.Catalog, b *Build, ctx script.Context, bonus, extra
 			}
 		}
 	}
+	if b.Pet > 0 { // the pet's egg completes sets like an equipped item
+		have[b.Pet]++
+	}
 	var cand []int
 	for id := range have {
 		cand = append(cand, c.CombosWith(id)...)

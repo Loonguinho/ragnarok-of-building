@@ -195,6 +195,7 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 	}
 	clientimport.MarkMVPCardsByName(c, db)
 	clientimport.DescEquip(c)
+	clientimport.DescLevels(c) // LATAM levels over rAthena's
 	clientimport.CostumeStones(c)
 	if _, err := clientimport.ImportRandomOpts(clientDir, c, db.RandomOpts); err != nil {
 		progress("Nomes dos bônus aleatórios não lidos: " + err.Error())

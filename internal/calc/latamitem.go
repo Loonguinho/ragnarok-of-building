@@ -108,6 +108,12 @@ func newLatamEnv(b Build, c *gamedata.Catalog) *latamEnv {
 			}
 		}
 	}
+	if it := c.Items[b.Pet]; b.Pet > 0 && it != nil {
+		env.equipped[b.Pet] = true
+		if it.LatamName != "" {
+			env.names[it.LatamName] = true
+		}
+	}
 	for id, lv := range b.Skills {
 		if s := c.Skills[id]; s != nil {
 			env.learned[normName(s.Name.Get("en"))] = lv
@@ -712,6 +718,26 @@ func (e *latamEnv) line(pos string, main bool, refine int, s string) float64 {
 	return v
 }
 
+// petLine reports an EQUIP_ID[...] line whose partners are all pet eggs
+// (Cesta de Mascotes: "EQUIP_ID[9121||9137||9193]10").
+func (e *latamEnv) petLine(l string) bool {
+	m := reLtEquipID.FindStringSubmatch(l)
+	if m == nil {
+		return false
+	}
+	pets := 0
+	for _, f := range strings.FieldsFunc(m[1], func(r rune) bool { return r == '|' || r == '&' }) {
+		id, _ := strconv.Atoi(f)
+		switch it := e.c.Items[id]; {
+		case e.c.Pets[id] != nil || it != nil && it.Type == "PetEgg":
+			pets++
+		case it != nil: // a real item: an item set, left to the combos
+			return false
+		}
+	}
+	return pets > 0
+}
+
 // eval sums an item's lines per bonus key (calcItemStatus). Set lines
 // (EQUIP[...]/EQUIP_ID[...]) only with sets; then they count once per
 // item and key, however many copies are worn.
@@ -725,7 +751,8 @@ func (e *latamEnv) evalScript(src map[string][]string, id int, pos string, main 
 		sum := 0.0
 		for _, l := range lines {
 			if strings.HasPrefix(l, "EQUIP[") || strings.HasPrefix(l, "EQUIP_ID[") {
-				if !sets {
+				// A pet's egg is in no item combo: its lines are the item's own.
+				if !sets && !e.petLine(l) {
 					continue
 				}
 				k := fmt.Sprintf("%d-%s-%s", id, attr, l)
@@ -918,6 +945,15 @@ func DecideLatamKeys(c *gamedata.Catalog, desc DescFunc) int {
 	refines := []int{0, 4, 5, 7, 9, 10, 11, 12, 13, 15}
 	b := Build{BaseLv: 250, JobLv: 50, Stats: [6]int{100, 100, 100, 100, 100, 100}, Equip: map[string]Equip{}}
 	env := newLatamEnv(b, c)
+	// Every pet out at once, so the bonuses a pet's egg completes (Cesta de
+	// Mascotes: ranged +10% with Orc Herói...) are decided too; in a build
+	// only the chosen pet's line counts.
+	for egg := range c.Pets {
+		env.equipped[egg] = true
+		if it := c.Items[egg]; it != nil && it.LatamName != "" {
+			env.names[it.LatamName] = true
+		}
+	}
 	param := map[string]int{"bStr": 100, "bAgi": 100, "bVit": 100, "bInt": 100, "bDex": 100, "bLuk": 100}
 	for id, it := range c.Items {
 		it.LatamKeys = nil

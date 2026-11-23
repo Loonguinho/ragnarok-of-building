@@ -579,12 +579,15 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		jb = j.JobBonus[b.JobLv]
 	}
 
-	// Equipment bonuses: first pass with base stats for readparam().
-	param := map[string]int{"bStr": b.Stats[STR] + jb[0], "bAgi": b.Stats[AGI] + jb[1], "bVit": b.Stats[VIT] + jb[2],
-		"bInt": b.Stats[INT] + jb[3], "bDex": b.Stats[DEX] + jb[4], "bLuk": b.Stats[LUK] + jb[5],
+	// readparam(bStr) is the allocated points only, without the class
+	// bonus (rAthena status.str; latam-ro-calc): an Executor replay's
+	// Constelação do Poder (POD ÷ 15) and Orelhas Espirituais ((FOR + VIT)
+	// ÷ 15) match the status window only this way.
+	param := map[string]int{"bStr": b.Stats[STR], "bAgi": b.Stats[AGI], "bVit": b.Stats[VIT],
+		"bInt": b.Stats[INT], "bDex": b.Stats[DEX], "bLuk": b.Stats[LUK],
 		// Traits (4th jobs): readparam(bCon) etc. in the Nebula/Constellation enchants.
-		"bPow": b.Traits[POW] + jb[6+POW], "bSta": b.Traits[STA] + jb[6+STA], "bWis": b.Traits[WIS] + jb[6+WIS],
-		"bSpl": b.Traits[SPL] + jb[6+SPL], "bCon": b.Traits[CON] + jb[6+CON], "bCrt": b.Traits[CRT] + jb[6+CRT]}
+		"bPow": b.Traits[POW], "bSta": b.Traits[STA], "bWis": b.Traits[WIS],
+		"bSpl": b.Traits[SPL], "bCon": b.Traits[CON], "bCrt": b.Traits[CRT]}
 	equipIDs := map[int]bool{}
 	for _, e := range b.Equip {
 		equipIDs[e.Item] = true
@@ -593,6 +596,9 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 				equipIDs[cd] = true
 			}
 		}
+	}
+	if b.Pet > 0 { // the pet's egg counts as worn for sets (Cesta de Mascotes, Espetinho Doce)
+		equipIDs[b.Pet] = true
 	}
 	slotRefine, slotGrade := slotStates(b)
 	sbase := scriptBase(b, c, param, equipIDs, slotRefine, slotGrade)
@@ -627,6 +633,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		seen[e.Item] = true
 		ctx := sbase
 		ctx.Refine, ctx.Grade = e.Refine, e.Grade
+		ctx.ArmorLv, ctx.WeaponLv = it.ArmorLv, it.WeaponLv
 		res := script.Eval(itemScript(it, &r.SkippedScriptEffects), ctx)
 		lenv.overLatam(it, e.Item, slot, true, e.Refine, &res)
 		effects.add(e.Item, it, ctx, res.Autobonus, slot, true, e.Refine)
@@ -648,6 +655,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 				// Cards and enchants read the refine and grade of the item they are in.
 				cctx := sbase
 				cctx.Refine, cctx.Grade = e.Refine, e.Grade
+				cctx.ArmorLv, cctx.WeaponLv = it.ArmorLv, it.WeaponLv // the item the card is in
 				cr := script.Eval(itemScript(ci, &r.SkippedScriptEffects), cctx)
 				lenv.overLatam(ci, cd, slot, false, e.Refine, &cr)
 				effects.add(cd, ci, cctx, cr.Autobonus, slot, false, e.Refine)
@@ -962,6 +970,24 @@ func scriptBase(b Build, c *gamedata.Catalog, param map[string]int, equipIDs map
 		}
 	}
 	ctx.EAClass, ctx.BaseJob, ctx.BaseClass, ctx.Upper = classInfo(c, b.Job)
+	ctx.ItemInfo = func(id int, info string) (int, bool) {
+		it := c.Items[id]
+		if it == nil {
+			return 0, id == 0 // an empty position reads as 0
+		}
+		switch info {
+		case "VIEW":
+			if it.Type == "Weapon" {
+				v, ok := script.WeaponTypes[it.SubType]
+				return v, ok
+			}
+		case "WEAPONLEVEL":
+			return it.WeaponLv, true
+		case "ARMORLEVEL":
+			return it.ArmorLv, true
+		}
+		return 0, false
+	}
 	return ctx
 }
 

@@ -33,6 +33,28 @@ type Context struct {
 	EAClass, BaseJob, BaseClass, Upper int
 	Skills                             map[string]int // getskilllv("CODE"): learned levels by code
 	PetIntimacy                        int            // getpetinfo(PETINFO_INTIMATE): 0-1000, pet scripts
+	// ItemInfo answers getiteminfo(item, ITEMINFO_x): VIEW (a weapon's
+	// W_* type), WEAPONLEVEL, ARMORLEVEL. nil = unknown.
+	ItemInfo func(item int, info string) (int, bool)
+	// The armor and weapon level of the item being evaluated (for a card,
+	// the item it is in): getequiparmorlv() / getequipweaponlv().
+	ArmorLv, WeaponLv int
+}
+
+// WeaponTypes are rAthena's W_* weapon types by item SubType: a weapon's
+// getiteminfo(..., ITEMINFO_VIEW).
+var WeaponTypes = map[string]int{
+	"Fist": 0, "Dagger": 1, "1hSword": 2, "2hSword": 3, "1hSpear": 4, "2hSpear": 5, "1hAxe": 6, "2hAxe": 7,
+	"Mace": 8, "2hMace": 9, "Staff": 10, "Bow": 11, "Knuckle": 12, "Musical": 13, "Whip": 14, "Book": 15,
+	"Katar": 16, "Revolver": 17, "Rifle": 18, "Gatling": 19, "Shotgun": 20, "Grenade": 21, "Huuma": 22, "2hStaff": 23,
+}
+
+// weaponConsts are the W_* names scripts compare with.
+var weaponConsts = map[string]int{
+	"W_FIST": 0, "W_DAGGER": 1, "W_1HSWORD": 2, "W_2HSWORD": 3, "W_1HSPEAR": 4, "W_2HSPEAR": 5, "W_1HAXE": 6,
+	"W_2HAXE": 7, "W_MACE": 8, "W_2HMACE": 9, "W_STAFF": 10, "W_BOW": 11, "W_KNUCKLE": 12, "W_MUSICAL": 13,
+	"W_WHIP": 14, "W_BOOK": 15, "W_KATAR": 16, "W_REVOLVER": 17, "W_RIFLE": 18, "W_GATLING": 19,
+	"W_SHOTGUN": 20, "W_GRENADE": 21, "W_HUUMA": 22, "W_2HSTAFF": 23,
 }
 
 // Pet intimacy steps (rAthena's PET_INTIMATE_*): a pet script's bonuses
@@ -311,11 +333,17 @@ func (p *parser) statement(run bool) {
 				break
 			}
 		}
-		// Flag bonuses with no value ("bonus bNoSizeFix;") count as 1.
-		if name.kind == 'i' && p.peek().s == ";" && flagBonus[name.s] {
+		// Flag bonuses with no value ("bonus bNoSizeFix;") count as 1. Any
+		// other value-less bonus (bNoKnockback...) is skipped by itself: it
+		// must not take the next statement with it.
+		if name.kind == 'i' && p.peek().s == ";" {
 			p.pos++
 			if run {
-				p.res.Bonus[name.s] = 1
+				if flagBonus[name.s] {
+					p.res.Bonus[name.s] = 1
+				} else {
+					p.res.Skipped++
+				}
 			}
 			break
 		}
@@ -642,6 +670,49 @@ func (p *parser) unary() int {
 				return 0
 			}
 			return p.ctx.Skills[arg]
+		case t.s == "getequiparmorlv" || t.s == "getequipweaponlv":
+			// No argument: the item the script belongs to; EQI_x: that position.
+			a := p.rawArgs()
+			if len(a) == 0 {
+				if t.s == "getequiparmorlv" {
+					return p.ctx.ArmorLv
+				}
+				return p.ctx.WeaponLv
+			}
+			if len(a) == 1 && strings.HasPrefix(a[0], "EQI_") && p.ctx.SlotItem != nil && p.ctx.ItemInfo != nil {
+				what := "ARMORLEVEL"
+				if t.s == "getequipweaponlv" {
+					what = "WEAPONLEVEL"
+				}
+				if v, ok := p.ctx.ItemInfo(p.ctx.SlotItem[a[0]], what); ok {
+					return v
+				}
+			}
+			p.bad = true
+			return 0
+		case t.s == "getiteminfo":
+			// getiteminfo(<item expr>, ITEMINFO_x)
+			if !p.accept("(") {
+				p.bad = true
+				return 0
+			}
+			item := p.expr()
+			p.accept(",")
+			info := p.peek()
+			p.pos++
+			if !p.accept(")") || info.kind != 'i' || p.ctx.ItemInfo == nil {
+				p.bad = true
+				return 0
+			}
+			if v, ok := p.ctx.ItemInfo(item, strings.TrimPrefix(info.s, "ITEMINFO_")); ok {
+				return v
+			}
+			p.bad = true
+			return 0
+		case strings.HasPrefix(t.s, "W_"):
+			if v, ok := weaponConsts[t.s]; ok {
+				return v
+			}
 		case t.s == "getpetinfo":
 			if a := p.rawArgs(); len(a) == 1 && a[0] == "PETINFO_INTIMATE" {
 				return p.ctx.PetIntimacy
@@ -787,6 +858,8 @@ var known = map[string]bool{
 	// the generated passives write it, the damage engine adds it after the ATK
 	// multipliers).
 	"bMasteryAtk": true,
+	// Perícia com Katar Avançada: % on the finished damage with a katar.
+	"bKatarDmgRate": true,
 	"bNoSizeFix":  true, "bCriticalLong": true,
 	"bCritTenths": true, // CRIT in tenths (skill tables write "+12,5")
 	"bAspdFixed":  true, // ASPD potions and quicken skills: × AGI ÷ 200 before the ASPD %

@@ -126,6 +126,12 @@ func TestFlagBonus(t *testing.T) {
 	if r.Bonus["bNoSizeFix"] != 1 || r.Bonus["bCriticalLong"] != 15 || r.Skipped != 0 {
 		t.Errorf("got %v, skipped %d", r.Bonus, r.Skipped)
 	}
+	// An unknown value-less bonus is skipped alone (the Mastodonte shadow
+	// set's bNoKnockback used to swallow its +12% against all elements).
+	r = Eval(`if (1) { bonus bNoKnockback; if (1) { bonus2 bAddEle,Ele_All,12; } } bonus bStr,1;`, Context{})
+	if r.Extra["bAddEle Ele_All"] != 12 || r.Bonus["bStr"] != 1 || r.Skipped != 1 {
+		t.Errorf("after bNoKnockback: bonus %v, extra %v, skipped %d", r.Bonus, r.Extra, r.Skipped)
+	}
 }
 
 func TestAutobonus(t *testing.T) {
@@ -139,5 +145,26 @@ func TestAutobonus(t *testing.T) {
 	}
 	if r := Eval(src, Context{Refine: 9}); len(r.Autobonus) != 1 {
 		t.Errorf("below +11 only the other proc: %q", r.Autobonus)
+	}
+}
+
+// getiteminfo(getequipid(EQI_HAND_R), ITEMINFO_VIEW) is the weapon's W_*
+// type (the winter crystals' two-handed/ranged set).
+func TestGetItemInfo(t *testing.T) {
+	src := `.@i = getiteminfo(getequipid(EQI_HAND_R), ITEMINFO_VIEW); if (.@i == W_KATAR || .@i == W_BOW) { bonus bShortAtkRate,10; } if (getiteminfo(getequipid(EQI_HAND_R), ITEMINFO_WEAPONLEVEL) >= 4) { bonus bStr,1; }`
+	info := func(item int, what string) (int, bool) {
+		switch what {
+		case "VIEW":
+			return map[int]int{1: WeaponTypes["Katar"], 2: WeaponTypes["Dagger"]}[item], true
+		case "WEAPONLEVEL":
+			return 4, true
+		}
+		return 0, false
+	}
+	for item, want := range map[int]int{1: 10, 2: 0} {
+		r := Eval(src, Context{SlotItem: map[string]int{"EQI_HAND_R": item}, ItemInfo: info})
+		if r.Bonus["bShortAtkRate"] != want || r.Bonus["bStr"] != 1 || r.Skipped != 0 {
+			t.Errorf("weapon %d: %v, skipped %d", item, r.Bonus, r.Skipped)
+		}
 	}
 }

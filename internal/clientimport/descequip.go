@@ -158,3 +158,46 @@ func appendUnique(s []string, v string) []string {
 	}
 	return append(s, v)
 }
+
+var (
+	reDescReqLv    = regexp.MustCompile(`(?i)^N[ií]vel (?:necess[aá]rio|m[ií]nimo)\s*:\s*(\d+)`)
+	reDescWeaponLv = regexp.MustCompile(`(?i)^N[ií]vel da arma\s*:\s*(\d+)`)
+	reDescArmorLv  = regexp.MustCompile(`(?i)^N[ií]vel do equip(?:amento|\.)?\s*:\s*(\d+)`)
+)
+
+// DescLevels takes the required base level, the weapon level and the armor
+// level from the LATAM client's description where it gives them: rAthena's
+// are kRO's and differ on hundreds of items (Jaqueta de Motociclista needs
+// level 55 in LATAM, not 1). Returns how many items changed.
+func DescLevels(c *gamedata.Catalog) int {
+	n := 0
+	for _, it := range c.Items {
+		if it.Type != "Weapon" && it.Type != "Armor" && it.Type != "ShadowGear" {
+			continue
+		}
+		changed := false
+		for _, l := range it.Desc["pt"] {
+			l = strings.TrimSpace(descColor.ReplaceAllString(l, ""))
+			num := func(re *regexp.Regexp) int {
+				if m := re.FindStringSubmatch(l); m != nil {
+					v, _ := strconv.Atoi(m[1])
+					return v
+				}
+				return 0
+			}
+			if v := num(reDescReqLv); v > 0 && v != it.EquipLvMin {
+				it.EquipLvMin, changed = v, true
+			}
+			if v := num(reDescWeaponLv); v > 0 && it.Type == "Weapon" && v != it.WeaponLv {
+				it.WeaponLv, changed = v, true
+			}
+			if v := num(reDescArmorLv); v > 0 && it.Type == "Armor" && v != it.ArmorLv {
+				it.ArmorLv, changed = v, true
+			}
+		}
+		if changed {
+			n++
+		}
+	}
+	return n
+}

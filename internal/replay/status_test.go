@@ -62,8 +62,8 @@ func TestApplyStatuses(t *testing.T) {
 	c := &gamedata.Catalog{Skills: map[int]*gamedata.Skill{5290: {ID: 5290, Code: "SHC_POTENT_VENOM"}}}
 	s := &Snapshot{Skills: map[int]int{5290: 7}, Statuses: []int{10, 442, 114, 1194, 341, 99999}}
 	var b calc.Build
-	if n := applyStatuses(&b, s, c); n != 5 {
-		t.Errorf("applied %d, want 5", n)
+	if n := applyStatuses(&b, s, c); n != 4 {
+		t.Errorf("applied %d, want 4", n)
 	}
 	if b.Buffs["blessing"] != 10 || b.Buffs["rushwindmill"] != 105 {
 		t.Errorf("buffs = %v", b.Buffs)
@@ -71,7 +71,14 @@ func TestApplyStatuses(t *testing.T) {
 	if b.Atk.States[calc.StateKeyOf("Enchant Deadly Poison")] != 1 || b.Atk.States[calc.StateKeyOf("Potent Venom")] != 7 {
 		t.Errorf("states = %v", b.Atk.States)
 	}
+	// Aplicar Toxina keeps the weapon's element; Encantar com Veneno is a
+	// poison endow.
+	if b.Atk.Element != "" {
+		t.Errorf("element = %q with Aplicar Toxina, want the weapon's", b.Atk.Element)
+	}
+	b = calc.Build{}
+	applyStatuses(&b, &Snapshot{Statuses: []int{6}}, c)
 	if b.Atk.Element != "Poison" {
-		t.Errorf("element = %q, want Poison (Aplicar Toxina)", b.Atk.Element)
+		t.Errorf("element = %q with Encantar com Veneno, want Poison", b.Atk.Element)
 	}
 }

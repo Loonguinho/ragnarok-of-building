@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strconv"
 	"strings"
 
 	"ragnarok-of-building/internal/gamedata"
@@ -126,7 +127,6 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	if a.Element != "" && a.Element != "Poison" && !edp {
 		statusEle = a.Element
 	}
-	edpPoison := max(0, attr("Poison"))
 	// Negative values (healing) are treated as no damage.
 	eleStatus, eleAtk := max(0, attr(statusEle)), max(0, attr(ele))
 	d.EleAtkPct = eleAtk
@@ -216,10 +216,9 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		step("ATQ de status", "%d × %d%% (%s) × 2 = %d", r.StatusATK, eleStatus, strings.ToLower(statusEle), status)
 
 		if edp {
-			// Only the +25% share is poison against the target.
 			before := weapon
-			weapon = int64(math.Floor(float64(weapon) * (1 + edpWeaponBonus*float64(edpPoison)/100)))
-			step("EDP (arma)", "%d + 25%% × veneno %d%% = %d", before, edpPoison, weapon)
+			weapon = int64(math.Floor(float64(weapon) * (1 + edpWeaponBonus)))
+			step("EDP (arma)", "%d + %.0f%% = %d", before, edpWeaponBonus*100, weapon)
 		}
 		w := weapon * int64(sizePct) / 100
 		w = w * int64(eleAtk) / 100
@@ -270,6 +269,10 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		rangeRate, rangeLabel := int64(bn["bShortAtkRate"]), "Dano corpo a corpo"
 		if !isMelee {
 			rangeRate, rangeLabel = int64(bn["bLongAtkRate"]), "Dano à distância"
+			if u := unlimitRate(b, true, false); u > 0 {
+				rangeRate += int64(u)
+				rangeLabel = "Dano à distância (com Ilimitar +" + strconv.Itoa(u) + "%)"
+			}
 		}
 		if rangeRate != 0 {
 			dmg = dmg * (100 + rangeRate) / 100
@@ -301,6 +304,10 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		}
 		step("DEF do alvo", "%d × (4000+%d)/(4000+%d) − %d%s = %d", before, def1, 10*def1, def2, ign, dmg)
 
+		if k := int64(bn["bKatarDmgRate"]); k != 0 && r.WeaponType == "Katar" {
+			dmg = dmg * (100 + k) / 100
+			step("Perícia com Katar Avançada", "%+d%% = %d", k, dmg)
+		}
 		if skillAtk != 0 {
 			dmg = dmg * int64(100+skillAtk) / 100
 			step("Bônus na habilidade (equip)", "%+d%% = %d", skillAtk, dmg)

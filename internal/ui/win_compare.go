@@ -67,6 +67,34 @@ func (a *App) addCompare(id int) {
 	a.showCompare()
 }
 
+// addCompareCard pins the slot's item with card id in the position being
+// picked (everything else as worn) to the comparison.
+func (a *App) addCompareCard(id int) {
+	s, cs := &a.slot, &a.cmp
+	if s.card < 0 {
+		return
+	}
+	if cs.slot != s.key || len(cs.cols) == 0 {
+		cs.slot, cs.cols = s.key, []view.CompareCand{{}}
+	}
+	e := a.Build().Equip[s.key]
+	cards := e.Cards
+	cards[s.card] = id
+	for _, c := range cs.cols[1:] {
+		if c.Item == 0 && c.Cards != nil && *c.Cards == cards {
+			a.showCompare()
+			return
+		}
+	}
+	if len(cs.cols) >= compareMax {
+		a.Say(a.T("A comparação já tem 3 itens: remova um para fixar outro."), true)
+		a.showCompare()
+		return
+	}
+	cs.cols = append(cs.cols, view.CompareCand{Cards: &cards, Refine: e.Refine, Grade: e.Grade})
+	a.showCompare()
+}
+
 func (a *App) showCompare() {
 	if !a.wCompare.Open {
 		a.Desk.Toggle(a.wCompare)

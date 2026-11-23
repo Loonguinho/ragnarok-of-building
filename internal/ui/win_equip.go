@@ -633,7 +633,11 @@ func (a *App) pickList(gtx C) D {
 			a.pick(it.ID)
 		}
 		if cb := s.cmpBtns[it.ID]; cb != nil && cb.Clicked(gtx) {
-			a.addCompare(it.ID)
+			if s.card >= 0 {
+				a.addCompareCard(it.ID)
+			} else {
+				a.addCompare(it.ID)
+			}
 		}
 	}
 	h := gtx.Dp(220)
@@ -704,9 +708,7 @@ func (a *App) pickList(gtx C) D {
 				})
 			}
 			var d D
-			if s.card >= 0 {
-				d = row(gtx)
-			} else {
+			{
 				cb := s.cmpBtns[it.ID]
 				if cb == nil {
 					cb = &widget.Clickable{}
@@ -742,6 +744,10 @@ func (a *App) pick(id int) {
 		a.SetBuild(edit.EditLinked(b, s.key, func(e *calc.Equip) { e.Cards[k] = id }))
 		a.Say(a.T("Carta aplicada."), false)
 		s.card, s.bestOn = -1, false
+	} else if s.bestOn && id == b.Equip[s.key].Item {
+		// The worn item: keep it as it is (random options, cards, enchants).
+		s.bestOn = false
+		a.equipDone()
 	} else if s.bestOn {
 		a.SetBuild(a.V.SwapAt(b, s.key, id, s.bestRefine, s.bestGrade))
 		a.Say(a.T("Item equipado."), false)

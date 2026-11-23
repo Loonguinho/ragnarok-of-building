@@ -108,6 +108,14 @@ func (v *Views) CompareBuild(b calc.Build, slot string, cand CompareCand) calc.B
 	} else {
 		nb = v.s.swapAt(b, slot, cand.Item, cand.Refine, cand.Grade)
 	}
+	if cand.Item == 0 && cand.Cards != nil { // the worn item with other cards: its refine and grade too
+		for k, e := range nb.Equip {
+			if k == slot || (strings.HasPrefix(slot, "Head_") && strings.HasPrefix(k, "Head_") && e.Item == nb.Equip[slot].Item) {
+				e.Refine, e.Grade = cand.Refine, cand.Grade
+				nb.Equip[k] = e
+			}
+		}
+	}
 	if cand.Cards != nil {
 		item := nb.Equip[slot].Item
 		for k, e := range nb.Equip {

@@ -93,7 +93,13 @@ func (v *Views) BestItems(ctx context.Context, b calc.Build, slot string, refine
 	for range max(1, runtime.NumCPU()-1) {
 		wg.Go(func() {
 			for id := range ch {
-				e := s.optExpected(s.swapAt(b, slot, id, refine, grade))
+				// The item already worn counts as it is (its random options,
+				// cards and enchants), not as a fresh copy: it reads "=".
+				nb := b
+				if id != b.Equip[slot].Item {
+					nb = s.swapAt(b, slot, id, refine, grade)
+				}
+				e := s.optExpected(nb)
 				mu.Lock()
 				out = append(out, scored{id, e / base})
 				mu.Unlock()

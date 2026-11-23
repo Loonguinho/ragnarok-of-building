@@ -63,7 +63,11 @@ func itemEffectRows(r calc.Result, c *gamedata.Catalog, l string) []effectItem {
 			lb, v := bonusText(k, ef.Extra[k], c, l)
 			gives = append(gives, strings.TrimSpace(lb+" "+v))
 		}
-		row := effectItem{Key: ef.Key, Label: it.Name.Get(l), Gives: strings.Join(gives, ", "), ItemID: ef.Item}
+		label := it.Name.Get(l)
+		if ef.Event {
+			label += " (" + tr(l, "durante o evento") + ")"
+		}
+		row := effectItem{Key: ef.Key, Label: label, Gives: strings.Join(gives, ", "), ItemID: ef.Item}
 		if ef.On {
 			row.Value = 1
 		}

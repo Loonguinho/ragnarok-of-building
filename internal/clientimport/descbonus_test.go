@@ -134,3 +134,12 @@ func TestDescSetWeaponLines(t *testing.T) {
 		t.Errorf("combo %v:\n%s\nwant:\n%s", cb.Items, cb.Script, want)
 	}
 }
+
+// TestEventScript: Batata Quente's event block, without its sets.
+func TestEventScript(t *testing.T) {
+	got := EventScript([]string{"Uma batata.", "-------", "[Durante o Evento]", "EXP obtida por monstros +5%.",
+		"Dano físico corpo a corpo +10%.", "Ao derrotar monstros:", "3% de chance de derrubar algo.", "-", "Conjunto", "Dano físico +10%."}, nil)
+	if got != "bonus bShortAtkRate,10;\n" {
+		t.Errorf("event script %q", got)
+	}
+}

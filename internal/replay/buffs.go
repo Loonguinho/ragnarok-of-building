@@ -51,6 +51,12 @@ var efstStates = map[int]struct {
 	1389: {"_SkyEmperor_Celestial_Space", 5, ""},
 	1390: {"_SkyEmperor_Celestial_Space", 6, ""},
 	1392: {"_SkyEmperor_Celestial_Space", 7, ""},
+	461:  {"Geneticist Cart Boost", 5, "GN_CARTBOOST"}, // Propulsão do Carrinho
+	758:  {"Platinum Altar", 1, ""}, // Altar de Platina (EFST_P_ALTER)
+	607:  {"Pyroclastic", 250, ""}, // Piroclástico; the homunculus level is not recorded
+	1176: {"Dragonic Aura", 10, ""},
+	1235: {"Axe Stomp", 5, ""},       // Esmagador
+	1248: {"Research Report", 1, ""}, // Eureka
 	1039: {"Universe Stance", 3, "SJ_UNIVERSESTANCE"}, // Postura do Universo
 }
 
@@ -59,6 +65,11 @@ var efstStates = map[int]struct {
 // Mestre Celestial replay comes out ~5% low, with and without the Bota
 // Desconhecida FOR proc, the same gap as the replay without Milagre.
 const efstMiracle = 160
+
+// efstAttackProperty: EFST_ATTACK_PROPERTY_*, the element of the weapon and
+// equipment ATK.
+var efstAttackProperty = map[int]string{898: "Water", 899: "Earth", 900: "Fire", 901: "Wind", 902: "Poison",
+	903: "Holy", 904: "Dark", 905: "Ghost", 906: "Undead"}
 
 const (
 	efstConcentration = 3 // Concentrar, at the learned level
@@ -100,6 +111,11 @@ func applyStatuses(b *calc.Build, s *Snapshot, c *gamedata.Catalog) int {
 				b.Atk.States = map[string]int{}
 			}
 			b.Atk.States[calc.StateKeyOf(st.name)] = v
+			n++
+			continue
+		}
+		if ele := efstAttackProperty[id]; ele != "" {
+			calc.SetAttackProperty(b, ele)
 			n++
 			continue
 		}

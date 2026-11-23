@@ -63,7 +63,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	ratio := a.SkillRatio
 	hits := max(1, a.Hits)
 	if f != nil {
-		ratio = f.Ratio(a.Input)
+		ratio = math.Floor(f.Ratio(a.Input)) // the server's skill ratio is an integer
 		if f.Hits != nil {
 			hits = max(1, f.Hits(a.Input))
 		}
@@ -118,6 +118,15 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 			}
 		}
 	}
+	// What is shot gives the attack its element, unless the build forces one.
+	ammo, ammoMastery := 0, 0
+	if !isMelee && usesAmmo(r, a.SkillCode) {
+		ammo, ammoMastery = ammoATK(r, a.SkillCode)
+		_, thrown := ammoSkills[a.SkillCode]
+		if r.AmmoEle != "" && (a.Element == "" || thrown) { // a thrown one's element cannot be changed
+			ele = r.AmmoEle
+		}
+	}
 	// A skill's own element wins over the weapon's and any endow.
 	if e := f.ElementOf(a.Input); e != "" {
 		ele = e
@@ -134,7 +143,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	// it takes too, unless the endow is poison (LATAM recordings).
 	statusEle := "Neutral"
 	edp := edpActive(b, a.SkillCode)
-	if a.Element != "" && a.Element == ele && a.Element != "Poison" && !edp {
+	if a.Element != "" && a.Element == ele && a.Element != "Poison" && !edp && !AttackPropertyOn(b, ele) {
 		statusEle = a.Element
 	}
 	// Negative values (healing) are treated as no damage.
@@ -216,6 +225,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	bn := r.Bonuses
 	scar := shadowScarPctOn(b, isMelee, false)
 	mastery := int64(bn["bMasteryAtk"] + sum("bMasteryAtkRace", "RC_"+m.Race, "RC_All") + sum("bMasteryAtkEle", "Ele_"+m.Element, "Ele_All"))
+	mastery += int64(ammoMastery)
 	one := func(weapon int64, crit, rec bool) int64 {
 		step := func(label, format string, args ...any) {
 			if rec {
@@ -256,8 +266,12 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		w = w * int64(eleAtk) / 100
 		step("ATQ da arma", "%d × tamanho %d%% × elemento %d%% = %d", weapon, sizePct, eleAtk, w)
 
-		eq := int64(r.OtherEquipATK) * int64(eleAtk) / 100
-		step("ATQ de equipamento", "%d × elemento %d%% = %d", r.OtherEquipATK, eleAtk, eq)
+		eq := int64(r.OtherEquipATK+ammo) * int64(eleAtk) / 100
+		if ammo > 0 {
+			step("ATQ de equipamento", "(%d + munição %d) × elemento %d%% = %d", r.OtherEquipATK, ammo, eleAtk, eq)
+		} else {
+			step("ATQ de equipamento", "%d × elemento %d%% = %d", r.OtherEquipATK, eleAtk, eq)
+		}
 
 		pct := (w + eq) * int64(bn["bAtkRate"]) / 100
 		if pct != 0 {
@@ -316,14 +330,19 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 			step("Habilidade", "× %.0f%% = %d", ratio, dmg)
 		}
 
-		if res > 0 && dmg > 0 {
+		hardFlat := f != nil && f.HardDefFlat
+		if res > 0 && dmg > 0 && !hardFlat {
 			cut := int64(float32(res/(res+400)) * 80.0 / 100.0 * float32(dmg))
 			dmg -= cut
 			step("RES do alvo", "%.0f → −%d = %d", res, cut, dmg)
 		}
 
 		before := dmg
-		dmg = dmg*(4000+def1)/(4000+10*def1) - def2
+		if hardFlat {
+			dmg -= def1 + def2
+		} else {
+			dmg = dmg*(4000+def1)/(4000+10*def1) - def2
+		}
 		if dmg < 1 {
 			dmg = 1
 		}
@@ -334,7 +353,11 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		if f != nil && (f.IgnoreDef || f.IgnoreSoftDef) {
 			ign = " (habilidade ignora DEF)"
 		}
-		step("DEF do alvo", "%d × (4000+%d)/(4000+%d) − %d%s = %d", before, def1, 10*def1, def2, ign, dmg)
+		if hardFlat {
+			step("DEF do alvo", "%d − %d − %d%s = %d", before, def1, def2, ign, dmg)
+		} else {
+			step("DEF do alvo", "%d × (4000+%d)/(4000+%d) − %d%s = %d", before, def1, 10*def1, def2, ign, dmg)
+		}
 
 		if k := int64(bn["bKatarDmgRate"]); k != 0 && r.WeaponType == "Katar" {
 			dmg = dmg * (100 + k) / 100
@@ -453,6 +476,28 @@ func learnedLv(b Build, c *gamedata.Catalog, code string) int {
 		}
 	}
 	return 0
+}
+
+// attackProperty is the state behind EFST_ATTACK_PROPERTY_* (897-906): an
+// endow that gives its element to the weapon and equipment ATK but leaves the
+// status ATK neutral (a Cientista recording with Water on it against Fire,
+// Poison, Ghost and Undead 4). Its value is the element's place in Elements,
+// so choosing another element by hand is an ordinary endow again.
+const attackProperty = "Attack Property"
+
+// SetAttackProperty puts the endow on the build.
+func SetAttackProperty(b *Build, ele string) {
+	if b.Atk.States == nil {
+		b.Atk.States = map[string]int{}
+	}
+	b.Atk.Element = ele
+	b.Atk.States[stateKey(attackProperty)] = slices.Index(Elements, ele) + 1
+}
+
+// AttackPropertyOn reports whether the element comes from that endow.
+func AttackPropertyOn(b Build, ele string) bool {
+	v := b.Atk.States[stateKey(attackProperty)]
+	return v > 0 && v == slices.Index(Elements, ele)+1
 }
 
 // stripShadow is the target's RES or MRES, less 50 under Remoção Sombria Total.

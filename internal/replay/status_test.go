@@ -103,3 +103,16 @@ func TestApplySkyEmperorStatuses(t *testing.T) {
 		t.Errorf("Elo Celestial / Postura do Universo: states = %v", st)
 	}
 }
+
+// TestAttackProperty: EFST_ATTACK_PROPERTY_WATER is a Water endow that the
+// status ATK does not take; Eureka comes from its status.
+func TestAttackProperty(t *testing.T) {
+	var b calc.Build
+	applyStatuses(&b, &Snapshot{Statuses: []int{898, 1248}}, &gamedata.Catalog{})
+	if b.Atk.Element != "Water" || !calc.AttackPropertyOn(b, "Water") || calc.AttackPropertyOn(b, "Fire") {
+		t.Errorf("element %q states %v", b.Atk.Element, b.Atk.States)
+	}
+	if b.Atk.States[calc.StateKeyOf("Research Report")] != 1 {
+		t.Errorf("Eureka not imported: %v", b.Atk.States)
+	}
+}

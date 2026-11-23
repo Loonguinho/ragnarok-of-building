@@ -261,8 +261,8 @@ func Load(dir string) (*DB, error) {
 		}
 		for _, e := range doc.Body {
 			aegis[e.AegisName] = e.ID
-			if f == "item_db_etc.yml" && e.Type != "Card" {
-				continue // only cards matter from the etc table
+			if f == "item_db_etc.yml" && e.Type != "Card" && e.Type != "Ammo" {
+				continue // only cards and ammunition matter from the etc table
 			}
 			if GMItems[e.ID] {
 				continue

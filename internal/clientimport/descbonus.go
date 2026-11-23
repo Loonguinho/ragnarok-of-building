@@ -46,6 +46,7 @@ func DescBonuses(c *gamedata.Catalog) (scripts, combos int) {
 	slices.Sort(ids) // deterministic output
 	for _, id := range ids {
 		it := c.Items[id]
+		it.EventScript = EventScript(it.Desc["pt"], skills)
 		if it.Script != "" {
 			continue
 		}
@@ -315,6 +316,34 @@ func DescScript(self int, desc []string, names map[string][]int, skills map[stri
 	}
 	flushCombo()
 	return out.String(), combos, skipped
+}
+
+// EventScript is the script of the description's "[Durante o Evento]" block
+// (up to the next separator or set); lines about drops and EXP give nothing.
+func EventScript(desc []string, skills map[string]string) string {
+	var out strings.Builder
+	in := false
+	for _, raw := range desc {
+		line := strings.TrimSpace(reTags.ReplaceAllString(reColor.ReplaceAllString(raw, ""), ""))
+		low := strings.ToLower(line)
+		switch {
+		case strings.HasPrefix(low, "[durante o evento"):
+			in = true
+			continue
+		case strings.HasPrefix(line, "-"), low == "conjunto", strings.HasSuffix(line, ":"):
+			in = false
+		}
+		if !in {
+			continue
+		}
+		line = strings.Replace(line, "todas as raças de monstro", "todas as raças", 1)
+		for _, sent := range splitSentences(line) {
+			if st, ok := descStatement(sent, "", skills); ok {
+				out.WriteString(st + "\n")
+			}
+		}
+	}
+	return out.String()
 }
 
 func splitSentences(line string) []string {

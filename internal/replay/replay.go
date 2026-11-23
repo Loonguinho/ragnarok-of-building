@@ -48,6 +48,7 @@ type Item struct {
 	Cards    [4]int
 	Opts     [][2]int // random options: [ID, value]
 	Equipped uint32   // rAthena e_equip_pos bitmask; 0 = not worn
+	Index    int      // inventory index in the packets (slot + 2)
 }
 
 // Snapshot is the character as it was when recording started.
@@ -65,6 +66,9 @@ type Snapshot struct {
 	// Client status (EFST) ids up on the character at its biggest hit on a
 	// monster (at the end of the recording when it hit none).
 	Statuses []int
+	// Ammo is the equipped ammunition (0 = none seen): the stack the
+	// recording spends, since the snapshot flags several as worn.
+	Ammo int
 	// The pet out when the recording started; nil when none.
 	Pet *Pet
 	// Damage dealt to monsters by each character in the recording (the
@@ -239,6 +243,7 @@ func Decode(buf []byte) (s *Snapshot, err error) {
 	for _, c := range append(initial, objects...) {
 		first = append(first, c.data)
 	}
+	s.Ammo = wornAmmo(s.Inventory, stream)
 	aid := uint32(u32(session, 1010))
 	s.Damage = summarizeDamage(aid, s.Player, first, stream)
 	var start []int
@@ -368,6 +373,7 @@ func readItems(data []byte) []Item {
 			continue
 		}
 		bySlot[slot] = true
+		it.Index = pos
 		out = append(out, it)
 	}
 	return out

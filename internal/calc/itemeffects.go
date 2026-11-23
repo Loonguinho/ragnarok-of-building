@@ -16,6 +16,7 @@ const ItemEffectPrefix = "proc:"
 // lines). The game rolls it; the build says whether to count it.
 type ItemEffect struct {
 	Item         int
+	Event        bool   // "[Durante o Evento]" bonus
 	Key          string // Build.Buffs key
 	On           bool
 	Bonus, Extra map[string]int
@@ -23,6 +24,9 @@ type ItemEffect struct {
 
 // ItemEffectKey is the Build.Buffs key of an item's effect.
 func ItemEffectKey(item int) string { return ItemEffectPrefix + strconv.Itoa(item) }
+
+// EventEffectKey is the Build.Buffs key of an item's event bonus.
+func EventEffectKey(item int) string { return ItemEffectPrefix + "ev" + strconv.Itoa(item) }
 
 type itemEffects struct {
 	b    *Build
@@ -36,6 +40,14 @@ type itemEffects struct {
 // scripts reached for this refine and grade, or else its latam-ro-calc
 // chance lines. One effect per item, however many copies are worn.
 func (x *itemEffects) add(id int, it *gamedata.Item, ctx script.Context, autobonus []string, slot string, main bool, refine int) {
+	if it.EventScript != "" && !x.seen[-id] {
+		x.seen[-id] = true
+		r := script.Eval(it.EventScript, ctx)
+		if len(r.Bonus) > 0 || len(r.Extra) > 0 {
+			key := EventEffectKey(id)
+			x.list = append(x.list, ItemEffect{Item: id, Event: true, Key: key, On: x.b.Buffs[key] > 0, Bonus: r.Bonus, Extra: r.Extra})
+		}
+	}
 	if x.seen[id] || (len(autobonus) == 0 && len(it.LatamProcs) == 0) {
 		return
 	}

@@ -107,10 +107,13 @@ func init() {
 		Ratio: func(in FormulaInput) float64 { // + Nv x VIT of the target
 			return (lv(in)*200 + in.S(INT)*2 + lv(in)*in.MonStat(2)) * bl(in)
 		}})
+	// Canhão de Prótons: 250/Nv + 20 × Nv × Aprimorar Carrinho + INT × 2; the
+	// target's hard DEF is subtracted like the soft one and RES does not
+	// apply (latam-ro-calc, measured on gn-cart-cannon-gear-states.rrf).
 	wikiAdd([]string{"JT_GENETIC", "JT_GENETIC_H"}, &SkillFormula{Code: "GN_CARTCANNON", Name: "Cart Cannon", Melee: meleeNever,
-		Partial: "elemento da bala de canhão",
+		Hit100: true, HardDefFlat: true,
 		Ratio: func(in FormulaInput) float64 {
-			return (lv(in)*250 + float64(in.LearnLv("GN_REMODELING_CART"))*20 + in.S(INT)*2) * bl(in)
+			return (lv(in)*250 + lv(in)*float64(in.LearnLv("GN_REMODELING_CART"))*20 + in.S(INT)*2) * bl(in)
 		}})
 	wikiAdd([]string{"JT_GENETIC", "JT_GENETIC_H"}, &SkillFormula{Code: "GN_SPORE_EXPLOSION", Name: "Spore Explosion", Melee: meleeNever,
 		Ratio: func(in FormulaInput) float64 { return (400 + lv(in)*200 + in.S(INT)) * bl(in) }})

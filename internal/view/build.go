@@ -29,7 +29,7 @@ var equipSlots = []slotInfo{
 	{calc.HeadTop, "Topo", "L"}, {calc.HeadMid, "Meio", "R"}, {calc.HeadLow, "Baixo", "L"},
 	{calc.Armor, "Armadura", "R"}, {calc.Weapon, "Arma", "L"}, {calc.Shield, "Escudo", "R"},
 	{calc.Garment, "Capa", "L"}, {calc.Shoes, "Sapatos", "R"}, {calc.AccRight, "Acessório D", "L"},
-	{calc.AccLeft, "Acessório E", "R"},
+	{calc.AccLeft, "Acessório E", "R"}, {calc.Ammo, "Munição", "L"},
 }
 
 var shadowSlots = []slotInfo{

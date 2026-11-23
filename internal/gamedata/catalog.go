@@ -82,6 +82,9 @@ type Item struct {
 	// description (clientimport.DescScript) and the lines it skipped.
 	DescScript  string `json:"dscript,omitempty"`
 	DescSkipped int    `json:"dskip,omitempty"`
+	// EventScript: the description's "[Durante o Evento]" bonuses, which
+	// count only when the build turns them on.
+	EventScript string `json:"evscript,omitempty"`
 	// latam-ro-calc's script (item.json, MIT): bonus key -> lines in its own
 	// notation. LatamName is the item's English name there, for EQUIP[...]
 	// conditions.

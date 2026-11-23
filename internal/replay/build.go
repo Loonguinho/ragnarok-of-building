@@ -7,8 +7,8 @@ import (
 	"ragnarok-of-building/internal/gamedata"
 )
 
-// equipBits maps rAthena e_equip_pos bits to build slots (ammo is not
-// simulated).
+// equipBits maps rAthena e_equip_pos bits to build slots (ammo comes from
+// Snapshot.Ammo).
 var equipBits = []struct {
 	bit  uint32
 	slot string
@@ -63,6 +63,9 @@ func ToBuild(s *Snapshot, c *gamedata.Catalog) (calc.Build, []string) {
 				b.Equip[eb.slot] = calc.Equip{Item: it.ItemID, Refine: it.Refine, Grade: it.Grade, Cards: it.Cards, Opts: it.Opts}
 			}
 		}
+	}
+	if it := c.Items[s.Ammo]; it != nil && it.Type == "Ammo" {
+		b.Equip[calc.Ammo] = calc.Equip{Item: s.Ammo}
 	}
 	if unknown > 0 {
 		notes = append(notes, fmt.Sprintf("%d item(ns) equipado(s) não existem no catálogo e foram ignorados.", unknown))

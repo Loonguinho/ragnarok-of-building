@@ -193,6 +193,7 @@ type SkillFormula struct {
 	IgnoreDef     bool
 	IgnoreSoftDef bool
 	IgnoreRes     bool
+	HardDefFlat   bool // hard DEF is subtracted like soft DEF; no RES (Canhão de Prótons)
 	Hit100        bool                    // never misses (latam-ro-calc isHit100)
 	Melee         func(FormulaInput) bool // nil = by weapon (ranged weapons are long range)
 	Weapons       []string                // required weapon types (rAthena SubType); empty = any

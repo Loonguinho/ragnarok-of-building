@@ -196,6 +196,7 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 	}
 	clientimport.MarkMVPCardsByName(c, db)
 	clientimport.DescEquip(c)
+	clientimport.Ammo(c)
 	clientimport.DescLevels(c) // LATAM levels over rAthena's
 	clientimport.CostumeStones(c)
 	if _, err := clientimport.ImportRandomOpts(clientDir, c, db.RandomOpts); err != nil {

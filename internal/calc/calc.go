@@ -60,6 +60,7 @@ const (
 	ShShoes    = "Shadow_Shoes"
 	ShAccR     = "Shadow_Right_Accessory"
 	ShAccL     = "Shadow_Left_Accessory"
+	Ammo       = "Ammo" // arrows, bullets, grenades, kunai...
 	maxRefine  = 20
 	// MaxRandomOpts is how many random options an item holds (client: 5).
 	MaxRandomOpts = 5
@@ -67,7 +68,7 @@ const (
 
 // Slots lists every slot the build supports.
 var Slots = []string{HeadTop, HeadMid, HeadLow, Armor, Weapon, Shield, Garment, Shoes, AccRight, AccLeft,
-	ShArmor, ShWeapon, ShShield, ShShoes, ShAccR, ShAccL, CosTop, CosMid, CosLow, CosGarment}
+	ShArmor, ShWeapon, ShShield, ShShoes, ShAccR, ShAccL, CosTop, CosMid, CosLow, CosGarment, Ammo}
 
 // IsCostume reports a costume (visual) slot.
 func IsCostume(slot string) bool { return strings.HasPrefix(slot, "Costume_") }
@@ -146,6 +147,10 @@ type Result struct {
 	StatusATK, EquipATK int // ATK shown as "StatusATK + EquipATK"
 	// Parts of EquipATK the damage formula treats differently.
 	WeaponATK        int // weapon's own ATK (after bWeaponAtkRate)
+	Ammo             *gamedata.Item // equipped ammunition; nil = none
+	AmmoATK          int            // its ATK (for the attacks that fire or throw it)
+	AmmoEle          string         // its element ("" = neutral)
+	AmmoFires        bool           // the weapon shoots it
 	WeaponRefineATK  int // refine bonus ATK
 	OtherEquipATK    int // armor ATK, bAtk, shadow weapon
 	WeaponLv         int
@@ -327,6 +332,9 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 			}
 		}
 	}
+	if at.Element != "" && AttackPropertyOn(*b, at.Element) { // an endow's kind, kept with its element
+		allowed[stateKey(attackProperty)] = true
+	}
 	own := map[string]*ClassBuff{}
 	for _, cb := range ClassBuffsFor(c, b.Job) {
 		own[cb.Key] = &cb
@@ -425,6 +433,9 @@ func SkillPointCheck(b Build, c *gamedata.Catalog) int {
 // Fits reports whether an item can be equipped in a slot. Items without
 // rAthena data (LATAM-only, Type "") cannot be checked and are allowed.
 func Fits(it *gamedata.Item, slot string) bool {
+	if slot == Ammo {
+		return it.Type == "Ammo"
+	}
 	switch it.Type {
 	case "":
 		return true
@@ -627,6 +638,10 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			shield = true
 			r.ShieldWeight, r.ShieldRefine = it.Weight, e.Refine
 		}
+		if slot == Ammo {
+			r.Ammo = it
+			continue
+		}
 		if seen[e.Item] && multiHead(it) {
 			continue
 		}
@@ -691,6 +706,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 			r.OtherEquipATK += it.Attack
 		}
 	}
+	applyAmmo(&r, sbase, bonus, extra)
 	r.Combos, r.ComboEffects = applyCombos(c, &b, sbase, bonus, extra, &r.SkippedScriptEffects)
 	r.ItemEffects = effects.list
 	for _, ef := range effects.list {
@@ -768,6 +784,9 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	r.WeaponATK += r.WeaponATK * bonus["bWeaponAtkRate"] / 100
 	r.OtherEquipATK += bonus["bAtk"] + bonus["bAtk2"] + bonus["bBaseAtk"]
 	r.EquipATK = r.WeaponATK + r.WeaponRefineATK + r.OtherEquipATK
+	if r.AmmoFires {
+		r.EquipATK += r.AmmoATK
+	}
 	matk := st[INT] + st[INT]/2 + st[DEX]/5 + st[LUK]/3 + lv/4 + 5*tr[SPL]
 	r.MATKMin, r.MATKMax = matk, matk
 	r.OtherEquipMATK += bonus["bMatk"]

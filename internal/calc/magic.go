@@ -22,6 +22,9 @@ func magicDamage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a 
 	if ele == "" {
 		ele = a.Element
 	}
+	if ele == "" && arrowMagic[a.SkillCode] && r.AmmoFires {
+		ele = r.AmmoEle
+	}
 	if ele == "" {
 		ele = "Neutral"
 		for k, v := range r.Extra {
@@ -145,3 +148,6 @@ func magicDamage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a 
 	}
 	return d
 }
+
+// arrowMagic: the spells that take the arrow's element.
+var arrowMagic = map[string]bool{"TR_METALIC_FURY": true, "TR_SOUNDBLEND": true, "TR_RHYTHMICAL_WAVE": true}

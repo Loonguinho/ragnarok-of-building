@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"image"
+	"math"
 	"strconv"
 
 	"gioui.org/layout"
@@ -348,17 +349,29 @@ func (a *App) resumoBody(gtx C) D {
 				return T(th, a.T("Escolha um alvo para ver o dano.")).C(ColMuted).Wrapping().W()(gtx)
 			}
 			dm := d.Dmg
+			// The big number is the expected damage per use (crits and
+			// misses counted): a skill that always crits shows its crit,
+			// as a replay records it.
+			expected := int64(math.Round(dm.Expected))
+			if expected <= 0 {
+				expected = dm.Avg
+			}
+			kills := dm.HitsToKill
+			if expected > 0 && d.Target.HP > 0 {
+				kills = int((int64(d.Target.HP) + expected - 1) / expected)
+			}
 			ws := []layout.Widget{
-				T(th, a.T("Dano por golpe (média)")).C(ColMuted).W(),
-				B(th, num(dm.Avg)).Sz(22).C(ColTitleText).W(),
-				T(th, num(dm.Min)+" ~ "+num(dm.Max)).C(ColLabel).W(),
+				T(th, a.T("Dano esperado por uso")).C(ColMuted).W(),
+				B(th, num(expected)).Sz(22).C(ColTitleText).W(),
+				T(th, a.T("Normal")+": "+num(dm.Min)+" ~ "+num(dm.Max)).C(ColLabel).W(),
 			}
 			var extra []layout.Widget
 			if dm.Crit > 0 {
-				extra = append(extra, Row(4, label("Crítico"), B(th, num(dm.Crit)).W()))
+				extra = append(extra, Row(4, label("Crítico"), B(th, num(dm.Crit)).W(),
+					T(th, "("+strconv.FormatFloat(dm.CritChance, 'f', 0, 64)+"%)").C(ColMuted).W()))
 			}
 			extra = append(extra,
-				Row(4, label("Usos p/ matar"), B(th, strconv.Itoa(dm.HitsToKill)).W()),
+				Row(4, label("Usos p/ matar"), B(th, strconv.Itoa(kills)).W()),
 				Row(4, label("Acerto"), B(th, strconv.FormatFloat(dm.HitChance, 'f', 0, 64)+"%").W()),
 			)
 			ws = append(ws, Row(14, extra...))
@@ -460,7 +473,9 @@ func (a *App) elementWarning(d view.DamageView) layout.Widget {
 		}
 		return Col(4,
 			T(th, msg).C(ColDown).Wrapping().W(),
-			func(gtx C) D { return Button{Label: a.T("Usar o elemento da arma")}.Layout(gtx, th, &a.shell.weaponEle) },
+			func(gtx C) D {
+				return Button{Label: a.T("Usar o elemento da arma")}.Layout(gtx, th, &a.shell.weaponEle)
+			},
 		)(gtx)
 	}
 }

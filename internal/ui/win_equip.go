@@ -27,12 +27,13 @@ type equipState struct {
 	slots map[string]*widget.Clickable
 	// The pet under the character.
 	pet, petTier Select
-	at    map[string]*Anchor // where each slot is on the desk
+	at           map[string]*Anchor // where each slot is on the desk
 }
 
 type slotState struct {
-	key  string // the slot being edited ("" = none)
-	card int    // -1: picking the item itself; else the card/enchant position
+	desc Details // the item's description in the editor (starts closed)
+	key  string  // the slot being edited ("" = none)
+	card int     // -1: picking the item itself; else the card/enchant position
 
 	q       Input
 	lastQ   string
@@ -64,7 +65,12 @@ type slotState struct {
 	bestFor               string // the slot bestRefine/bestGrade were set for
 	best                  *view.BestResult
 	bestRunning, bestOn   bool
-	bestSeq               int
+	// Best card for the position being picked, by goal (view.GoalDamage,
+	// GoalPhysDef, GoalMagDef); bestOn shows it in the list too.
+	bestCardBtn  widget.Clickable
+	bestCardSel  Select
+	bestCardGoal string
+	bestSeq      int
 
 	tipMu sync.Mutex
 	tips  map[string]*view.SwapView // swap comparisons by build code + slot + item + card
@@ -294,11 +300,15 @@ func (a *App) slotBody(gtx C) D {
 	if s.bestBtn.Clicked(gtx) {
 		a.runBest()
 	}
+	if s.bestCardBtn.Clicked(gtx) {
+		a.runBestCard()
+	}
 	if s.pickItem.Clicked(gtx) {
 		s.bestOn = false
 		s.card = -1
 		s.q.Ed.SetText("")
 		a.search(0)
+		a.showPicker()
 	}
 	if s.unequip.Clicked(gtx) {
 		setBuild(edit.Unequip(b, s.key))
@@ -310,6 +320,7 @@ func (a *App) slotBody(gtx C) D {
 			s.card = i
 			s.q.Ed.SetText("")
 			a.search(0)
+			a.showPicker()
 		}
 		if s.cardDel[i].Clicked(gtx) {
 			setBuild(edit.EditLinked(b, s.key, func(e *calc.Equip) { e.Cards[i] = 0 }))
@@ -349,7 +360,7 @@ func (a *App) slotBody(gtx C) D {
 		},
 		func(gtx C) D {
 			if s.card >= 0 {
-				return D{}
+				return a.bestCardControls(gtx)
 			}
 			return a.bestControls(gtx)
 		},
@@ -359,7 +370,9 @@ func (a *App) slotBody(gtx C) D {
 			if s.bestOn {
 				msg = a.bestStatus()
 			}
-			if s.card >= 0 {
+			if s.card >= 0 && s.bestOn {
+				msg = a.bestStatus()
+			} else if s.card >= 0 {
 				if s.card < sv.CardSlots {
 					msg = fmt.Sprintf("%s (slot %d)", a.T("Escolha uma carta"), s.card+1)
 				} else {
@@ -421,6 +434,16 @@ func (a *App) slotEditor(sv view.SlotView, label string) layout.Widget {
 			)(gtx)
 		}
 		kids = append(kids, head)
+		if len(sv.Item.Desc) > 0 {
+			kids = append(kids, func(gtx C) D {
+				return s.desc.Layout(gtx, th, a.T("Descrição"), false, func(gtx C) D {
+					return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(5, 6, 5, 6)}.Layout(gtx, func(gtx C) D {
+						gtx.Constraints.Min.X = gtx.Constraints.Max.X
+						return RichText(th, sv.Item.Desc, rgb(0x000000))(gtx)
+					})
+				})
+			})
+		}
 		if len(sv.Cards) > 0 {
 			kids = append(kids, func(gtx C) D {
 				return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(2, 4, 2, 4)}.Layout(gtx, func(gtx C) D {
@@ -718,7 +741,7 @@ func (a *App) pick(id int) {
 		k := s.card
 		a.SetBuild(edit.EditLinked(b, s.key, func(e *calc.Equip) { e.Cards[k] = id }))
 		a.Say(a.T("Carta aplicada."), false)
-		s.card = -1
+		s.card, s.bestOn = -1, false
 	} else if s.bestOn {
 		a.SetBuild(a.V.SwapAt(b, s.key, id, s.bestRefine, s.bestGrade))
 		a.Say(a.T("Item equipado."), false)
@@ -751,7 +774,7 @@ func (a *App) swapTip(id int) *view.SwapView {
 	s := &a.slot
 	b := a.Build()
 	refine, grade := -1, -1
-	if s.bestOn {
+	if s.bestOn && s.card < 0 {
 		refine, grade = s.bestRefine, s.bestGrade
 	}
 	key := fmt.Sprintf("%s|%s|%d|%d|%d|%d", view.EncodeBuild(b), s.key, id, s.card, refine, grade)
@@ -991,7 +1014,17 @@ func (a *App) bestStatus() string {
 	res := s.best
 	a.mu.Unlock()
 	if res == nil {
+		if s.card >= 0 {
+			return a.T("Testando todas as cartas da posição…")
+		}
 		return a.T("Testando todos os itens do slot…")
+	}
+	if s.card >= 0 {
+		msg := fmt.Sprintf(a.T("Melhores de %d cartas, %s, contra o build atual."), res.Tested, a.T(bestGoalLabel(s.bestCardGoal)))
+		if res.Partial {
+			msg += " " + a.T("(parou no limite de tempo)")
+		}
+		return msg
 	}
 	g := ""
 	if s.bestGrade > 0 {
@@ -1070,4 +1103,76 @@ func (a *App) petBlock(pv view.PetView, w unit.Dp) layout.Widget {
 		}
 		return Col(3, ws...)(gtx)
 	}
+}
+
+// bestGoals are the "Melhor carta" goals: value, label.
+var bestGoals = [][2]string{
+	{view.GoalDamage, "pelo dano esperado"},
+	{view.GoalPhysDef, "pela defesa física (HP efetivo)"},
+	{view.GoalMagDef, "pela defesa mágica (HP efetivo)"},
+}
+
+func bestGoalLabel(goal string) string {
+	for _, g := range bestGoals {
+		if g[0] == goal {
+			return g[1]
+		}
+	}
+	return bestGoals[0][1]
+}
+
+// bestCardControls: "Melhor carta" and its goal, while picking a card or
+// an enchant.
+func (a *App) bestCardControls(gtx C) D {
+	th, s := a.Th, &a.slot
+	if s.bestCardGoal == "" {
+		s.bestCardGoal = view.GoalDamage
+	}
+	opts := []Option{{view.GoalDamage, a.T("Melhor dano")}, {view.GoalPhysDef, a.T("Melhor defesa física")}, {view.GoalMagDef, a.T("Melhor defesa mágica")}}
+	return Row(4,
+		func(gtx C) D { return Button{Label: a.T("Melhor carta")}.Layout(gtx, th, &s.bestCardBtn) },
+		func(gtx C) D {
+			d, val, ok := s.bestCardSel.Layout(gtx, th, a.Desk, opts, s.bestCardGoal, 170)
+			if ok {
+				s.bestCardGoal = val
+				if s.bestOn {
+					a.runBestCard()
+				}
+			}
+			return d
+		},
+	)(gtx)
+}
+
+// runBestCard ranks the cards for the position being picked in the
+// background.
+func (a *App) runBestCard() {
+	s := &a.slot
+	if s.bestCardGoal == "" {
+		s.bestCardGoal = view.GoalDamage
+	}
+	a.mu.Lock()
+	s.bestSeq++
+	seq, slot, idx, goal, b, lang := s.bestSeq, s.key, s.card, s.bestCardGoal, a.b.Clone(), a.Lang
+	s.bestOn, s.bestRunning, s.best = true, true, nil
+	a.mu.Unlock()
+	go func() {
+		res := a.V.BestCards(context.Background(), b, slot, idx, goal, lang)
+		a.mu.Lock()
+		if seq == s.bestSeq {
+			s.best, s.bestRunning = &res, false
+		}
+		a.mu.Unlock()
+		if a.Invalidate != nil {
+			a.Invalidate()
+		}
+	}()
+}
+
+// showPicker scrolls a tall slot editor to its end, where the search and
+// the list are: after Carta… or Trocar the choices are in view (the list
+// of a scrolled editor used to open below the visible part).
+func (a *App) showPicker() {
+	a.wSlot.scroll.List.Position.First = 0
+	a.wSlot.scroll.List.Position.Offset = 1 << 20 // the list clamps it to the end
 }

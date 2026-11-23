@@ -73,6 +73,10 @@ func TestShots(t *testing.T) {
 	h.waitReady()
 	h.waitSearch()
 	h.shot("03-weapon-equipped")
+	a.openSlot(calc.Weapon) // the editor on an equipped item: its description
+	h.waitReady()
+	h.shot("03-slot-editor")
+	a.equipDone()
 
 	// A target and learned skills: the damage window and its table.
 	a.Edit(func(b *calc.Build) {

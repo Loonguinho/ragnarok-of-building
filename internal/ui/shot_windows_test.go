@@ -97,6 +97,9 @@ func TestShots(t *testing.T) {
 	a.Desk.Toggle(a.wSkills)
 	a.Desk.Toggle(a.wDamage)
 	h.shot("06-skills")
+	a.wSlot.Open = false
+	a.shellSelect(a.wSkills) // the Habilidades tab: points and Resetar under the tree
+	h.shot("07-skills-tab")
 }
 
 // TestShotsReplay imports RO_REPLAY (a .rrf) and renders the recap, the

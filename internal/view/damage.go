@@ -58,7 +58,8 @@ func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
 		v.Elements = append(v.Elements, [2]string{e, elementPT[e]})
 	}
 	for id, lv := range b.Skills {
-		if sk := c.Skills[id]; sk != nil && lv > 0 && !sk.Free() {
+		// Passives are never cast: only the active skills are offered.
+		if sk := c.Skills[id]; sk != nil && lv > 0 && !sk.Free() && (!sk.Passive || id == b.Atk.Skill) {
 			v.Skills = append(v.Skills, atkSkill{ID: id, Name: sk.Name.Get(l), Selected: id == b.Atk.Skill})
 		}
 	}

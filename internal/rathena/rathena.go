@@ -116,6 +116,11 @@ type DB struct {
 	Aegis map[string]int
 	// Pets by egg item ID (pet_db.yml).
 	Pets map[int]*Pet
+	// SkillWeapons: the weapon types a skill requires (skill_db.yml), by
+	// skill code; absent = any weapon.
+	SkillWeapons map[string][]string
+	// SkillPassive: skills without a TargetType, never cast (skill_db.yml).
+	SkillPassive map[string]bool
 
 	optDrops [][2]string // (item AegisName, RandomOptionGroup) from monster drops
 }
@@ -278,6 +283,9 @@ func Load(dir string) (*DB, error) {
 	}
 	if err := db.loadCombos(filepath.Join(re, "item_combos.yml"), aegis); err != nil {
 		return nil, err
+	}
+	if err := db.loadSkillWeapons(filepath.Join(re, "skill_db.yml")); err != nil {
+		return nil, fmt.Errorf("rathena: skill_db.yml: %w", err)
 	}
 	if err := db.loadPets(filepath.Join(re, "pet_db.yml"), aegis); err != nil {
 		return nil, err

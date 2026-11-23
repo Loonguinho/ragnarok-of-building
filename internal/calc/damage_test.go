@@ -1,6 +1,7 @@
 package calc
 
 import (
+	"strings"
 	"testing"
 
 	"ragnarok-of-building/internal/gamedata"
@@ -190,5 +191,22 @@ func TestHitDetails(t *testing.T) {
 	c.Skills = map[int]*gamedata.Skill{43: {ID: 43, Code: "AC_VULTURE"}}
 	if d := Damage(Build{Skills: map[int]int{43: 10}}, r, c, m, Attack{}); d.HitChance != 49 {
 		t.Errorf("Olhos de Águia 10: 39%% + 10 = 49%%, got %v", d.HitChance)
+	}
+}
+
+// TestSkillWeaponRequirement: a skill the equipped weapon cannot use
+// (rAthena skill_db Requires: Weapon) does no damage and says why.
+func TestSkillWeaponRequirement(t *testing.T) {
+	c := dmgCatalog()
+	c.Skills = map[int]*gamedata.Skill{2553: {ID: 2553, Code: "RL_FIREDANCE", Weapons: []string{"Revolver"}}}
+	r := baseResult()
+	r.WeaponType = "Shotgun"
+	d := Damage(Build{}, r, c, target(0, 0, 0), Attack{SkillCode: "RL_FIREDANCE", SkillRatio: 500})
+	if d.Avg != 0 || len(d.Notes) == 0 || !strings.Contains(d.Notes[0], "Revólver") {
+		t.Errorf("Descarregar Tambor with a shotgun: avg %d, notes %v", d.Avg, d.Notes)
+	}
+	r.WeaponType = "Revolver"
+	if d := Damage(Build{}, r, c, target(0, 0, 0), Attack{SkillCode: "RL_FIREDANCE", SkillRatio: 500}); d.Avg == 0 {
+		t.Errorf("Descarregar Tambor with a revolver: no damage")
 	}
 }

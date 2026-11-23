@@ -127,6 +127,7 @@ func ImportEnchants(dir string, c *gamedata.Catalog, aegis map[string]int) (int,
 		}
 	}
 	addNPCEnchants(c)
+	addLatamEnchants(c, aegis)
 	for _, slots := range c.Enchants {
 		for k := range slots {
 			slices.Sort(slots[k])

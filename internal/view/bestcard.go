@@ -90,6 +90,26 @@ feed:
 	close(ch)
 	wg.Wait()
 	res.Tested = len(out)
+	// The cards that complete a set with cards not worn yet: the set placed
+	// as a whole, as another row.
+	type comboScored struct {
+		id    int
+		ratio float64
+		parts []ComboPart
+	}
+	var combos []comboScored
+	for _, id := range ids {
+		if ctx.Err() != nil {
+			res.Partial = true
+			break
+		}
+		for _, parts := range s.comboPlacements(b, slot, idx, id, goal) {
+			nb := s.applyCombo(b, slot, idx, id, parts)
+			if e := s.optScore(nb, goal); e > 0 {
+				combos = append(combos, comboScored{id, e / base, parts})
+			}
+		}
+	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].ratio != out[j].ratio {
 			return out[i].ratio > out[j].ratio
@@ -103,5 +123,121 @@ feed:
 		}
 		res.Items = append(res.Items, BestItem{Item: viewItem(c.Items[sc.id], l), Gain: ln, Ratio: sc.ratio})
 	}
+	// The sets that beat the single cards' ranking enter it, best first.
+	sort.Slice(combos, func(i, j int) bool { return combos[i].ratio > combos[j].ratio })
+	for _, cs := range combos[:min(len(combos), 5)] {
+		if cs.ratio <= 1.0005 {
+			continue
+		}
+		parts := cs.parts
+		for i := range parts {
+			parts[i].CardName = c.Items[parts[i].Card].Name.Get(l)
+			parts[i].SlotLabel = tr(l, slotLabel(parts[i].Slot))
+		}
+		bi := BestItem{Item: viewItem(c.Items[cs.id], l), Ratio: cs.ratio, Combo: parts,
+			Gain: StatLine{Diff: pctChange(cs.ratio, l), Better: true}}
+		at := sort.Search(len(res.Items), func(i int) bool { return res.Items[i].Ratio < cs.ratio })
+		res.Items = append(res.Items[:at], append([]BestItem{bi}, res.Items[at:]...)...)
+	}
 	return res
+}
+
+// comboPlacements: for each set of card id whose other pieces are all
+// cards not worn yet, where they go — each in the free or replaced card
+// position (of another worn item) that scores best, one after the other.
+func (s *Server) comboPlacements(b calc.Build, slot string, idx, id int, goal string) [][]ComboPart {
+	c := s.opt.Catalog
+	worn := map[int]int{}
+	for _, e := range b.Equip {
+		for _, cd := range e.Cards {
+			if cd > 0 {
+				worn[cd]++
+			}
+		}
+	}
+	var out [][]ComboPart
+	for _, ci := range c.CombosWith(id) {
+		cb := c.Combos[ci]
+		var need []int
+		self := false
+		ok := true
+		for _, p := range cb.Items {
+			if p == id && !self {
+				self = true
+				continue
+			}
+			it := c.Items[p]
+			if it == nil || it.Type != "Card" || it.SubType == "Enchant" {
+				ok = false // a set with an item (not a card): out of scope
+				break
+			}
+			need = append(need, p)
+		}
+		if !ok || len(need) == 0 || len(need) > 3 {
+			continue
+		}
+		// Pieces already worn need no placing.
+		left := maps.Clone(worn)
+		var place []int
+		for _, p := range need {
+			if left[p] > 0 {
+				left[p]--
+				continue
+			}
+			place = append(place, p)
+		}
+		if len(place) == 0 {
+			continue // the set is complete already: the single row counts it
+		}
+		used := map[[2]any]bool{{slot, idx}: true}
+		cur := s.swapItem(b, slot, id, idx)
+		var parts []ComboPart
+		for _, p := range place {
+			best, bestScore := ComboPart{}, -1.0
+			for sl, e := range cur.Equip {
+				host := c.Items[e.Item]
+				if host == nil || !calc.CardFits(c.Items[p], sl) {
+					continue
+				}
+				for k := 0; k < host.Slots && k < 4; k++ {
+					if used[[2]any{sl, k}] {
+						continue
+					}
+					nb := s.swapItem(cur, sl, p, k)
+					if nb.Equip[sl].Cards[k] != p {
+						continue
+					}
+					if sc := s.optScore(nb, goal); sc > bestScore {
+						best, bestScore = ComboPart{Slot: sl, Idx: k, Card: p}, sc
+					}
+				}
+			}
+			if bestScore < 0 {
+				parts = nil
+				break
+			}
+			used[[2]any{best.Slot, best.Idx}] = true
+			cur = s.swapItem(cur, best.Slot, best.Card, best.Idx)
+			parts = append(parts, best)
+		}
+		if parts != nil {
+			out = append(out, parts)
+		}
+	}
+	return out
+}
+
+// applyCombo puts card id at idx of slot and the set's other cards where
+// parts says.
+func (s *Server) applyCombo(b calc.Build, slot string, idx, id int, parts []ComboPart) calc.Build {
+	nb := s.swapItem(b, slot, id, idx)
+	for _, p := range parts {
+		nb = s.swapItem(nb, p.Slot, p.Card, p.Idx)
+	}
+	return nb
+}
+
+// ApplyCombo is applyCombo for the UI (a Melhor carta set row).
+func (v *Views) ApplyCombo(b calc.Build, slot string, idx, id int, parts []ComboPart) calc.Build {
+	return v.s.applyCombo(b, slot, idx, id, parts)
 }

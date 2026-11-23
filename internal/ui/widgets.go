@@ -90,26 +90,48 @@ func (in *Input) Layout(gtx C, th *Theme, width unit.Dp) (d D, changed, submitte
 // Text is the box's text.
 func (in *Input) Text() string { return in.Ed.Text() }
 
-// NumInput is a number box: it keeps the build's value unless the user is
-// typing in it.
+// NumInput is a number box showing the build's value. While the user types,
+// the box keeps the text: the build is recomputed in the background, so the
+// value can still be the old one for a frame. A value that changes to
+// something the user did not type (the +/- buttons) replaces the text even
+// with the box focused.
 type NumInput struct {
 	Input
-	last int
+	last int  // what the box shows or last sent
+	seen int  // the build's value at the previous frame
 	set  bool
 }
 
 // Layout shows v; it returns the typed value and true when it changed.
 func (n *NumInput) Layout(gtx C, th *Theme, v int, width unit.Dp) (D, int, bool) {
-	if !gtx.Focused(&n.Ed) && (!n.set || n.last != v) {
+	focused := gtx.Focused(&n.Ed)
+	external := n.set && v != n.seen && v != n.last
+	if !n.set || (!focused && n.last != v) || external {
 		n.Ed.SetText(strconv.Itoa(v))
+		if focused {
+			n.Ed.SetCaret(n.Ed.Len(), n.Ed.Len())
+		}
 		n.last, n.set = v, true
 	}
+	n.seen = v
 	n.Ed.Filter = "0123456789-"
 	d, changed, submitted := n.Input.Layout(gtx, th, width)
 	if changed || submitted {
-		if x, err := strconv.Atoi(strings.TrimSpace(n.Ed.Text())); err == nil && x != v {
-			n.last = x
-			return d, x, true
+		txt := strings.TrimSpace(n.Ed.Text())
+		if txt == "" { // a cleared box is 0, and shows it
+			txt = "0"
+		}
+		x, err := strconv.Atoi(txt)
+		if err == nil {
+			// "0" then a digit reads "05": show the number itself.
+			if s := strconv.Itoa(x); s != n.Ed.Text() && txt != "-" {
+				n.Ed.SetText(s)
+				n.Ed.SetCaret(n.Ed.Len(), n.Ed.Len())
+			}
+			if x != v {
+				n.last = x
+				return d, x, true
+			}
 		}
 	}
 	return d, v, false

@@ -25,6 +25,18 @@ type BestItem struct {
 	Item  ItemView
 	Gain  StatLine // expected damage change against the current build
 	Ratio float64
+	// Combo, for Melhor carta: the cards that complete one of the card's
+	// sets, placed in the build too (the gain counts them).
+	Combo []ComboPart
+}
+
+// ComboPart is a card placed to complete a set: where and which.
+type ComboPart struct {
+	Slot      string
+	Idx       int
+	Card      int
+	CardName  string
+	SlotLabel string // "Elmo", "Armadura" ...
 }
 
 // BestResult is the ranking.

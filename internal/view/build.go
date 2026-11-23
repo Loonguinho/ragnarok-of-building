@@ -86,11 +86,24 @@ func encodeBuild(b calc.Build) string {
 }
 
 func defaultBuild(c *gamedata.Catalog) calc.Build {
-	b := calc.Build{Job: 4252, BaseLv: 200, JobLv: 50, Stats: [6]int{1, 1, 1, 1, 1, 1}}
+	b := calc.Build{Job: 4252, BaseLv: 200, JobLv: 50, Stats: [6]int{1, 1, 1, 1, 1, 1}, Target: DefaultTarget(c)}
 	if _, ok := c.Jobs[b.Job]; !ok {
 		b.Job = 0
 	}
 	return b
+}
+
+// trainingDummyNeutral is Prontera's Training Dummy (Neutral): Medium,
+// Formless, Neutral 1, no DEF.
+const trainingDummyNeutral = 21067
+
+// DefaultTarget is the target a build starts with: the neutral training
+// dummy (0 when the catalog lacks it).
+func DefaultTarget(c *gamedata.Catalog) int {
+	if c.Monster(trainingDummyNeutral) != nil {
+		return trainingDummyNeutral
+	}
+	return 0
 }
 
 // buildView is everything the build templates render.

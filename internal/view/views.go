@@ -87,13 +87,17 @@ func (v *Views) SkillTree(jobID, jobLv int, l string) (SkillTree, bool) {
 		Groups: t["groups"].([]gamedata.SkillGroup)}, true
 }
 
+// DefaultTarget is the target a build starts with (the neutral dummy).
+func (v *Views) DefaultTarget() int { return DefaultTarget(v.s.opt.Catalog) }
+
 // DefaultBuild is the build a new page starts with.
 func (v *Views) DefaultBuild() calc.Build { return defaultBuild(v.s.opt.Catalog) }
 
 // NewBuild is a blank build for a class, at its max levels.
 func (v *Views) NewBuild(jobID int) calc.Build {
 	if j := v.s.opt.Catalog.Jobs[jobID]; j != nil && j.HasStats() {
-		return calc.Build{Job: j.ID, BaseLv: j.MaxBaseLv, JobLv: j.MaxJobLv, Stats: [6]int{1, 1, 1, 1, 1, 1}}
+		return calc.Build{Job: j.ID, BaseLv: j.MaxBaseLv, JobLv: j.MaxJobLv, Stats: [6]int{1, 1, 1, 1, 1, 1},
+			Target: DefaultTarget(v.s.opt.Catalog)}
 	}
 	return v.DefaultBuild()
 }

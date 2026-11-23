@@ -40,6 +40,13 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 			c.MonsterStubs[id] = m.Aegis
 		}
 	}
+	// The weapons each skill requires, and which are passive.
+	for _, sk := range c.Skills {
+		if ws := db.SkillWeapons[sk.Code]; len(ws) > 0 {
+			sk.Weapons = ws
+		}
+		sk.Passive = db.SkillPassive[sk.Code] || descPassive(sk.Desc["pt"])
+	}
 	// Pets whose egg the client has.
 	c.Pets = map[int]*gamedata.Pet{}
 	for egg, p := range db.Pets {
@@ -204,4 +211,16 @@ func canonicalType(t string) string {
 		return "PetArmor"
 	}
 	return t
+}
+
+// descPassive: the client description's "Tipo: Passiva" (for the skills
+// rAthena's skill_db does not have).
+func descPassive(desc []string) bool {
+	for _, l := range desc {
+		l = strings.ToLower(strings.TrimSpace(reColor.ReplaceAllString(l, "")))
+		if strings.HasPrefix(l, "tipo:") {
+			return strings.Contains(l, "passiva")
+		}
+	}
+	return false
 }

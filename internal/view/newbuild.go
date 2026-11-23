@@ -63,11 +63,28 @@ func (s *Server) importReplay(buf []byte, l string) (calc.Build, []string, *rdmg
 		return calc.Build{}, nil, nil, err
 	}
 	b, notes := replay.ToBuild(snap, s.opt.Catalog)
+	b.Target = replayTarget(snap, s.opt.Catalog)
 	notes = append(notes, calc.Normalize(&b, s.opt.Catalog)...)
 	for i := range notes {
 		notes[i] = tr(l, notes[i])
 	}
 	return b, notes, replayDamageView(snap, s.opt.Catalog, l), nil
+}
+
+// replayTarget is the monster the recording character damaged the most
+// (the summary lists them most damaged first), or the neutral dummy.
+func replayTarget(snap *replay.Snapshot, c *gamedata.Catalog) int {
+	for _, d := range snap.Damage {
+		if !d.Self {
+			continue
+		}
+		for _, m := range d.Monsters {
+			if c.Monster(m.Mob) != nil {
+				return m.Mob
+			}
+		}
+	}
+	return DefaultTarget(c)
 }
 
 // listedTiers are the class tiers offered in class lists: 3rd and 4th

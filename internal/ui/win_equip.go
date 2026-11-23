@@ -611,14 +611,27 @@ func (a *App) pickList(gtx C) D {
 	th, s := a.Th, &a.slot
 	a.mu.Lock()
 	results, gains, pending := s.results, s.gains, s.pending
+	// Melhor carta's set rows: the same card with its set's other cards,
+	// under a key of their own (negative).
+	var combos map[int][]view.ComboPart
+	keyOf := func(i int, it view.ItemView) int { return it.ID }
 	if s.bestOn {
 		results, gains, pending = nil, map[int]view.StatLine{}, s.bestRunning
+		combos = map[int][]view.ComboPart{}
+		var keys []int
 		if s.best != nil {
-			for _, bi := range s.best.Items {
+			for i, bi := range s.best.Items {
+				k := bi.Item.ID
+				if len(bi.Combo) > 0 {
+					k = -(i + 1)
+					combos[k] = bi.Combo
+				}
+				keys = append(keys, k)
 				results = append(results, bi.Item)
-				gains[bi.Item.ID] = bi.Gain
+				gains[k] = bi.Gain
 			}
 		}
+		keyOf = func(i int, it view.ItemView) int { return keys[i] }
 	}
 	a.mu.Unlock()
 	if s.rows == nil {
@@ -627,10 +640,18 @@ func (a *App) pickList(gtx C) D {
 	if s.cmpBtns == nil {
 		s.cmpBtns = map[int]*widget.Clickable{}
 	}
-	for _, it := range results {
-		cl := s.rows[it.ID]
+	for i, it := range results {
+		key := keyOf(i, it)
+		cl := s.rows[key]
 		if cl != nil && cl.Clicked(gtx) {
-			a.pick(it.ID)
+			if parts, ok := combos[key]; ok {
+				a.pickCombo(it.ID, parts)
+			} else {
+				a.pick(it.ID)
+			}
+		}
+		if key < 0 {
+			continue
 		}
 		if cb := s.cmpBtns[it.ID]; cb != nil && cb.Clicked(gtx) {
 			if s.card >= 0 {
@@ -658,10 +679,12 @@ func (a *App) pickList(gtx C) D {
 		s.list.Axis = layout.Vertical
 		return s.list.Layout(gtx, len(results), func(gtx C, i int) D {
 			it := results[i]
-			cl := s.rows[it.ID]
+			key := keyOf(i, it)
+			parts := combos[key]
+			cl := s.rows[key]
 			if cl == nil {
 				cl = &widget.Clickable{}
-				s.rows[it.ID] = cl
+				s.rows[key] = cl
 			}
 			row := func(gtx C) D {
 				return cl.Layout(gtx, func(gtx C) D {
@@ -676,12 +699,21 @@ func (a *App) pickList(gtx C) D {
 						if it.MVP {
 							name += " (MVP)"
 						}
+						nameW := T(th, name).W()
+						if len(parts) > 0 {
+							var with []string
+							for _, p := range parts {
+								with = append(with, fmt.Sprintf("%s (%s)", p.CardName, p.SlotLabel))
+							}
+							nameW = Col(1, T(th, name).W(),
+								T(th, a.T("Combo com")+" "+strings.Join(with, ", ")).Sz(SmallText).C(ColLink).Lines(2).Wrapping().W())
+						}
 						return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 							layout.Rigid(func(gtx C) D { return a.Icons.Icon(gtx, view.ItemIcon(it.ID), 24) }),
 							layout.Rigid(Gap(6, 0)),
-							layout.Flexed(1, T(th, name).W()),
+							layout.Flexed(1, nameW),
 							layout.Rigid(func(gtx C) D {
-								g, ok := gains[it.ID]
+								g, ok := gains[key]
 								if !ok || g.Diff == "" {
 									return D{}
 								}
@@ -708,6 +740,15 @@ func (a *App) pickList(gtx C) D {
 				})
 			}
 			var d D
+			if len(parts) > 0 { // a set: applied whole, no side-by-side
+				d = row(gtx)
+				if cl.Hovered() {
+					a.Desk.ShowTip(func(gtx C) D {
+						return TipBox(gtx, T(th, a.T("Aplica a carta e as cartas do combo nos lugares indicados (substituindo o que estiver lá).")).W())
+					})
+				}
+				return d
+			}
 			{
 				cb := s.cmpBtns[it.ID]
 				if cb == nil {
@@ -758,6 +799,21 @@ func (a *App) pick(id int) {
 		a.Say(a.T("Item equipado."), false)
 		a.equipDone()
 	}
+	s.q.Ed.SetText("")
+	s.lastQ = ""
+	a.search(0)
+}
+
+// pickCombo applies a Melhor carta set row: the card in the position being
+// picked and the set's other cards where the ranking placed them.
+func (a *App) pickCombo(id int, parts []view.ComboPart) {
+	s := &a.slot
+	if s.card < 0 {
+		return
+	}
+	a.SetBuild(a.V.ApplyCombo(a.Build(), s.key, s.card, id, parts))
+	a.Say(a.T("Cartas do combo aplicadas."), false)
+	s.card, s.bestOn = -1, false
 	s.q.Ed.SetText("")
 	s.lastQ = ""
 	a.search(0)

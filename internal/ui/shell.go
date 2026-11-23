@@ -27,6 +27,7 @@ type shellState struct {
 	mid    ScrollList
 	right  ScrollList
 	skill  Select
+	pick   skillPick
 	target widget.Clickable
 	cmds   [5]widget.Clickable
 	midFor *Window // the tab the middle scroll is at
@@ -239,8 +240,11 @@ func (a *App) shellMiddle(gtx C) D {
 	th, s := a.Th, &a.shell
 	w := s.cur
 	h := gtx.Constraints.Max.Y
+	// Habilidades keeps its points and Resetar right under the tree (in the
+	// body below), not at the bottom of the column.
+	underBody := w == a.wSkills
 	footer := func(gtx C) D {
-		if w.Footer == nil {
+		if w.Footer == nil || underBody {
 			return D{}
 		}
 		return Inset(6, 0, 0, 0).Layout(gtx, w.Footer)
@@ -269,6 +273,9 @@ func (a *App) shellMiddle(gtx C) D {
 			}
 			if w == a.wEquip { // the gear and what it gives, together
 				return Col(8, w.Body, Sep, a.bonusBody)(gtx)
+			}
+			if underBody && w.Footer != nil {
+				return Col(8, w.Body, w.Footer)(gtx)
 			}
 			return w.Body(gtx)
 		})
@@ -313,20 +320,7 @@ func (a *App) resumoBody(gtx C) D {
 	num := func(n int64) string { return view.FmtInt(n) }
 	label := func(t string) layout.Widget { return T(th, a.T(t)).C(ColLabel).W() }
 
-	skills := []Option{{"0", a.T("Ataque básico")}}
-	for _, sk := range d.Skills {
-		skills = append(skills, Option{strconv.Itoa(sk.ID), sk.Name})
-	}
-	skillSel := func(gtx C) D {
-		w := unit.Dp(float32(gtx.Constraints.Max.X) / gtx.Metric.PxPerDp)
-		dd, val, ok := s.skill.Layout(gtx, th, a.Desk, skills, strconv.Itoa(d.Atk.Skill), w)
-		if ok {
-			id, _ := strconv.Atoi(val)
-			lv := b.Skills[id]
-			a.setAtk(func(at *calc.AttackChoice) { at.Skill, at.Level, at.Ratio, at.Variant = id, lv, 0, 0 })
-		}
-		return dd
-	}
+	skillSel := func(gtx C) D { return a.skillPicker(gtx, b, d) }
 	target := func(gtx C) D {
 		name := a.T("Nenhum alvo")
 		var icon layout.Widget = Gap(0, 0)

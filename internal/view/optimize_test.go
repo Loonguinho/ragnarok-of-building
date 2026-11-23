@@ -129,7 +129,7 @@ func TestOptimizeKeepsEnchantPositions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	const sword, stormSlash, slashEnchant = 500055, 5213, 311275 // Espada Vil Invernal, Dilacerar, Cristal Invernal (Dilacerar)
+	const sword, stormSlash, slashEnchant = 600030, 5213, 311275 // Espada de Duas Mãos Vil Invernal, Dilacerar (2H sword or axe), Cristal Invernal (Dilacerar)
 	if c.Items[sword] == nil || len(c.Enchants[sword]) < 3 || c.Skills[stormSlash] == nil {
 		t.Skip("catalog without the Vil Invernal data")
 	}

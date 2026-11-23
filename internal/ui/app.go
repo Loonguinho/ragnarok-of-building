@@ -108,6 +108,9 @@ func NewApp(v *view.Views, th *Theme, stateFile string) *App {
 		}
 		if d, ok := view.DecodeBuild(st.Build); ok {
 			b = d
+			if b.Target == 0 { // opens against the neutral dummy
+				b.Target = v.DefaultTarget()
+			}
 		}
 		a.savedID = st.Saved
 		for id, ws := range st.Windows {

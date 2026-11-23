@@ -80,3 +80,24 @@ func TestNPCEnchantTables(t *testing.T) {
 		t.Errorf("Colete Automatron A: %v, want B-DEF", e)
 	}
 }
+
+// TestLatamEnchants: items the client's list leaves out take latam-ro-calc's
+// pools (Brasão de Schmidt, Bota Temporal); a client list is kept.
+func TestLatamEnchants(t *testing.T) {
+	c := &gamedata.Catalog{Items: map[int]*gamedata.Item{}, Enchants: map[int]map[int][]int{}}
+	for _, id := range []int{32228, 22000, 4700, 4701, 29061, 99} {
+		c.Items[id] = &gamedata.Item{ID: id}
+	}
+	aegis := map[string]int{"Schmidt_Insignia_Str": 32228, "Temporal_Str_Boots": 22000, "Strength3": 4702, "Expert_Archer1": 29061}
+	c.Items[4702] = &gamedata.Item{ID: 4702}
+	c.Enchants[22000] = map[int][]int{3: {99}} // the client lists it
+	if n := addLatamEnchants(c, aegis); n != 1 {
+		t.Errorf("filled %d items, want 1 (the Brasão)", n)
+	}
+	if got := c.Enchants[32228][3]; !slices.Contains(got, 4702) {
+		t.Errorf("Brasão de Schmidt position 3: %v, want STR+3 (4702)", got)
+	}
+	if got := c.Enchants[22000]; len(got) != 1 || !slices.Equal(got[3], []int{99}) {
+		t.Errorf("Bota Temporal kept the client list? %v", got)
+	}
+}

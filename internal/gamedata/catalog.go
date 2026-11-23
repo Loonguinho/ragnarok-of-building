@@ -143,6 +143,11 @@ type Skill struct {
 	// level table (clientimport.SkillDescEffects); nil when it has none the
 	// simulator understands.
 	Effects *SkillEffects `json:"effects,omitempty"`
+	// Weapons are the weapon types the skill requires (rAthena skill_db
+	// Requires: Weapon); empty = any.
+	Weapons []string `json:"weapons,omitempty"`
+	// Passive: rAthena gives it no TargetType (never cast).
+	Passive bool `json:"passive,omitempty"`
 }
 
 // SkillEffects: what a buff or passive gives at each level, from the

@@ -54,6 +54,12 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	}
 	f := a.Formula
 	isSkill := a.SkillCode != ""
+	// A skill the weapon cannot use (rAthena skill_db Requires: Weapon)
+	// does no damage: the game does not let it be cast.
+	if ws := SkillWeapons(c, a.SkillCode); len(ws) > 0 && !slices.Contains(ws, r.WeaponType) {
+		d.Notes = append(d.Notes, "Esta habilidade exige arma do tipo "+weaponListPT(ws)+": com "+weaponName(r.WeaponType)+" ela não pode ser usada.")
+		return d
+	}
 	ratio := a.SkillRatio
 	hits := max(1, a.Hits)
 	if f != nil {
@@ -68,7 +74,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 			d.Notes = append(d.Notes, "Esta habilidade exige o estado \""+f.RequiresState+"\" ativo.")
 		}
 		if len(f.Weapons) > 0 && !slices.Contains(f.Weapons, r.WeaponType) {
-			d.Notes = append(d.Notes, "Esta habilidade exige arma do tipo "+strings.Join(f.Weapons, " ou ")+".")
+			d.Notes = append(d.Notes, "Esta habilidade exige arma do tipo "+weaponListPT(f.Weapons)+".")
 		}
 	}
 	if ratio <= 0 {
@@ -417,4 +423,45 @@ func learnedLv(b Build, c *gamedata.Catalog, code string) int {
 		}
 	}
 	return 0
+}
+
+// SkillWeapons are the weapon types the skill requires; nil = any.
+func SkillWeapons(c *gamedata.Catalog, code string) []string {
+	if code == "" {
+		return nil
+	}
+	for _, sk := range c.Skills {
+		if sk.Code == code {
+			return sk.Weapons
+		}
+	}
+	return nil
+}
+
+// weaponTypeNames are the PT names of the weapon types.
+var weaponTypeNames = map[string]string{
+	"Fist": "mãos vazias", "Dagger": "Adaga", "1hSword": "Espada", "2hSword": "Espada de Duas Mãos",
+	"1hSpear": "Lança", "2hSpear": "Lança de Duas Mãos", "1hAxe": "Machado", "2hAxe": "Machado de Duas Mãos",
+	"Mace": "Maça", "2hMace": "Maça de Duas Mãos", "Staff": "Cajado", "2hStaff": "Cajado de Duas Mãos",
+	"Bow": "Arco", "Knuckle": "Soqueira", "Musical": "Instrumento Musical", "Whip": "Chicote",
+	"Book": "Livro", "Katar": "Katar", "Revolver": "Revólver", "Rifle": "Rifle", "Gatling": "Metralhadora",
+	"Shotgun": "Escopeta", "Grenade": "Lança-Granadas", "Huuma": "Shuriken Huuma",
+}
+
+func weaponName(t string) string {
+	if n := weaponTypeNames[t]; n != "" {
+		return n
+	}
+	return t
+}
+
+func weaponListPT(ts []string) string {
+	ns := make([]string, len(ts))
+	for i, t := range ts {
+		ns[i] = weaponName(t)
+	}
+	if len(ns) == 1 {
+		return ns[0]
+	}
+	return strings.Join(ns[:len(ns)-1], ", ") + " ou " + ns[len(ns)-1]
 }

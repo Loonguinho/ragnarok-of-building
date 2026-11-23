@@ -55,9 +55,9 @@ var efstStates = map[int]struct {
 }
 
 // efstMiracle: Milagre Solar, Lunar e Estelar. The LATAM client calls the
-// status EFST_SKE; it lasts one hour, and a Mestre Celestial replay with it
-// up hit 3.2x harder, what Fúria Estelar on every target (with the
-// Bota Desconhecida FOR's STR proc) gives.
+// status EFST_SKE; it lasts one hour. With Fúria Estelar on every target a
+// Mestre Celestial replay comes out ~5% low, with and without the Bota
+// Desconhecida FOR proc, the same gap as the replay without Milagre.
 const efstMiracle = 160
 
 const (

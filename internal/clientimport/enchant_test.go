@@ -59,3 +59,24 @@ func TestNPCEnchants(t *testing.T) {
 		t.Error("an item missing from the catalog got enchants")
 	}
 }
+
+// TestNPCEnchantTables: the Illusion (Illusion Enchanter, RS26) and
+// Automatron (Lisa) equipment get their NPC's enchants.
+func TestNPCEnchantTables(t *testing.T) {
+	items := map[int]*gamedata.Item{}
+	for _, id := range []int{20847, 15377, 450127, 4700, 4742, 29535, 310082} {
+		items[id] = &gamedata.Item{ID: id}
+	}
+	items[20847].Type, items[20847].Locations = "Armor", []string{"Garment"}
+	c := &gamedata.Catalog{Items: items, Enchants: map[int]map[int][]int{}}
+	addNPCEnchants(c)
+	if e := c.Enchants[20847]; !slices.Contains(e[3], 4700) || !slices.Contains(e[2], 4742) {
+		t.Errorf("Sobrevivente Ilusional: %v, want stats in the 3rd and 4th positions", e)
+	}
+	if e := c.Enchants[15377]; !slices.Contains(e[1], 29535) {
+		t.Errorf("Colete Ilusión B: %v, want the armor modules", e)
+	}
+	if e := c.Enchants[450127]; !slices.Contains(e[1], 310082) { // B-DEF, module 1000105
+		t.Errorf("Colete Automatron A: %v, want B-DEF", e)
+	}
+}

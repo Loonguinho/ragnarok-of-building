@@ -2,6 +2,7 @@ package clientimport
 
 import (
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -90,6 +91,19 @@ func DescEquip(c *gamedata.Catalog) int {
 			if v, ok := strings.CutPrefix(l, "Equipa em:"); ok && pos == "" {
 				pos = strings.ToLower(strings.TrimSpace(v))
 			}
+		}
+		// Cards and visuals: the position from "Equipa em:".
+		if kind == "carta" || kind == "visual" {
+			if locs := descPositions(pos, kind == "visual"); len(locs) > 0 {
+				it.Locations = locs
+				if kind == "carta" {
+					it.Type = "Card"
+				} else {
+					it.Type = "Armor"
+				}
+				n++
+			}
+			continue
 		}
 		k, ok := descKind[kind]
 		if !ok {
@@ -200,4 +214,44 @@ func DescLevels(c *gamedata.Catalog) int {
 		}
 	}
 	return n
+}
+
+// descPositions reads "Equipa em:" for a card or a visual ("Capa", "Topo,
+// Meio e Baixo", "Armadura", "Acessório"...).
+func descPositions(pos string, costume bool) []string {
+	var locs []string
+	add := func(l string) { locs = appendUnique(locs, l) }
+	for word, loc := range headPos {
+		if strings.Contains(pos, word) {
+			if costume {
+				loc = "Costume_" + loc
+			}
+			add(loc)
+		}
+	}
+	switch {
+	case strings.Contains(pos, "capa"):
+		if costume {
+			add("Costume_Garment")
+		} else {
+			add("Garment")
+		}
+	case costume:
+	case strings.Contains(pos, "armadura"):
+		add("Armor")
+	case strings.Contains(pos, "calçado") || strings.Contains(pos, "sapato"):
+		add("Shoes")
+	case strings.Contains(pos, "escudo"):
+		add("Left_Hand")
+	case strings.Contains(pos, "acessório"):
+		add("Both_Accessory")
+	case strings.Contains(pos, "arma"):
+		add("Right_Hand")
+	case strings.Contains(pos, "cabeça"):
+		add("Head_Top")
+		add("Head_Mid")
+		add("Head_Low")
+	}
+	sort.Strings(locs)
+	return locs
 }

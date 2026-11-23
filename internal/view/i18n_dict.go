@@ -601,6 +601,8 @@ var dict = map[string][2]string{
 	"Espaço Celeste": {"Celestial Space", "Espacio Celestial"}, "Nascer do Sol": {"Sunrise", "Amanecer"}, "Meio-Dia": {"Noon", "Mediodía"},
 	"Pôr do Sol": {"Sunset", "Atardecer"}, "Nascer da Lua": {"Moonrise", "Salida de la Luna"}, "Meia-Noite": {"Midnight", "Medianoche"},
 	"Pôr da Lua": {"Moonset", "Puesta de la Luna"}, "Elo Celestial": {"Celestial Unity", "Unión Celestial"},
+	"Fúria Solar": {"Solar Wrath", "Ira Solar"}, "Fúria Lunar": {"Lunar Wrath", "Ira Lunar"}, "Fúria Estelar": {"Stellar Wrath", "Ira Estelar"},
+	"Milagre Solar, Lunar e Estelar": {"Miracle of the Sun, Moon and Stars", "Milagro Solar, Lunar y Estelar"},
 	"Esferas Espirituais": {"Spirit Spheres", "Esferas Espirituales"}, "Espírito Elemental": {"Elemental Spirit", "Espíritu Elemental"},
 	"Pontos de Foco": {"Focus Points", "Puntos de Foco"}, "Pontos de Rotação": {"Rotation Points", "Puntos de Rotación"},
 	"ATQM de status": {"Status MATK", "ATQM de estado"},

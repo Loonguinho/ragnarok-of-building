@@ -72,6 +72,9 @@ var (
 	reValue   = regexp.MustCompile(`^(.*?)\s*([+-]\s?\d+(?:[.,]\d+)?)\s*(%|segundos?|s)?\.?$`)
 	reEach    = regexp.MustCompile(`(?i)^a cada (\d+) refinos?(?: d[oa] [^:]+)?:?$`)
 	reRefine  = regexp.MustCompile(`(?i)^refino \+(\d+) ou mais:?$`)
+	// A set's lines on the weapon: "Arma com refino +10 ou mais:", "Arma Grau C ou mais:".
+	reWRefine = regexp.MustCompile(`(?i)^arma com refino \+(\d+) ou mais:?$`)
+	reWGrade  = regexp.MustCompile(`(?i)^arma (?:com )?grau ([A-D]) ou mais:?$`)
 	reBaseLv  = regexp.MustCompile(`(?i)^a cada (\d+) n[ií]veis de base(?: at[eé] o (?:n[ií]vel )?(\d+))?:?$`)
 	reIgnore  = regexp.MustCompile(`(?i)^ignora (\d+)% da (DEF e DEFM|DEFM|DEF)(?: d[aeo]s?)? (.+?)(?: adicional)?\.?$`)
 	reSkill   = regexp.MustCompile(`(?i)^dano (?:de|da habilidade) \[([^\]]+)\]$`)
@@ -141,9 +144,27 @@ func descMaps(c *gamedata.Catalog) (map[string][]int, map[string]string) {
 	for _, ids := range names {
 		slices.Sort(ids)
 	}
+	// Two skills can share a PT name (Impacto Cristalino and its _ATK
+	// part): the lowest ID, the one the player casts, wins, every run;
+	// monster skills (NPC_) only when no player skill has the name.
 	skills := map[string]string{}
-	for _, sk := range c.Skills {
-		if n := strings.ToLower(sk.Name.Get("pt")); n != "" {
+	skillIDs := make([]int, 0, len(c.Skills))
+	for id := range c.Skills {
+		skillIDs = append(skillIDs, id)
+	}
+	slices.SortFunc(skillIDs, func(a, b int) int {
+		na, nb := strings.HasPrefix(c.Skills[a].Code, "NPC_"), strings.HasPrefix(c.Skills[b].Code, "NPC_")
+		if na != nb {
+			if na {
+				return 1
+			}
+			return -1
+		}
+		return a - b
+	})
+	for _, id := range skillIDs {
+		sk := c.Skills[id]
+		if n := strings.ToLower(sk.Name.Get("pt")); n != "" && skills[n] == "" {
 			skills[n] = sk.Code
 		}
 	}
@@ -247,11 +268,27 @@ func DescScript(self int, desc []string, names map[string][]int, skills map[stri
 			cur.mult, cur.cond = "*(.@lv/"+m[1]+")", ""
 			continue
 		}
+		if cur.inCombo {
+			if m := reWRefine.FindStringSubmatch(line); m != nil {
+				cur.cond, cur.mult, cur.pre = "getequiprefinerycnt(EQI_HAND_R) >= "+m[1], "", ""
+				continue
+			}
+			if m := reWGrade.FindStringSubmatch(line); m != nil {
+				cur.cond, cur.mult, cur.pre = "getenchantgrade(EQI_HAND_R) >= ENCHANTGRADE_"+strings.ToUpper(m[1]), "", ""
+				continue
+			}
+		}
 		if strings.HasSuffix(low, ":") && strings.Contains(low, "refino") { // "Bota com refino +10 ou mais:"
 			cur.skip = true
 			continue
 		}
-		if cur.inCombo && comboBody.Len() == 0 && !cur.skip && !reValue.MatchString(strings.TrimSuffix(line, ".")) && !strings.HasPrefix(low, "ignora") {
+		// A proc line ("3% de chance de ...") is the set's text, not a piece.
+		isProc := strings.Contains(low, "chance")
+		if cur.inCombo && comboBody.Len() == 0 && len(cur.combo) > 0 && isProc {
+			skipped++
+			continue
+		}
+		if cur.inCombo && comboBody.Len() == 0 && !cur.skip && !isProc && !reValue.MatchString(strings.TrimSuffix(line, ".")) && !strings.HasPrefix(low, "ignora") {
 			// item names of the set: "[Item]", "Item [1]", "Item A ou"
 			alt := strings.HasSuffix(low, " ou")
 			name := strings.ToLower(reSlots.ReplaceAllString(strings.Trim(strings.TrimSuffix(strings.TrimSuffix(line, " ou"), "."), "[] "), ""))
@@ -312,11 +349,28 @@ func descStatement(sent, mult string, skills map[string]string) (string, bool) {
 		}
 		return strings.TrimSpace(b.String()), true
 	}
+	// "... +10% adicional": the same bonus, on top of an earlier line.
+	if t, ok := strings.CutSuffix(strings.TrimSuffix(sent, "."), " adicional"); ok {
+		sent = t
+	}
 	m := reValue.FindStringSubmatch(sent)
 	if m == nil {
 		return "", false
 	}
 	phrase := strings.ToLower(strings.TrimSpace(m[1]))
+	// "POD e P.ATQ +5": two fixed phrases with one value.
+	if a, b, ok := strings.Cut(phrase, " e "); ok {
+		if _, okA := descFixed[a]; okA {
+			if _, okB := descFixed[b]; okB {
+				sa, okA := descStatement(a+" "+m[2]+m[3], mult, skills)
+				sb, okB := descStatement(b+" "+m[2]+m[3], mult, skills)
+				if okA && okB {
+					return sa + " " + sb, true
+				}
+				return "", false
+			}
+		}
+	}
 	num, err := strconv.ParseFloat(strings.ReplaceAll(strings.ReplaceAll(m[2], " ", ""), ",", "."), 64)
 	if err != nil {
 		return "", false

@@ -104,3 +104,30 @@ func TestLatamClassRules(t *testing.T) {
 		}
 	}
 }
+
+// TestWrathLevelsAndMiracle: the Wrath divisor follows its level (÷9, ÷6,
+// ÷3, bROWiki), and Milagre lets Fúria Estelar (with FOR) reach any target.
+func TestWrathLevelsAndMiracle(t *testing.T) {
+	c := starCatalog()
+	b := Build{Job: 4302, BaseLv: 240}
+	// No Kihop: 325 ATK. Medium target, Fúria Lunar Nv 1: +240/9 = 26%.
+	b.Atk.States = map[string]int{stateKey("Wrath of Moon"): 1}
+	if d := Damage(b, baseResult(), c, target(0, 0, 0), Attack{}); d.Avg != 409 {
+		t.Errorf("Fúria Lunar Nv 1: avg %d, want 409", d.Avg)
+	}
+	// Nv 2: +240/6 = 40%.
+	b.Atk.States[stateKey("Wrath of Moon")] = 2
+	if d := Damage(b, baseResult(), c, target(0, 0, 0), Attack{}); d.Avg != 455 {
+		t.Errorf("Fúria Lunar Nv 2: avg %d, want 455", d.Avg)
+	}
+	// Fúria Estelar alone does not reach a Medium target...
+	b.Atk.States = map[string]int{stateKey("Wrath of"): 3}
+	if d := Damage(b, baseResult(), c, target(0, 0, 0), Attack{}); d.Avg != 325 {
+		t.Errorf("Fúria Estelar on Medium: avg %d, want 325", d.Avg)
+	}
+	// ...but does under Milagre: +(240 + FOR 48)/3 = 96%.
+	b.Atk.States[stateKey("Miracle")] = 1
+	if d := Damage(b, baseResult(), c, target(0, 0, 0), Attack{}); d.Avg != 637 {
+		t.Errorf("Fúria Estelar + Milagre: avg %d, want 637", d.Avg)
+	}
+}

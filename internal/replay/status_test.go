@@ -82,3 +82,24 @@ func TestApplyStatuses(t *testing.T) {
 		t.Errorf("element = %q with Encantar com Veneno, want Poison", b.Atk.Element)
 	}
 }
+
+// TestApplySkyEmperorStatuses: Milagre (EFST_SKE) turns on Fúria Estelar at
+// the learned level for every target; Elo Celestial wins over a moon state;
+// Postura do Universo takes the learned level.
+func TestApplySkyEmperorStatuses(t *testing.T) {
+	c := &gamedata.Catalog{Skills: map[int]*gamedata.Skill{
+		437: {ID: 437, Code: "SG_STAR_ANGER"}, 2583: {ID: 2583, Code: "SJ_UNIVERSESTANCE"},
+	}}
+	s := &Snapshot{Skills: map[int]int{437: 2, 2583: 3}, Statuses: []int{160, 1039, 1389, 1392}}
+	var b calc.Build
+	if n := applyStatuses(&b, s, c); n != 4 {
+		t.Errorf("applied %d, want 4", n)
+	}
+	st := b.Atk.States
+	if st[calc.StateKeyOf("Miracle")] != 1 || st[calc.StateKeyOf("Wrath of")] != 2 {
+		t.Errorf("Milagre: states = %v", st)
+	}
+	if st[calc.StateKeyOf("_SkyEmperor_Celestial_Space")] != 7 || st[calc.StateKeyOf("Universe Stance")] != 3 {
+		t.Errorf("Elo Celestial / Postura do Universo: states = %v", st)
+	}
+}

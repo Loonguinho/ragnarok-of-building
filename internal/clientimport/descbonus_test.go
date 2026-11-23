@@ -1,6 +1,7 @@
 package clientimport
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -104,5 +105,32 @@ Pós-conjuração -5%.
 	}
 	if skipped != 1 {
 		t.Errorf("skipped %d, want 1 (the proc line)", skipped)
+	}
+}
+
+// TestDescSetWeaponLines: a set written without brackets, opened by a proc
+// line, with lines on the weapon's refine and grade (Colar Consagrado:
+// Destino with Manual Vivatus Fides).
+func TestDescSetWeaponLines(t *testing.T) {
+	desc := []string{
+		"Conjuração variável -10%.", "--------------------------",
+		"Conjunto", "Manual Vivatus Fides",
+		"3% de chance de converter 7% do dano físico causado em HP.",
+		"Arma com refino +10 ou mais:", "Custo de SP das habilidades -10%.", "Dano de [Chute Meia-Lua] +10%.",
+		"Arma Grau C ou mais:", "POD e P.ATQ +5.", "Dano de [Chute Meia-Lua] +10% adicional.",
+		"--------------------------", "Conjunto", "Compêndio Desconhecido", "Dano físico +5%.",
+	}
+	names := map[string][]int{"manual vivatus fides": {540046}}
+	skills := map[string]string{"chute meia-lua": "SKE_MIDNIGHT_KICK"}
+	_, combos, _ := DescScript(491119, desc, names, skills)
+	if len(combos) != 1 {
+		t.Fatalf("combos %+v, want the one with Manual Vivatus Fides", combos)
+	}
+	want := "if (getequiprefinerycnt(EQI_HAND_R) >= 10) { bonus bUseSPrate,-10; }\n" +
+		"if (getequiprefinerycnt(EQI_HAND_R) >= 10) { bonus2 bSkillAtk,\"SKE_MIDNIGHT_KICK\",10; }\n" +
+		"if (getenchantgrade(EQI_HAND_R) >= ENCHANTGRADE_C) { bonus bPow,5; bonus bPAtk,5; }\n" +
+		"if (getenchantgrade(EQI_HAND_R) >= ENCHANTGRADE_C) { bonus2 bSkillAtk,\"SKE_MIDNIGHT_KICK\",10; }\n"
+	if cb := combos[0]; !slices.Equal(cb.Items, []int{491119, 540046}) || cb.Script != want {
+		t.Errorf("combo %v:\n%s\nwant:\n%s", cb.Items, cb.Script, want)
 	}
 }

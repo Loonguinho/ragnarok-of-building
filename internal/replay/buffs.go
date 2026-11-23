@@ -41,7 +41,24 @@ var efstStates = map[int]struct {
 	1194: {"Potent Venom", 10, "SHC_POTENT_VENOM"},
 	334:  {"Hallucination Walk", 5, "GC_HALLUCINATIONWALK"},
 	722:  {"Unlimit", 5, "RA_UNLIMIT"}, // Ilimitar, 150 s
+	// Mestre Celestial: the sun and moon states (EFST_RISING_SUN..
+	// EFST_DAWN_MOON) and Elo Celestial (EFST_SKY_ENCHANT, every state at
+	// once; its ID is above the others, so it wins when both are up).
+	1385: {"_SkyEmperor_Celestial_Space", 1, ""},
+	1386: {"_SkyEmperor_Celestial_Space", 2, ""},
+	1387: {"_SkyEmperor_Celestial_Space", 3, ""},
+	1388: {"_SkyEmperor_Celestial_Space", 4, ""},
+	1389: {"_SkyEmperor_Celestial_Space", 5, ""},
+	1390: {"_SkyEmperor_Celestial_Space", 6, ""},
+	1392: {"_SkyEmperor_Celestial_Space", 7, ""},
+	1039: {"Universe Stance", 3, "SJ_UNIVERSESTANCE"}, // Postura do Universo
 }
+
+// efstMiracle: Milagre Solar, Lunar e Estelar. The LATAM client calls the
+// status EFST_SKE; it lasts one hour, and a Mestre Celestial replay with it
+// up hit 3.2x harder, what Fúria Estelar on every target (with the
+// Bota Desconhecida FOR's STR proc) gives.
+const efstMiracle = 160
 
 const (
 	efstConcentration = 3 // Concentrar, at the learned level
@@ -98,6 +115,15 @@ func applyStatuses(b *calc.Build, s *Snapshot, c *gamedata.Catalog) int {
 		case efstEnchantPoison:
 			b.Atk.Element = "Poison"
 			n++
+		case efstMiracle:
+			if lv := learned("SG_STAR_ANGER"); lv > 0 {
+				if b.Atk.States == nil {
+					b.Atk.States = map[string]int{}
+				}
+				b.Atk.States[calc.StateKeyOf("Miracle")] = 1
+				b.Atk.States[calc.StateKeyOf("Wrath of")] = lv
+				n++
+			}
 		}
 	}
 	return n

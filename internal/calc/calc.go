@@ -352,7 +352,7 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 		}
 		excl[cb.Excl] = true
 	}
-	at.Stack = clamp(at.Stack, 0, 10)
+	at.Stack = clamp(at.Stack, 0, 20) // Pilares de Pedra: up to 20 pillars
 	slices.Sort(notes)
 	return slices.Compact(notes) // multi-slot items are reported once
 }

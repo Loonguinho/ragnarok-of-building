@@ -179,7 +179,13 @@ type SkillFormula struct {
 	Ratio         func(FormulaInput) float64 // % of ATK/MATK, total for one use
 	Magic         bool                       // MATK-based (magic pipeline)
 	Element       string                     // fixed element ("" = weapon/endow)
+	ElementFn     func(FormulaInput) string  // element by level or state; wins over Element
 	Hits          func(FormulaInput) int     // real damage multiplier (totalHit); nil = 1
+	Flat          func(FormulaInput) int64   // added to each hit after every reduction
+	// Base replaces the ATK chain (Sopro do Dragão): DEF is subtracted, then
+	// ranged %, equipment skill bonus, BaseMul and the element apply.
+	Base    func(FormulaInput, Result) int64
+	BaseMul func(FormulaInput) int64
 	CanCrit       func(FormulaInput) bool    // nil = no crits
 	CritRate      float64                    // fraction of the crit chance (baseCriPercentage)
 	CritDmg       float64                    // fraction of the crit damage bonus (criDmgPercentage)
@@ -234,6 +240,17 @@ func (f *SkillFormula) Variants() []*SkillFormula {
 		return nil
 	}
 	return append([]*SkillFormula{f}, f.Alts...)
+}
+
+// ElementOf is the skill's own element ("" = weapon/endow).
+func (f *SkillFormula) ElementOf(in FormulaInput) string {
+	if f == nil {
+		return ""
+	}
+	if f.ElementFn != nil {
+		return f.ElementFn(in)
+	}
+	return f.Element
 }
 
 // Pick returns variant i (0 = the first), or the first when out of range.

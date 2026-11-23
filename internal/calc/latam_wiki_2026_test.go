@@ -48,8 +48,8 @@ func TestRebalance2026(t *testing.T) {
 		}
 	}
 	// Sopro do Dragão is not Baforada Draconiana (the generator mixed them).
-	if f := latamByJob["JT_DRAGON_KNIGHT"]["RK_DRAGONBREATH"]; f != nil {
-		t.Errorf("Sopro do Dragão uses %s", f.Name)
+	if f := latamByJob["JT_DRAGON_KNIGHT"]["RK_DRAGONBREATH"]; f != nil || latamByJob["JT_RUNE_KNIGHT"]["RK_DRAGONBREATH"].Name != "Dragon Breath" {
+		t.Error("Sopro do Dragão: wrong formula")
 	}
 }
 

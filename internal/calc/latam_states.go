@@ -26,6 +26,30 @@ func init() {
 	// under Sopro do Dragão; the right one is in latam_wiki_2026.go.
 	delete(latamByJob["JT_DRAGON_KNIGHT"], "RK_DRAGONBREATH")
 
+	// Cores do Arco-Íris: the element of Meteoros de Nepeta, Brisa Silvestre
+	// and Lança Galhada.
+	regStates("JT_SPIRIT_HANDLER", []StateOption{{Key: stateKey("Colors of Hynrok"), Label: "Cores do Arco-Íris",
+		Choices: [][2]string{{"0", "—"}, {"1", "Água"}, {"2", "Vento"}, {"3", "Terra"}, {"4", "Fogo"}, {"5", "Sombrio"}, {"6", "Sagrado"}}}})
+	for job, codes := range map[string][]string{"JT_DO_SUMMONER": {"SU_CN_METEOR"}, "JT_SPIRIT_HANDLER": {"SH_HYUN_ROKS_BREEZE", "SH_HYUN_ROK_CANNON"}} {
+		for _, code := range codes {
+			if f := latamByJob[job][code]; f != nil {
+				f.ElementFn = func(in FormulaInput) string {
+					return [...]string{"Neutral", "Water", "Wind", "Earth", "Fire", "Dark", "Holy"}[min(max(in.ActiveLv("Colors of Hynrok"), 0), 6)]
+				}
+			}
+		}
+	}
+	// Remoção Sombria Total: the target loses 50 RES and MRES.
+	regStates("JT_ABYSS_CHASER", []StateOption{{Key: stateKey("Strip Shadow"), Label: "Remoção Sombria Total no alvo", Choices: yes("5")}})
+	// 10 spirit charms: 30% more physical damage on the element they beat.
+	// What each charm adds to the ninja spells, and Terra's ATK, is left out.
+	for _, job := range []string{"JT_KAGEROU", "JT_OBORO"} {
+		regClassBuffs(job, []ClassBuff{{Name: "Spirit Charm", Label: "10 Amuletos",
+			Choices: [][2]string{{"0", "—"}, {"1", "Fogo"}, {"2", "Água"}, {"3", "Vento"}, {"4", "Terra"}},
+			Scripts: map[int]string{1: "bonus2 bAddEle,Ele_Earth,30;", 2: "bonus2 bAddEle,Ele_Fire,30;",
+				3: "bonus2 bAddEle,Ele_Water,30;", 4: "bonus2 bAddEle,Ele_Wind,30;"}}})
+	}
+
 	// Piroclástico (Dieter) Nv 10: the master's weapon ATK + homunculus
 	// level + 200 (bROWiki: 20/Nv; measured by latam-ro-calc: +431 at 231).
 	pyro := ClassBuff{Name: "Pyroclastic", Skill: "MH_PYROCLASTIC", Label: "Piroclástico",

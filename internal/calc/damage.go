@@ -82,7 +82,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	}
 	d.Ratio, d.Hits = ratio, hits
 	if f != nil && f.Magic {
-		md := magicDamage(r, c, m, a, f, ratio, hits)
+		md := magicDamage(b, r, c, m, a, f, ratio, hits)
 		md.Notes = append(d.Notes, md.Notes...)
 		return md
 	}
@@ -118,6 +118,10 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 			}
 		}
 	}
+	// A skill's own element wins over the weapon's and any endow.
+	if e := f.ElementOf(a.Input); e != "" {
+		ele = e
+	}
 	d.Element = ele
 
 	attr := func(atkEle string) int {
@@ -130,7 +134,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	// it takes too, unless the endow is poison (LATAM recordings).
 	statusEle := "Neutral"
 	edp := edpActive(b, a.SkillCode)
-	if a.Element != "" && a.Element != "Poison" && !edp {
+	if a.Element != "" && a.Element == ele && a.Element != "Poison" && !edp {
 		statusEle = a.Element
 	}
 	// Negative values (healing) are treated as no damage.
@@ -190,7 +194,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	if def1 == -400 {
 		def1 = -399
 	}
-	res := float64(m.RES)
+	res := stripShadow(b, m.RES)
 	if ign := min(100, sum("bIgnoreResRaceRate", "RC_"+m.Race, "RC_All")); ign > 0 {
 		res -= float64(ign) * res / 100
 	}
@@ -217,6 +221,28 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 			if rec {
 				d.Steps = append(d.Steps, Step{label, fmt.Sprintf(format, args...)})
 			}
+		}
+		if f != nil && f.Base != nil {
+			dmg := f.Base(a.Input, r)
+			step("Dano base (HP e SP)", "%d", dmg)
+			dmg = max(1, dmg-def1-def2)
+			step("DEF do alvo", "− %d − %d = %d", def1, def2, dmg)
+			mul := func(label string, pct int64) {
+				if pct != 100 {
+					dmg = dmg * pct / 100
+					step(label, "× %d%% = %d", pct, dmg)
+				}
+			}
+			mul("Dano à distância", 100+int64(bn["bLongAtkRate"])+int64(unlimitRate(b, true, false)))
+			mul("Bônus na habilidade (equip)", int64(100+skillAtk))
+			if f.BaseMul != nil {
+				mul("Aura Draconiana", 100*f.BaseMul(a.Input))
+			}
+			mul("Elemento ("+strings.ToLower(ele)+")", int64(eleAtk))
+			if m.DamageTaken != 100 {
+				dmg = max(1, dmg*int64(m.DamageTaken)/100)
+			}
+			return dmg * int64(hits)
 		}
 		status := int64(r.StatusATK) * int64(eleStatus) / 100 * 2
 		step("ATQ de status", "%d × %d%% (%s) × 2 = %d", r.StatusATK, eleStatus, strings.ToLower(statusEle), status)
@@ -324,6 +350,10 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 			step("Crítico", "× %.2f = %d", 1.4+0.01*float64(r.CRATE), dmg)
 		}
 
+		if f != nil && f.Flat != nil {
+			dmg += f.Flat(a.Input)
+			step("Dano fixo da habilidade", "%+d = %d", f.Flat(a.Input), dmg)
+		}
 		if scar != 0 {
 			dmg += dmg * int64(scar) / 100
 			step("Profanação no alvo", "%+d%% = %d", scar, dmg)
@@ -423,6 +453,14 @@ func learnedLv(b Build, c *gamedata.Catalog, code string) int {
 		}
 	}
 	return 0
+}
+
+// stripShadow is the target's RES or MRES, less 50 under Remoção Sombria Total.
+func stripShadow(b Build, v int) float64 {
+	if b.Atk.States[stateKey("Strip Shadow")] != 0 {
+		v = max(0, v-50)
+	}
+	return float64(v)
 }
 
 // SkillWeapons are the weapon types the skill requires; nil = any.

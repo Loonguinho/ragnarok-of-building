@@ -15,10 +15,10 @@ import (
 // ratio, own-element bonus, MRES, hard MDEF (1000+MDEF)/(1000+10 MDEF), soft
 // MDEF, skill bonus (bSkillAtk), the monster's damage taken and hits. Every
 // stage is floored. Magic never misses and does not crit.
-func magicDamage(r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attack, f *SkillFormula, ratio float64, hits int) DamageResult {
+func magicDamage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attack, f *SkillFormula, ratio float64, hits int) DamageResult {
 	d := DamageResult{Ratio: ratio, Hits: hits, HitChance: 100}
 
-	ele := f.Element
+	ele := f.ElementOf(a.Input)
 	if ele == "" {
 		ele = a.Element
 	}
@@ -73,7 +73,7 @@ func magicDamage(r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attack, f
 	if f.IgnoreSoftDef {
 		softMDEF = 0
 	}
-	mres := float64(m.MRES)
+	mres := stripShadow(b, m.MRES)
 	if ign := min(100, sum("bIgnoreMresRaceRate", "RC_"+m.Race, "RC_All")); ign > 0 {
 		mres = math.Floor(mres - mres*float64(ign)/100)
 	}
@@ -119,6 +119,10 @@ func magicDamage(r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attack, f
 		}
 		step("DEFM do alvo", "× (1000+%.0f)/(1000+%.0f) − %d = %d", mdef, mdef*10, softMDEF, total)
 		mul("Bônus na habilidade (equip)", float64(100+skillAtk))
+		if f.Flat != nil {
+			total += f.Flat(a.Input)
+			step("Dano fixo da habilidade", "%+d = %d", f.Flat(a.Input), total)
+		}
 		if m.DamageTaken != 100 {
 			total = max(1, total*int64(m.DamageTaken)/100)
 			step("Dano recebido pelo alvo", "× %d%% = %d", m.DamageTaken, total)

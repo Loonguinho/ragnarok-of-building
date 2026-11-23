@@ -24,6 +24,7 @@ REVIEWED = {
     'GC_COUNTERSLASH': 'a tabela lista o dano base sem o ÷120 da fórmula; a fórmula bate',
     'NC_AXEBOOMERANG': 'depende do peso do machado (a comparação roda sem arma); a fórmula bate',
     'WL_FROSTMISTY': 'a 1ª coluna não é o ATQM; a fórmula por cristal bate',
+    'WZ_VERMILION': TYPO + ' (Nv7: o cliente diz 1.100%)',
     'HN_SPIRAL_PIERCE_MAX': 'a tabela é o dano base antes do multiplicador de tamanho (×1,3 no médio da comparação); a fórmula bate',
 }
 
@@ -31,6 +32,8 @@ REVIEWED = {
 # Attribute coefficients checked by hand.
 STATE = 'o 2º coeficiente vale com o estado {}, que o simulador aplica'
 COEF_REVIEWED = {
+    'BO_EXPLOSIVE_POWDER': STATE.format('Eureka'), 'BO_MAYHEMIC_THORNS': STATE.format('Eureka'),
+    'DK_DRAGONIC_BREATH': STATE.format('Aura Draconiana'),
     'SHC_SAVAGE_IMPACT': STATE.format('Carrasco Sombrio'), 'SHC_ETERNAL_SLASH': STATE.format('Carrasco Sombrio'),
     'EM_CONFLAGRATION': STATE.format('Elemental ativo'), 'EM_DIAMOND_STORM': STATE.format('Elemental ativo'),
     'EM_LIGHTNING_LAND': STATE.format('Elemental ativo'), 'EM_TERRA_DRIVE': STATE.format('Elemental ativo'),

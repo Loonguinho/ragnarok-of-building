@@ -108,6 +108,11 @@ func MergeLatamCalc(c *gamedata.Catalog, path string) (added, updated int, err e
 		}
 		m.Source = "latam-ro-calc"
 	}
+	for id, card := range mobCards {
+		if m := c.Monsters[id]; m != nil && len(m.Names) == 0 {
+			m.Names = monsterNames(c, []int{card})
+		}
+	}
 	return added, updated, nil
 }
 

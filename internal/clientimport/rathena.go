@@ -29,6 +29,17 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 		}
 		c.Monsters[id].Names = monsterNames(c, m.Cards)
 	}
+	// Summoned copies are named as the monster they copy.
+	for id, m := range db.Mobs {
+		base, ok := strings.CutPrefix(m.Aegis, "G_ILL_")
+		if cp := c.Monsters[id]; ok && cp != nil && len(cp.Names) == 0 {
+			for bid, bm := range db.Mobs {
+				if bm.Aegis == "ILL_"+base && c.Monsters[bid] != nil {
+					cp.Names = c.Monsters[bid].Names
+				}
+			}
+		}
+	}
 	markMVPCards(c, db)
 	// Monsters rAthena lists without stats: searchable, stats on demand.
 	c.MonsterStubs = map[int]string{}
@@ -44,6 +55,10 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 	for _, sk := range c.Skills {
 		if ws := db.SkillWeapons[sk.Code]; len(ws) > 0 {
 			sk.Weapons = ws
+		}
+		// The client's list misses one (Decorar Carrinho).
+		if sk.Type == "" && db.SkillQuest[sk.Code] {
+			sk.Type = "Quest"
 		}
 		sk.Passive = db.SkillPassive[sk.Code] || descPassive(sk.Desc["pt"])
 	}
@@ -127,6 +142,11 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 
 // cardPrefix is how each client language names a monster's card.
 var cardPrefix = map[string]string{"pt": "Carta ", "es": "Carta "}
+
+// mobCards are the cards of the Illusion of Labyrinth, by monster: rAthena
+// has no drops for them.
+var mobCards = map[int]int{20520: 27334, 20525: 27335, 20526: 27336, 20527: 27337, 20528: 27338,
+	20529: 27339, 20530: 27340, 20531: 27341, 20532: 27342}
 
 // monsterNames takes a monster's local names from its card ("Carta Pesar
 // Noturno" -> "Pesar Noturno"): the client has no monster name table.

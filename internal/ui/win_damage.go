@@ -384,6 +384,9 @@ func (a *App) mobList(gtx C) D {
 					if r.M.Stub {
 						info = a.T("sem atributos no rAthena: buscados no Divine Pride ao escolher")
 					}
+					if r.Place != "" {
+						info = r.Place + " · " + info
+					}
 					return Col(0, T(th, name).W(), T(th, info).Sz(SmallText).C(rgb(0x888888)).W())(gtx)
 				})
 				call := m.Stop()

@@ -121,6 +121,8 @@ type DB struct {
 	SkillWeapons map[string][]string
 	// SkillPassive: skills without a TargetType, never cast (skill_db.yml).
 	SkillPassive map[string]bool
+	// SkillQuest: skills learned by quest, which cost no points.
+	SkillQuest map[string]bool
 
 	optDrops [][2]string // (item AegisName, RandomOptionGroup) from monster drops
 }

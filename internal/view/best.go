@@ -28,6 +28,8 @@ type BestItem struct {
 	// Combo, for Melhor carta: the cards that complete one of the card's
 	// sets, placed in the build too (the gain counts them).
 	Combo []ComboPart
+	// Traits, for Melhor carta: the gain is with the traits changed to these.
+	Traits *[6]int
 }
 
 // ComboPart is a card placed to complete a set: where and which.

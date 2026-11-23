@@ -170,13 +170,14 @@ type MonsterRow struct {
 	M             *gamedata.Monster
 	Name          string
 	Race, Element string
+	Place         string // the Illusion dungeon it is from
 }
 
 // SearchMonsters is the monster picker.
 func (v *Views) SearchMonsters(q, l string) []MonsterRow {
 	var out []MonsterRow
-	for _, m := range v.s.opt.Catalog.SearchMonsters(q, 40) {
-		out = append(out, MonsterRow{M: m, Name: m.NameIn(l), Race: tr(l, racePT(m.Race)), Element: tr(l, elementPT[m.Element])})
+	for _, m := range v.s.opt.Catalog.SearchMonsters(q, 150) {
+		out = append(out, MonsterRow{M: m, Name: m.NameIn(l), Race: tr(l, racePT(m.Race)), Element: tr(l, elementPT[m.Element]), Place: gamedata.MonsterPlace(m.ID).Get(l)})
 	}
 	return out
 }
@@ -184,7 +185,15 @@ func (v *Views) SearchMonsters(q, l string) []MonsterRow {
 // Optimize runs the optimizer: items, cards and enchants, one swap at a
 // time, ranked by the goal (it stops itself after a while).
 func (v *Views) Optimize(ctx context.Context, b calc.Build, o OptOptions, l string) OptResult {
-	return v.s.optimizeWith(ctx, b, o, l)
+	res := v.s.optimizeWith(ctx, b, o, l)
+	if o.Traits && !res.NoTarget {
+		if tv := v.CompareTraits(ctx, b, TraitOptions{Goal: o.Goal}, l); len(tv.Cols) > 1 {
+			if best := tv.Cols[len(tv.Cols)-1]; best.Ratio > 1.0005 {
+				res.Traits = &best
+			}
+		}
+	}
+	return res
 }
 
 // ImportReplay reads a .rrf: its build, notes and damage window (nil when

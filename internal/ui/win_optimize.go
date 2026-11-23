@@ -25,6 +25,8 @@ type optimizeState struct {
 	goal              Select
 	ref, gra          Select
 	items, cards, enc Checkbox
+	tra               Checkbox
+	traits            bool // also search trait distributions
 	// Unchecked boxes (the zero value tests everything).
 	noItems, noCards, noEnch bool
 	refine, grade            int
@@ -48,7 +50,7 @@ func (a *App) runOptimizer() {
 	}
 	s.busy = true
 	b, lang := a.b.Clone(), a.Lang
-	o := view.OptOptions{Goal: s.goalVal, Items: !s.noItems, Cards: !s.noCards, Enchants: !s.noEnch, Refine: s.refine, Grade: s.grade}
+	o := view.OptOptions{Goal: s.goalVal, Items: !s.noItems, Cards: !s.noCards, Enchants: !s.noEnch, Refine: s.refine, Grade: s.grade, Traits: s.traits}
 	a.mu.Unlock()
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -137,12 +139,22 @@ func (a *App) optimizeBody(gtx C) D {
 		),
 		Row(10, check(&s.cards, &s.noCards, a.T("Cartas")), check(&s.enc, &s.noEnch, a.T("Encantamentos (os que o cliente lista para cada item)"))),
 		func(gtx C) D {
+			d, toggled := s.tra.Layout(gtx, th, s.traits, a.T("Considerar mudar os talentos"))
+			if toggled {
+				s.traits = !s.traits
+			}
+			return d
+		},
+		func(gtx C) D {
 			label := a.T("Calcular")
 			if busy {
 				label = a.T("Calculando…")
 			}
 			return Button{Label: label, Disabled: busy, MinWidth: 80}.Layout(gtx, th, &s.run)
 		},
+	}
+	if res != nil && res.Traits != nil {
+		kids = append(kids, a.optTraits(res.Traits))
 	}
 	if res != nil {
 		kids = append(kids, a.optResult(*res))
@@ -448,6 +460,10 @@ func (a *App) itemsBody(gtx C) D {
 	}
 	kids := []layout.Widget{
 		func(gtx C) D {
+			d, _ := SearchBox(gtx, th, &s.q, a.T("Nome ou ID…"), 0)
+			return d
+		},
+		func(gtx C) D {
 			d, changed := s.tabs.Layout(gtx, a, tabs, Col(4, list, bottom))
 			if changed {
 				s.filt.On = -1
@@ -481,17 +497,12 @@ func (a *App) itemsBody(gtx C) D {
 	return Col(6, kids...)(gtx)
 }
 
-// itemsFooter is the storage's footer: the count, the search and Fechar.
+// itemsFooter is the storage's footer: the count and Fechar.
 func (a *App) itemsFooter(gtx C) D {
 	th, s := a.Th, &a.items
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 		layout.Rigid(T(th, fmt.Sprintf("%d %s", len(s.results), a.T("itens"))).C(ColLabel).W()),
-		layout.Rigid(Gap(8, 0)),
-		layout.Flexed(1, func(gtx C) D {
-			d, _ := SearchBox(gtx, th, &s.q, a.T("Nome ou ID…"), 0)
-			return d
-		}),
-		layout.Rigid(Gap(6, 0)),
+		layout.Flexed(1, func(gtx C) D { return D{Size: image.Pt(gtx.Constraints.Min.X, 0)} }),
 		layout.Rigid(func(gtx C) D { return Button{Label: a.T("Fechar")}.Layout(gtx, th, &s.close) }),
 	)
 }

@@ -70,6 +70,8 @@ type slotState struct {
 	bestCardBtn  widget.Clickable
 	bestCardSel  Select
 	bestCardGoal string
+	bestTraits   Checkbox
+	withTraits   bool // Melhor carta: also with the traits changed
 	bestSeq      int
 
 	tipMu sync.Mutex
@@ -614,6 +616,7 @@ func (a *App) pickList(gtx C) D {
 	// Melhor carta's set rows: the same card with its set's other cards,
 	// under a key of their own (negative).
 	var combos map[int][]view.ComboPart
+	withTr := map[int][6]int{} // rows with the traits changed
 	keyOf := func(i int, it view.ItemView) int { return it.ID }
 	if s.bestOn {
 		results, gains, pending = nil, map[int]view.StatLine{}, s.bestRunning
@@ -625,6 +628,10 @@ func (a *App) pickList(gtx C) D {
 				if len(bi.Combo) > 0 {
 					k = -(i + 1)
 					combos[k] = bi.Combo
+				}
+				if bi.Traits != nil {
+					k = -(i + 1)
+					withTr[k] = *bi.Traits
 				}
 				keys = append(keys, k)
 				results = append(results, bi.Item)
@@ -644,7 +651,9 @@ func (a *App) pickList(gtx C) D {
 		key := keyOf(i, it)
 		cl := s.rows[key]
 		if cl != nil && cl.Clicked(gtx) {
-			if parts, ok := combos[key]; ok {
+			if tr, ok := withTr[key]; ok {
+				a.pickTraits(it.ID, tr)
+			} else if parts, ok := combos[key]; ok {
 				a.pickCombo(it.ID, parts)
 			} else {
 				a.pick(it.ID)
@@ -708,6 +717,10 @@ func (a *App) pickList(gtx C) D {
 							nameW = Col(1, T(th, name).W(),
 								T(th, a.T("Combo com")+" "+strings.Join(with, ", ")).Sz(SmallText).C(ColLink).Lines(2).Wrapping().W())
 						}
+						if tr, ok := withTr[key]; ok {
+							nameW = Col(1, T(th, name).W(),
+								T(th, a.T("com os talentos")+" "+a.traitsText(tr)).Sz(SmallText).C(ColLink).Lines(2).Wrapping().W())
+						}
 						return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 							layout.Rigid(func(gtx C) D { return a.Icons.Icon(gtx, view.ItemIcon(it.ID), 24) }),
 							layout.Rigid(Gap(6, 0)),
@@ -740,6 +753,15 @@ func (a *App) pickList(gtx C) D {
 				})
 			}
 			var d D
+			if _, ok := withTr[key]; ok {
+				d = row(gtx)
+				if cl.Hovered() {
+					a.Desk.ShowTip(func(gtx C) D {
+						return TipBox(gtx, T(th, a.T("Aplica o encantamento e troca seus talentos pelos indicados.")).W())
+					})
+				}
+				return d
+			}
 			if len(parts) > 0 { // a set: applied whole, no side-by-side
 				d = row(gtx)
 				if cl.Hovered() {
@@ -1203,6 +1225,19 @@ func (a *App) bestCardControls(gtx C) D {
 			}
 			return d
 		},
+		func(gtx C) D {
+			if v := a.View(); v.Job == nil || !v.Job.Fourth {
+				return D{}
+			}
+			d, toggled := s.bestTraits.Layout(gtx, th, s.withTraits, a.T("Mudar talentos"))
+			if toggled {
+				s.withTraits = !s.withTraits
+				if s.bestOn {
+					a.runBestCard()
+				}
+			}
+			return d
+		},
 	)(gtx)
 }
 
@@ -1215,11 +1250,11 @@ func (a *App) runBestCard() {
 	}
 	a.mu.Lock()
 	s.bestSeq++
-	seq, slot, idx, goal, b, lang := s.bestSeq, s.key, s.card, s.bestCardGoal, a.b.Clone(), a.Lang
+	seq, slot, idx, goal, b, lang, withTraits := s.bestSeq, s.key, s.card, s.bestCardGoal, a.b.Clone(), a.Lang, s.withTraits
 	s.bestOn, s.bestRunning, s.best = true, true, nil
 	a.mu.Unlock()
 	go func() {
-		res := a.V.BestCards(context.Background(), b, slot, idx, goal, lang)
+		res := a.V.BestCardsTraits(context.Background(), b, slot, idx, goal, withTraits, lang)
 		a.mu.Lock()
 		if seq == s.bestSeq {
 			s.best, s.bestRunning = &res, false

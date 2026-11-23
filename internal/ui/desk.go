@@ -398,13 +398,28 @@ func (d *Desk) layoutFloats(gtx C, th *Theme, size image.Point, ws []*Window) {
 			w.Placed = true
 		}
 		w.Pos.X = max(0, min(w.Pos.X, size.X-cw))
-		g := gtx
-		g.Constraints = layout.Constraints{Max: image.Pt(cw, max(size.Y-w.Pos.Y-gtx.Dp(8), gtx.Dp(160)))}
-		st := op.Offset(w.Pos).Push(gtx.Ops)
-		wd := w.layout(g, th, d, true)
-		st.Pop()
-		w.rect = image.Rectangle{Min: w.Pos, Max: w.Pos.Add(wd.Size)}
+		d.layoutFloat(gtx, th, size, w, cw)
 	}
+}
+
+// layoutFloat draws a floating window at its position. Its height does not
+// depend on where it is (it would change while dragged), except a
+// dropdown's, which ends at the bottom of the screen; the title bar always
+// stays in view.
+func (d *Desk) layoutFloat(gtx C, th *Theme, size image.Point, w *Window, cw int) {
+	w.Pos.Y = max(0, min(w.Pos.Y, size.Y-gtx.Dp(TitleH)-gtx.Dp(8)))
+	room := size.Y - gtx.Dp(16)
+	if w.Dropdown {
+		room = size.Y - w.Pos.Y - gtx.Dp(8)
+	}
+	g := gtx
+	g.Constraints = layout.Constraints{Max: image.Pt(cw, max(room, gtx.Dp(160)))}
+	at := w.Pos // layout moves w.Pos when dragged: for the next frame
+	st := op.Offset(at).Push(gtx.Ops)
+	wd := w.layout(g, th, d, true)
+	st.Pop()
+	w.drawn = at
+	w.rect = image.Rectangle{Min: at, Max: at.Add(wd.Size)}
 }
 
 func (d *Desk) layoutFloating(gtx C, th *Theme, size image.Point) {
@@ -429,12 +444,7 @@ func (d *Desk) layoutFloating(gtx C, th *Theme, size image.Point) {
 		if w.Width > 0 {
 			cw = gtx.Dp(w.Width)
 		}
-		g := gtx
-		g.Constraints = layout.Constraints{Max: image.Pt(cw, max(size.Y-w.Pos.Y-gtx.Dp(8), gtx.Dp(160)))}
-		st := op.Offset(w.Pos).Push(gtx.Ops)
-		wd := w.layout(g, th, d, true)
-		st.Pop()
-		w.rect = image.Rectangle{Min: w.Pos, Max: w.Pos.Add(wd.Size)}
+		d.layoutFloat(gtx, th, size, w, cw)
 	}
 	if d.Below != nil {
 		m := op.Record(gtx.Ops)

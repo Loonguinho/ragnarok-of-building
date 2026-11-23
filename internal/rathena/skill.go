@@ -23,7 +23,10 @@ func (db *DB) loadSkillWeapons(path string) error {
 		Body []struct {
 			Name       string `yaml:"Name"`
 			TargetType string `yaml:"TargetType"`
-			Requires   struct {
+			Flags      struct {
+				IsQuest bool `yaml:"IsQuest"`
+			} `yaml:"Flags"`
+			Requires struct {
 				Weapon map[string]bool `yaml:"Weapon"`
 			} `yaml:"Requires"`
 		} `yaml:"Body"`
@@ -33,7 +36,11 @@ func (db *DB) loadSkillWeapons(path string) error {
 	}
 	db.SkillWeapons = map[string][]string{}
 	db.SkillPassive = map[string]bool{}
+	db.SkillQuest = map[string]bool{}
 	for _, s := range doc.Body {
+		if s.Flags.IsQuest {
+			db.SkillQuest[s.Name] = true
+		}
 		if s.TargetType == "" || s.TargetType == "Passive" { // passives have none
 			db.SkillPassive[s.Name] = true
 		}

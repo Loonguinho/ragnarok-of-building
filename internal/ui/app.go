@@ -52,7 +52,7 @@ type App struct {
 
 	// Windows.
 	wMenu, wBasic, wStatus, wEquip, wSkills, wBonus, wDamage, wBuffs, wOptimize *Window
-	wSaved, wShare, wHelp, wSlot, wRdmg, wItems, wCompare                       *Window
+	wSaved, wShare, wHelp, wSlot, wRdmg, wItems, wCompare, wTraits              *Window
 	wSettings                                                                   *Window // a tab of the single window
 
 	menu   menuState
@@ -68,6 +68,7 @@ type App struct {
 	share  shareState
 	replay replayState
 	opt    optimizeState
+	traits traitsState
 	items  itemsState
 	shell  shellState
 
@@ -155,6 +156,8 @@ func (a *App) makeWindows() {
 	// buttons, Alt+K).
 	a.wCompare = d.Add(&Window{ID: "win-compare", Title: "Comparar itens", Hotkey: "K", Col: 2, Float: true, Width: 760, NoShowAll: true})
 	a.wCompare.Body = a.compareBody
+	a.wTraits = d.Add(&Window{ID: "win-traits", Title: "Comparar talentos", Hotkey: "T", Col: 2, Float: true, Width: 860, NoShowAll: true})
+	a.wTraits.Body = a.traitsBody
 	a.wBonus.Body = a.bonusBody
 	a.wDamage.Body = a.damageBody
 	a.wEquip.Body = a.equipBody
@@ -361,6 +364,7 @@ func (a *App) updateTitles() {
 	a.wOptimize.Title = a.T("Otimizador")
 	a.wItems.Title = a.T("Banco de Itens")
 	a.wCompare.Title = a.T("Comparar itens")
+	a.wTraits.Title = a.T("Comparar talentos")
 	SearchHint = a.T("Buscar…")
 	a.wSlot.Title = a.slotTitle()
 }

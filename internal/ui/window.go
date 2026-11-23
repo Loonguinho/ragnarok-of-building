@@ -67,6 +67,8 @@ type Window struct {
 	z     int
 	drag  gesture.Drag
 	press image.Point
+	drawn image.Point // where the last frame drew it: pointer positions are relative to it
+	block bool        // tag of the area that keeps the pointer off what is behind
 	close widget.Clickable
 	mini  widget.Clickable
 	rect  image.Rectangle // last drawn, desk coordinates
@@ -112,11 +114,13 @@ func (w *Window) layout(gtx C, th *Theme, d *Desk, floating bool) D {
 				w.press = e.Position.Round()
 				d.Raise(w)
 			case pointer.Drag:
-				delta := e.Position.Round().Sub(w.press)
-				w.Pos = w.Pos.Add(delta)
+				// The pointer is where the last frame drew the window plus
+				// this position, however many events came since.
+				w.Pos = w.drawn.Add(e.Position.Round().Sub(w.press))
 				w.Pos.X = max(w.Pos.X, -width+gtx.Dp(60))
 				w.Pos.Y = max(w.Pos.Y, 0)
 				d.changed = true
+				gtx.Execute(op.InvalidateCmd{})
 			}
 		}
 	}
@@ -203,6 +207,9 @@ func (w *Window) layout(gtx C, th *Theme, d *Desk, floating bool) D {
 	full := image.Rectangle{Max: image.Pt(width, h)}
 
 	// Frame.
+	if floating {
+		w.blockPointer(gtx, full)
+	}
 	Shadow(gtx, full, gtx.Dp(6))
 	FillRound(gtx, full, ColBody, gtx.Dp(6), gtx.Dp(6), gtx.Dp(3), gtx.Dp(3))
 	// Title bar.
@@ -270,6 +277,20 @@ func (w *Window) layout(gtx C, th *Theme, d *Desk, floating bool) D {
 	return D{Size: full.Max}
 }
 
+// blockPointer keeps presses, hovers and the wheel from reaching what is
+// behind the window; its own content, drawn after, still gets them.
+func (w *Window) blockPointer(gtx C, r image.Rectangle) {
+	for {
+		if _, ok := gtx.Event(pointer.Filter{Target: &w.block, Kinds: pointer.Press | pointer.Release | pointer.Move | pointer.Scroll,
+			ScrollY: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}}); !ok {
+			break
+		}
+	}
+	st := clip.Rect(r).Push(gtx.Ops)
+	event.Op(gtx.Ops, &w.block)
+	st.Pop()
+}
+
 // layoutDropdown draws a Dropdown window: its body in a white box with the
 // dropdown's border, scrolling inside when taller than the room below.
 func (w *Window) layoutDropdown(gtx C, d *Desk, width int) D {
@@ -308,6 +329,7 @@ func (w *Window) layoutDropdown(gtx C, d *Desk, width int) D {
 	}
 	call := m.Stop()
 	full := image.Rectangle{Max: image.Pt(width, bd.Size.Y+2)}
+	w.blockPointer(gtx, full)
 	Shadow(gtx, full, gtx.Dp(4))
 	Fill(gtx, full, ColWhite)
 	st := op.Offset(image.Pt(1, 1)).Push(gtx.Ops)

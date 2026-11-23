@@ -564,6 +564,12 @@ func (a *App) statusBody(gtx C) D {
 			),
 			Sep,
 			points("Pontos de traço:", r.TraitPoints),
+			func(gtx C) D {
+				if a.traits.open.Clicked(gtx) {
+					a.showTraits()
+				}
+				return Button{Label: a.T("Comparar talentos")}.Layout(gtx, th, &a.traits.open)
+			},
 		)
 	}
 	pools := fmt.Sprintf("HP %d %s %d", r.HP, a.T("· SP"), r.SP)

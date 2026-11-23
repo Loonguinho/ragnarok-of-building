@@ -103,3 +103,31 @@ func TestItemRandomOptions(t *testing.T) {
 		}
 	}
 }
+
+// TestIllusionSearch: the Illusion dungeons are found by their names, the
+// monsters of each have stats, and the Labyrinth's have local names.
+func TestIllusionSearch(t *testing.T) {
+	_, v := stressCatalog(t)
+	for q, want := range map[string]int{"ilusao do vampiro": 8, "ilusao da lua": 8, "ilusao do gelo": 5, "ilusao da tartaruga": 6,
+		"ilusao do ursinho": 9, "ilusao de luanda": 8, "ilusao do labirinto": 9, "ilusao do mar": 12, "ilusao dos gemeos": 10} {
+		n := 0
+		for _, r := range v.SearchMonsters(q, "pt") {
+			if r.Place != "" && !r.M.Stub && r.M.Level > 100 {
+				n++
+			}
+		}
+		if n < want {
+			t.Errorf("%s: %d monsters, want at least %d", q, n, want)
+		}
+	}
+	if r := v.SearchMonsters("bafome caotico", "pt"); len(r) == 0 || r[0].M.ID != 20520 {
+		t.Errorf("Bafomé Caótico not found: %+v", r)
+	}
+	places := map[string]bool{}
+	for _, r := range v.SearchMonsters("ilusao", "pt") {
+		places[r.Place] = true
+	}
+	if len(places) < 9 {
+		t.Errorf("ilusao lists %d places", len(places))
+	}
+}

@@ -17,6 +17,12 @@ import (
 
 // BestCards ranks the cards for position idx of the item in slot.
 func (v *Views) BestCards(ctx context.Context, b calc.Build, slot string, idx int, goal string, l string) BestResult {
+	return v.BestCardsTraits(ctx, b, slot, idx, goal, false, l)
+}
+
+// BestCardsTraits is BestCards; with traits, the enchants that depend on a
+// trait are also ranked with the traits changed for them.
+func (v *Views) BestCardsTraits(ctx context.Context, b calc.Build, slot string, idx int, goal string, traits bool, l string) BestResult {
 	s := v.s
 	c := s.opt.Catalog
 	var res BestResult
@@ -136,10 +142,20 @@ feed:
 		}
 		bi := BestItem{Item: viewItem(c.Items[cs.id], l), Ratio: cs.ratio, Combo: parts,
 			Gain: StatLine{Diff: pctChange(cs.ratio, l), Better: true}}
-		at := sort.Search(len(res.Items), func(i int) bool { return res.Items[i].Ratio < cs.ratio })
-		res.Items = append(res.Items[:at], append([]BestItem{bi}, res.Items[at:]...)...)
+		insertBest(&res, bi)
+	}
+	if traits {
+		for _, bi := range s.traitAlternatives(ctx, b, slot, idx, ids, goal, base, l) {
+			insertBest(&res, bi)
+		}
 	}
 	return res
+}
+
+// insertBest keeps the ranking in order.
+func insertBest(res *BestResult, bi BestItem) {
+	at := sort.Search(len(res.Items), func(i int) bool { return res.Items[i].Ratio < bi.Ratio })
+	res.Items = append(res.Items[:at], append([]BestItem{bi}, res.Items[at:]...)...)
 }
 
 // comboPlacements: for each set of card id whose other pieces are all

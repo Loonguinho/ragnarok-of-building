@@ -128,6 +128,9 @@ func (c *Catalog) SearchMonsters(q string, limit int) []*Monster {
 				rank = 2
 			}
 		}
+		if rank == 0 && placeMatches(m.ID, words) {
+			rank = 3
+		}
 		if rank > 0 {
 			hits = append(hits, hit{m, rank})
 		}
@@ -152,6 +155,9 @@ func (c *Catalog) SearchMonsters(q string, limit int) []*Monster {
 				rank = 2
 			}
 		}
+		if rank == 0 && placeMatches(id, words) {
+			rank = 3
+		}
 		if rank != 0 {
 			hits = append(hits, hit{m, max(rank, 0)})
 		}
@@ -163,6 +169,11 @@ func (c *Catalog) SearchMonsters(q string, limit int) []*Monster {
 		}
 		if a.m.Stub != b.m.Stub {
 			return b.m.Stub // monsters with stats first
+		}
+		if a.rank == 3 { // together by place
+			if x, y := MonsterPlace(a.m.ID)["pt"], MonsterPlace(b.m.ID)["pt"]; x != y {
+				return x < y
+			}
 		}
 		if a.m.Level != b.m.Level {
 			return a.m.Level < b.m.Level

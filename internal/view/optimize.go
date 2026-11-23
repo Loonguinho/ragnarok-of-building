@@ -30,6 +30,7 @@ type OptOptions struct {
 	Goal                   string // GoalDamage (default), GoalPhysDef, GoalMagDef
 	Items, Cards, Enchants bool
 	Refine, Grade          int // of the items it suggests (those that take them)
+	Traits                 bool // also search trait distributions (4th classes)
 }
 
 type optOption struct {
@@ -74,6 +75,9 @@ type optResult struct {
 	NoEnch   []string // enchanted items the client's enchant list doesn't cover
 	Tested   int
 	Partial  bool // stopped by the time limit
+	// Traits: the best trait distribution found, with its enchants; nil when
+	// none beats the build's.
+	Traits *TraitCol
 }
 
 // optPosition is one card position to optimize.

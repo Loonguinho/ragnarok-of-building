@@ -16,7 +16,7 @@ var buffBonusNames = map[string]bool{}
 
 func init() {
 	for _, n := range strings.Fields(`bStr bAgi bVit bInt bDex bLuk bAllStats bPow bSta bWis bSpl bCon bCrt
-		bHit bFlee bCritical bCRate bCritAtkRate bAspd bAspdRate bAspdFixed bAtk bBaseAtk bMatk bPAtk bSMatk bDef bMdef
+		bHit bFlee bCritical bCRate bHPlus bCritAtkRate bAspd bAspdRate bAspdFixed bAtk bBaseAtk bMatk bPAtk bSMatk bDef bMdef
 		bRes bMRes bMaxHPrate bMaxSPrate bAtkRate bMatkRate bShortAtkRate bLongAtkRate
 		bIgnoreDefRaceRate bIgnoreMdefRaceRate bIgnoreResRaceRate bIgnoreMresRaceRate bAddRace bAddEle bMagicAddEle bMagicAtkEle`) {
 		buffBonusNames[n] = true

@@ -1,50 +1,55 @@
 package calc
 
-import "testing"
+import (
+	"testing"
+
+	"ragnarok-of-building/internal/gamedata"
+)
 
 // TestRebalance2026: the added skills match their bROWiki pages: the table
 // at base level 100 with no POW, POW × 7 (× 10 in the Eureka/Aura forms and
 // on Laser Triplo), Baforada's HP/SP factor, and the hits.
 func TestRebalance2026(t *testing.T) {
+	up := func(state string, in FormulaInput) FormulaInput {
+		in.States = map[string]int{stateKey(state): 1}
+		return in
+	}
 	for _, tc := range []struct {
-		job, code, variant string
-		in                 FormulaInput
-		ratio              float64
-		hits               int
+		job, code string
+		in        FormulaInput
+		ratio     float64
+		hits      int
 	}{
-		{"JT_DRAGON_KNIGHT", "DK_DRAGONIC_BREATH", "Normal", FormulaInput{Lv: 1, BaseLv: 100}, 400, 1},
-		// Nv 10: 3.550% + 50 × 0,01 × (80.000/8 + 4.000/4) + POW 100 × 7, at base 200.
-		{"JT_DRAGON_KNIGHT", "DK_DRAGONIC_BREATH", "Normal", FormulaInput{Lv: 10, BaseLv: 200, MaxHP: 80000, MaxSP: 4000, Traits: [6]int{100}}, (3550 + 5500 + 700) * 2, 1},
-		{"JT_DRAGON_KNIGHT", "DK_DRAGONIC_BREATH", "Aura Draconiana", FormulaInput{Lv: 10, BaseLv: 100, MaxHP: 80000, MaxSP: 4000, Traits: [6]int{100}}, 3550 + 7700 + 1000, 1},
-		{"JT_MEISTER", "MT_SPARK_BLASTER", "", FormulaInput{Lv: 10, BaseLv: 100}, 7750, 2},
-		{"JT_MEISTER", "MT_TRIPLE_LASER", "", FormulaInput{Lv: 2, BaseLv: 100, Traits: [6]int{10}}, 1500 + 100, 3},
-		{"JT_MEISTER", "MT_MIGHTY_SMASH", "Esmagador", FormulaInput{Lv: 5, BaseLv: 100, Traits: [6]int{10}}, 1650 + 70, 5},
-		{"JT_BIOLO", "BO_EXPLOSIVE_POWDER", "Eureka", FormulaInput{Lv: 2, BaseLv: 100}, 1500, 5},
-		{"JT_BIOLO", "BO_MAYHEMIC_THORNS", "Normal", FormulaInput{Lv: 6, BaseLv: 100, Traits: [6]int{10}}, 1700 + 70, 3},
-		{"JT_BIOLO", "BO_MAYHEMIC_THORNS", "Eureka", FormulaInput{Lv: 10, BaseLv: 100, Traits: [6]int{10}}, 3250 + 100, 5},
+		{"JT_DRAGON_KNIGHT", "DK_DRAGONIC_BREATH", FormulaInput{Lv: 1, BaseLv: 100}, 400, 1},
+		// Nv 10: 3.550% + 50 x 0,01 x (80.000/8 + 4.000/4) + POW 100 x 7, at base 200.
+		{"JT_DRAGON_KNIGHT", "DK_DRAGONIC_BREATH", FormulaInput{Lv: 10, BaseLv: 200, MaxHP: 80000, MaxSP: 4000, Traits: [6]int{100}}, (3550 + 5500 + 700) * 2, 1},
+		{"JT_DRAGON_KNIGHT", "DK_DRAGONIC_BREATH", up("Dragonic Aura", FormulaInput{Lv: 10, BaseLv: 100, MaxHP: 80000, MaxSP: 4000, Traits: [6]int{100}}), 3550 + 7700 + 1000, 1},
+		{"JT_MEISTER", "MT_SPARK_BLASTER", FormulaInput{Lv: 10, BaseLv: 100}, 7750, 2},
+		{"JT_MEISTER", "MT_TRIPLE_LASER", FormulaInput{Lv: 2, BaseLv: 100, Traits: [6]int{10}}, 1500 + 100, 3},
+		{"JT_MEISTER", "MT_MIGHTY_SMASH", FormulaInput{Lv: 5, BaseLv: 100, Traits: [6]int{10}}, 1600 + 70, 3},
+		{"JT_MEISTER", "MT_MIGHTY_SMASH", up("Axe Stomp", FormulaInput{Lv: 5, BaseLv: 100, Traits: [6]int{10}}), 1650 + 70, 5},
+		{"JT_BIOLO", "BO_EXPLOSIVE_POWDER", up("Research Report", FormulaInput{Lv: 2, BaseLv: 100}), 1500, 5},
+		{"JT_BIOLO", "BO_MAYHEMIC_THORNS", FormulaInput{Lv: 6, BaseLv: 100, Traits: [6]int{10}}, 1700 + 70, 3},
+		{"JT_BIOLO", "BO_MAYHEMIC_THORNS", up("Research Report", FormulaInput{Lv: 10, BaseLv: 100, Traits: [6]int{10}}), 3250 + 100, 5},
+		{"JT_BIOLO", "BO_ACIDIFIED_ZONE_FIRE", FormulaInput{Lv: 5, BaseLv: 200, Traits: [6]int{10}}, (2000 + 10) * 2, 7},
+		{"JT_BIOLO", "BO_ACIDIFIED_ZONE_FIRE", up("Research Report", FormulaInput{Lv: 5, BaseLv: 100, Traits: [6]int{10}, Monster: &gamedata.Monster{Race: "Plant"}}), (2000 + 15) * 1.5, 7},
 	} {
 		f := latamByJob[tc.job][tc.code]
 		if f == nil {
 			t.Errorf("%s: no formula", tc.code)
 			continue
 		}
-		found := false
-		for _, v := range f.Variants() {
-			if tc.variant != "" && v.Variant != tc.variant {
-				continue
-			}
-			found = true
-			h := 1
-			if v.Hits != nil {
-				h = v.Hits(tc.in)
-			}
-			if got := v.Ratio(tc.in); got != tc.ratio || h != tc.hits || v.Source != wikiSource {
-				t.Errorf("%s %s Nv %d: %v%% x %d (%s), want %v%% x %d", tc.code, v.Variant, tc.in.Lv, got, h, v.Source, tc.ratio, tc.hits)
-			}
+		h := 1
+		if f.Hits != nil {
+			h = f.Hits(tc.in)
 		}
-		if !found {
-			t.Errorf("%s: no variant %q", tc.code, tc.variant)
+		if got := f.Ratio(tc.in); got != tc.ratio || h != tc.hits || len(f.Alts) != 0 {
+			t.Errorf("%s Nv %d %v: %v%% x %d (%s, %d alts), want %v%% x %d", tc.code, tc.in.Lv, tc.in.States, got, h, f.Source, len(f.Alts), tc.ratio, tc.hits)
 		}
+	}
+	// Sopro do Dragão is not Baforada Draconiana (the generator mixed them).
+	if f := latamByJob["JT_DRAGON_KNIGHT"]["RK_DRAGONBREATH"]; f != nil {
+		t.Errorf("Sopro do Dragão uses %s", f.Name)
 	}
 }
 

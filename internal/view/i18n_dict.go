@@ -369,6 +369,8 @@ var dict = map[string][2]string{
 	"Encant.":                                                                                                               {"Ench.", "Encant."},
 	"Comparar itens":                                                                                                        {"Compare items", "Comparar objetos"},
 	"Comparar":                                                                                                              {"Compare", "Comparar"},
+	"Eureka": {"Research Report", "Eureka"}, "Piroclástico": {"Pyroclastic", "Piroclástico"},
+	"Aegis Domini Nv 3": {"Shield Spell Lv 3", "Aegis Domini Nv. 3"}, "Sinfonia Mística": {"Mystic Symphony", "Sinfonía Mística"}, "Aliança Animal": {"Temporary Communion", "Alianza Animal"},
 	"Combo com": {"Set with", "Combo con"},
 	"Cartas do combo aplicadas.": {"Set cards applied.", "Cartas del combo aplicadas."},
 	"Aplica a carta e as cartas do combo nos lugares indicados (substituindo o que estiver lá).": {"Applies the card and the set's cards where shown (replacing what is there).", "Aplica la carta y las cartas del combo en los lugares indicados (reemplazando lo que haya)."},

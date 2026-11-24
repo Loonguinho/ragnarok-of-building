@@ -116,3 +116,20 @@ func TestAttackProperty(t *testing.T) {
 		t.Errorf("Eureka not imported: %v", b.Atk.States)
 	}
 }
+
+// TestApplyInquisitorStatuses: a recorded Inquisidor whose equip ATK only
+// matched with Mantra da Força and Bolinho Divino (30 ATK each).
+func TestApplyInquisitorStatuses(t *testing.T) {
+	c := &gamedata.Catalog{Skills: map[int]*gamedata.Skill{5238: {ID: 5238, Code: "IQ_POWERFUL_FAITH"}}}
+	var b calc.Build
+	if n := applyStatuses(&b, &Snapshot{Skills: map[int]int{5238: 4}, Statuses: []int{410, 685, 1160, 1233}}, c); n != 4 {
+		t.Errorf("applied %d, want 4", n)
+	}
+	st := b.Atk.States
+	if st[calc.StateKeyOf("Powerful Faith")] != 4 || st[calc.StateKeyOf("Rising Dragon")] != 10 || st[calc.StateKeyOf("Third Exor Flame")] != 5 {
+		t.Errorf("states = %v", st)
+	}
+	if b.Buffs[calc.ConsumableKey(itemAlmighty)] != 1 {
+		t.Errorf("Bolinho Divino not imported: %v", b.Buffs)
+	}
+}

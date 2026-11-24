@@ -52,12 +52,21 @@ var efstStates = map[int]struct {
 	1390: {"_SkyEmperor_Celestial_Space", 6, ""},
 	1392: {"_SkyEmperor_Celestial_Space", 7, ""},
 	461:  {"Geneticist Cart Boost", 5, "GN_CARTBOOST"}, // Propulsão do Carrinho
-	758:  {"Platinum Altar", 1, ""}, // Altar de Platina (EFST_P_ALTER)
-	607:  {"Pyroclastic", 250, ""}, // Piroclástico; the homunculus level is not recorded
+	758:  {"Platinum Altar", 1, ""},                    // Altar de Platina (EFST_P_ALTER)
+	607:  {"Pyroclastic", 250, ""},                     // Piroclástico; the homunculus level is not recorded
 	1176: {"Dragonic Aura", 10, ""},
-	1235: {"Axe Stomp", 5, ""},       // Esmagador
-	1248: {"Research Report", 1, ""}, // Eureka
+	1235: {"Axe Stomp", 5, ""},                        // Esmagador
+	1248: {"Research Report", 1, ""},                  // Eureka
 	1039: {"Universe Stance", 3, "SJ_UNIVERSESTANCE"}, // Postura do Universo
+	// Shura and Inquisidor.
+	86:   {"Fury", 5, "MO_EXPLOSIONSPIRITS"},
+	410:  {"Rising Dragon", 10, "SR_RAISINGDRAGON"},
+	1160: {"Powerful Faith", 5, "IQ_POWERFUL_FAITH"}, // Mantra da Força
+	1161: {"Sincere Faith", 5, "IQ_SINCERE_FAITH"},   // Mantra da Energia
+	1162: {"Firm Faith", 5, "IQ_FIRM_FAITH"},         // Mantra da Saúde
+	1234: {"First Faith Power", 5, ""},               // the three auras
+	1232: {"Judge", 5, ""},
+	1233: {"Third Exor Flame", 5, ""},
 }
 
 // efstMiracle: Milagre Solar, Lunar e Estelar. The LATAM client calls the
@@ -72,6 +81,9 @@ var efstAttackProperty = map[int]string{898: "Water", 899: "Earth", 900: "Fire",
 	903: "Holy", 904: "Dark", 905: "Ghost", 906: "Undead"}
 
 const (
+	// Bolinho Divino; its stats show as the cash foods' statuses too (271-276).
+	efstAlmighty      = 685
+	itemAlmighty      = 12883
 	efstConcentration = 3 // Concentrar, at the learned level
 	// Aplicar Toxina (341) coats the weapon with a toxin but keeps its
 	// element: an Executor replay with it up hit a Poison 3 Rgan for
@@ -120,6 +132,12 @@ func applyStatuses(b *calc.Build, s *Snapshot, c *gamedata.Catalog) int {
 			continue
 		}
 		switch id {
+		case efstAlmighty:
+			if b.Buffs == nil {
+				b.Buffs = map[string]int{}
+			}
+			b.Buffs[calc.ConsumableKey(itemAlmighty)] = 1
+			n++
 		case efstConcentration:
 			if lv := learned("AC_CONCENTRATION"); lv > 0 {
 				if b.Buffs == nil {

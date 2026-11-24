@@ -2,6 +2,7 @@ package view
 
 import (
 	"maps"
+	"math"
 	"sort"
 	"strings"
 
@@ -181,12 +182,7 @@ func (v *Views) Compare(b calc.Build, slot string, cands []CompareCand, l string
 	if m != nil {
 		out.Target = m.NameIn(l)
 	}
-	type colStats struct {
-		vals     []float64
-		expected float64
-	}
-	var labels []string
-	var stats []colStats
+	var builds []calc.Build
 	cards := s.compareCards(slot, l)
 	for _, cand := range cands {
 		nb := v.CompareBuild(b, slot, cand)
@@ -209,7 +205,27 @@ func (v *Views) Compare(b calc.Build, slot string, cands []CompareCand, l string
 		}
 		col.Positions = s.comparePositions(slot, e, cards, l)
 		out.Cols = append(out.Cols, col)
+		builds = append(builds, nb)
+	}
+	out.Rows = s.compareRows(builds, l)
+	return out
+}
 
+// compareRows are the numbers that differ between the builds, each against
+// the first, with the expected damage on top.
+func (s *Server) compareRows(builds []calc.Build, l string) []CompareRow {
+	if len(builds) == 0 {
+		return nil
+	}
+	m := s.opt.Catalog.Monster(builds[0].Target)
+	type colStats struct {
+		vals     []float64
+		expected float64
+	}
+	var labels []string
+	var stats []colStats
+	for _, nb := range builds {
+		r := calc.Compute(nb, s.opt.Catalog)
 		var cs colStats
 		labels = labels[:0]
 		add := func(label string, x float64) {
@@ -243,8 +259,9 @@ func (v *Views) Compare(b calc.Build, slot string, cands []CompareCand, l string
 		stats = append(stats, cs)
 	}
 	if len(stats) == 0 {
-		return out
+		return nil
 	}
+	var out []CompareRow
 	if m != nil {
 		row := CompareRow{Label: tr(l, "Dano esperado"), Main: true}
 		e0 := stats[0].expected
@@ -263,7 +280,7 @@ func (v *Views) Compare(b calc.Build, slot string, cands []CompareCand, l string
 			row.Diffs = append(row.Diffs, d)
 			row.Better = append(row.Better, better)
 		}
-		out.Rows = append(out.Rows, row)
+		out = append(out, row)
 	}
 	for k, label := range labels {
 		same := true
@@ -276,10 +293,10 @@ func (v *Views) Compare(b calc.Build, slot string, cands []CompareCand, l string
 		row := CompareRow{Label: tr(l, label)}
 		for i, cs := range stats {
 			x := cs.vals[k]
-			row.Values = append(row.Values, fmtInt(int64(x)))
+			row.Values = append(row.Values, fmtInt(int64(math.Round(x))))
 			d, better := "", 0
 			if i > 0 && x != stats[0].vals[k] {
-				diff := int64(x - stats[0].vals[k])
+				diff := int64(math.Round(x - stats[0].vals[k]))
 				d = fmtInt(diff)
 				if diff > 0 {
 					d, better = "+"+d, 1
@@ -290,7 +307,7 @@ func (v *Views) Compare(b calc.Build, slot string, cands []CompareCand, l string
 			row.Diffs = append(row.Diffs, d)
 			row.Better = append(row.Better, better)
 		}
-		out.Rows = append(out.Rows, row)
+		out = append(out, row)
 	}
 	return out
 }

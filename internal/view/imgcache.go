@@ -26,7 +26,7 @@ const (
 )
 
 // dpImgPath: the only paths the cache serves (one image each, no listing).
-var dpImgPath = regexp.MustCompile(`^images/(items/item|skill|mobs/png|jobs)/[A-Za-z0-9_]{1,64}\.png$`)
+var dpImgPath = regexp.MustCompile(`^images/(items/item|items/collection|skill|mobs/png|jobs)/[A-Za-z0-9_]{1,64}\.png$`)
 
 type imgCache struct {
 	dir    string
@@ -112,6 +112,9 @@ func (ic *IconCache) Get(ctx context.Context, rel string) (string, error) {
 
 // Icon paths, as Divine Pride's static site has them.
 func ItemIcon(id int) string    { return fmt.Sprintf("images/items/item/%d.png", id) }
+// ItemArt is the item window's picture (75x100, on white).
+func ItemArt(id int) string { return fmt.Sprintf("images/items/collection/%d.png", id) }
+
 func SkillIcon(id int) string   { return fmt.Sprintf("images/skill/%d.png", id) }
 func MonsterIcon(id int) string { return fmt.Sprintf("images/mobs/png/%d.png", id) }
 func JobIcon(id int) string     { return fmt.Sprintf("images/jobs/icon_jobs_%d.png", id) }

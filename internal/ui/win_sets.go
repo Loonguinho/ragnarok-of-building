@@ -423,7 +423,7 @@ func (a *App) setsPiece(c *setColumn, pi int, pv view.SetPieceView) []layout.Wid
 	var ctl []layout.Widget
 	if pv.Refineable {
 		var opts []Option
-		for r := 0; r <= 20; r++ {
+		for r := 0; r <= calc.MaxRefine(pv.Slot); r++ {
 			opts = append(opts, Option{strconv.Itoa(r), "+" + strconv.Itoa(r)})
 		}
 		ctl = append(ctl, func(gtx C) D {

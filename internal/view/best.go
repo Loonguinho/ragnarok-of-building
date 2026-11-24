@@ -30,6 +30,9 @@ type BestItem struct {
 	Combo []ComboPart
 	// Traits, for Melhor carta: the gain is with the traits changed to these.
 	Traits *[6]int
+	// Opts, for Melhor item: the random options it was measured with.
+	Opts     [][2]int
+	OptsText string
 }
 
 // ComboPart is a card placed to complete a set: where and which.
@@ -65,6 +68,12 @@ func (s *Server) swapAt(b calc.Build, slot string, id, refine, grade int) calc.B
 
 // BestItems ranks the items for slot (see above).
 func (v *Views) BestItems(ctx context.Context, b calc.Build, slot string, refine, grade int, l string) BestResult {
+	return v.BestItemsOpts(ctx, b, slot, refine, grade, false, l)
+}
+
+// BestItemsOpts is BestItems; with opts, each item gets its best random
+// options (the items that rank highest without them go first).
+func (v *Views) BestItemsOpts(ctx context.Context, b calc.Build, slot string, refine, grade int, opts bool, l string) BestResult {
 	s := v.s
 	c := s.opt.Catalog
 	var res BestResult
@@ -79,6 +88,9 @@ func (v *Views) BestItems(ctx context.Context, b calc.Build, slot string, refine
 		b.Equip = map[string]calc.Equip{}
 	}
 	calc.Normalize(&b, c)
+	if slot == calc.Shield && calc.ShieldBlocked(b, c) {
+		return res
+	}
 	base := s.optExpected(b)
 	if base <= 0 {
 		res.NoTarget = true
@@ -132,18 +144,41 @@ feed:
 	close(ch)
 	wg.Wait()
 	res.Tested = len(out)
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].ratio != out[j].ratio {
-			return out[i].ratio > out[j].ratio
+	rank := func() {
+		sort.Slice(out, func(i, j int) bool {
+			if out[i].ratio != out[j].ratio {
+				return out[i].ratio > out[j].ratio
+			}
+			return out[i].id < out[j].id
+		})
+	}
+	rank()
+	rolls := map[int][][2]int{}
+	if opts {
+		if !runPar(ctx, len(out), func(i int) {
+			id := out[i].id
+			if id == b.Equip[slot].Item || c.ItemOpts[id] == nil {
+				return
+			}
+			nb := s.swapAt(b, slot, id, refine, grade)
+			if o := s.bestOpts(nb, slot, GoalDamage); len(o) > 0 {
+				e := s.optExpected(withOpts(nb, slot, o))
+				mu.Lock()
+				out[i].ratio, rolls[id] = e/base, o
+				mu.Unlock()
+			}
+		}) {
+			res.Partial = true
 		}
-		return out[i].id < out[j].id
-	})
+		rank()
+	}
 	for _, sc := range out[:min(len(out), bestTop)] {
 		ln := StatLine{Diff: pctChange(sc.ratio, l), Better: sc.ratio > 1.0005, Same: sc.ratio > 0.9995 && sc.ratio < 1.0005}
 		if ln.Same {
 			ln.Diff = "="
 		}
-		res.Items = append(res.Items, BestItem{Item: viewItem(c.Items[sc.id], l), Gain: ln, Ratio: sc.ratio})
+		res.Items = append(res.Items, BestItem{Item: viewItem(c.Items[sc.id], l), Gain: ln, Ratio: sc.ratio,
+			Opts: rolls[sc.id], OptsText: s.optsText(rolls[sc.id], l)})
 	}
 	return res
 }

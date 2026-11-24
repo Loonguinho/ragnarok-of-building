@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 
 	"ragnarok-of-building/internal/gamedata"
 	"ragnarok-of-building/internal/rathena"
@@ -109,4 +110,91 @@ func LatamAegis(path string, rathena map[string]int) map[string]int {
 		}
 	}
 	return out
+}
+
+// optCrit is the CRIT random option (VAR_CRITICALSUCCESSVALUE).
+const optCrit = 24
+
+// FixShadowOpts caps CRIT on shadow gear at 5: rAthena rolls 1-15, LATAM 1-5
+// (bROWiki, and every roll in the recordings).
+func FixShadowOpts(c *gamedata.Catalog) int {
+	n := 0
+	for id, spec := range c.ItemOpts {
+		if it := c.Items[id]; it == nil || it.Type != "ShadowGear" {
+			continue
+		}
+		for _, rolls := range spec.Positions {
+			for i := range rolls {
+				if rolls[i].ID == optCrit && rolls[i].Max > 5 {
+					rolls[i].Max = 5
+					n++
+				}
+			}
+		}
+	}
+	return n
+}
+
+// shadowBookExtra are the rolls the shadow books (Cadernos Sombrios) add to
+// the ones every shadow piece has, and shadowBookSecond the second option
+// they may give (bROWiki; Dano preciso has no option in the client list).
+var (
+	shadowBookExtra  = []gamedata.OptRange{{ID: 219, Min: 1, Max: 5}, {ID: 231, Min: 1, Max: 5}}
+	shadowBookSecond = []gamedata.OptRange{
+		{ID: 243, Min: 1, Max: 5}, {ID: 244, Min: 1, Max: 5}, {ID: 245, Min: 1, Max: 5}, // POD, FEI, STA
+		{ID: 246, Min: 1, Max: 5}, {ID: 247, Min: 1, Max: 5}, {ID: 248, Min: 1, Max: 5}, // SAB, CON, CRV
+		{ID: 249, Min: 1, Max: 2}, {ID: 250, Min: 1, Max: 2}, // P.ATQ, S.ATQM
+		{ID: 251, Min: 5, Max: 15}, {ID: 252, Min: 5, Max: 15}, // TEN, TENM
+		{ID: 253, Min: 3, Max: 10}, {ID: 254, Min: 1, Max: 5}, // C.Mais, T.CRÍT
+	}
+)
+
+// ShadowBooks gives the shadow pieces the books name ("Itens afetados") their
+// two random options. Returns how many pieces it covers.
+func ShadowBooks(c *gamedata.Catalog) int {
+	byName := map[string][]int{}
+	var base []gamedata.OptRange // what every shadow piece rolls
+	for id, it := range c.Items {
+		if it.Type != "ShadowGear" {
+			continue
+		}
+		n := strings.TrimSpace(it.Name.Get("pt"))
+		byName[n] = append(byName[n], id)
+		if s := c.ItemOpts[id]; s != nil && len(s.Positions) == 1 && len(s.Positions[0]) > len(base) {
+			base = s.Positions[0]
+		}
+	}
+	n := 0
+	for _, it := range c.Items {
+		if !strings.HasPrefix(it.Name.Get("pt"), "Caderno") {
+			continue
+		}
+		two, list := false, false
+		for _, l := range it.Desc["pt"] {
+			l = strings.TrimSpace(descColor.ReplaceAllString(l, ""))
+			switch {
+			case strings.Contains(l, "até 2 bônus aleatórios"):
+				two = true
+			case strings.Contains(l, "Itens afetados"):
+				list = true
+			case strings.HasPrefix(l, "---"):
+				list = false
+			case two && list:
+				for _, id := range byName[l] {
+					first := slices.Clone(base)
+					if s := c.ItemOpts[id]; s != nil && len(s.Positions) > 0 {
+						if len(s.Positions) > 1 {
+							continue // another book's
+						}
+						first = slices.Clone(s.Positions[0])
+					}
+					first = append(first, shadowBookExtra...)
+					slices.SortFunc(first, func(a, b gamedata.OptRange) int { return a.ID - b.ID })
+					c.ItemOpts[id] = &gamedata.ItemOpts{Positions: [][]gamedata.OptRange{first, shadowBookSecond}}
+					n++
+				}
+			}
+		}
+	}
+	return n
 }

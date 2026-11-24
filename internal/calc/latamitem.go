@@ -42,11 +42,11 @@ type latamEnv struct {
 	today      string          // yyyy-mm-dd in São Paulo, for UNTIL[...]
 }
 
-// latamSlots: latam-ro-calc's positions. Its accLeft is the right
-// accessory (replay-to-model.ts: EQP_ACC_R -> accLeft).
+// latamSlots: latam-ro-calc's positions (Moeda Lançável's left bonus is its
+// POS[accLeft]).
 var latamSlots = map[string]string{
 	"weapon": Weapon, "leftWeapon": Shield, "shield": Shield, "headUpper": HeadTop, "headMiddle": HeadMid,
-	"headLower": HeadLow, "armor": Armor, "garment": Garment, "boot": Shoes, "accLeft": AccRight, "accRight": AccLeft,
+	"headLower": HeadLow, "armor": Armor, "garment": Garment, "boot": Shoes, "accLeft": AccLeft, "accRight": AccRight,
 	"shadowWeapon": ShWeapon, "shadowArmor": ShArmor, "shadowShield": ShShield, "shadowBoot": ShShoes,
 	"shadowEarring": ShAccR, "shadowPendant": ShAccL, "costumeUpper": CosTop, "costumeMiddle": CosMid,
 	"costumeLower": CosLow, "costumeGarment": CosGarment,

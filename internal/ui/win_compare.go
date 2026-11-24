@@ -11,6 +11,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/widget"
 
+	"ragnarok-of-building/internal/calc"
 	"ragnarok-of-building/internal/view"
 )
 
@@ -222,7 +223,7 @@ func (a *App) compareCol(gtx C, res *view.CompareView, i int) D {
 		var ctl []layout.Widget
 		if col.Refineable {
 			var opts []Option
-			for r := 0; r <= 20; r++ {
+			for r := 0; r <= calc.MaxRefine(cs.slot); r++ {
 				opts = append(opts, Option{strconv.Itoa(r), "+" + strconv.Itoa(r)})
 			}
 			ctl = append(ctl, func(gtx C) D {

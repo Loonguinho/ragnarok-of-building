@@ -133,3 +133,30 @@ func TestBestItems(t *testing.T) {
 		t.Errorf("the caller's build changed: %+v", b.Equip)
 	}
 }
+
+// TestTwoHandedBlocksShield: with a two-handed weapon the shield slot is
+// blocked, offers nothing, and equipping a shield keeps the weapon.
+func TestTwoHandedBlocksShield(t *testing.T) {
+	c := testCatalog()
+	c.Items[2101] = &gamedata.Item{ID: 2101, Name: gamedata.Text{"pt": "Escudo"}, Type: "Armor", Locations: []string{"Left_Hand"}}
+	v := testViews(t, c)
+	c.Items[1150] = &gamedata.Item{ID: 1150, Name: gamedata.Text{"pt": "Montante"}, Type: "Weapon", SubType: "2hSword", Locations: []string{"Both_Hand"}}
+	b := calc.Build{BaseLv: 1, JobLv: 1, Equip: map[string]calc.Equip{calc.Weapon: {Item: 1150}}}
+	var blocked bool
+	for _, sv := range v.Build(b, "pt").Slots {
+		if sv.Blocked && sv.Key != calc.Shield {
+			t.Errorf("%s blocked", sv.Key)
+		}
+		blocked = blocked || sv.Blocked
+	}
+	if !blocked {
+		t.Error("shield slot not blocked")
+	}
+	if items, _ := v.PickItems(b, calc.Shield, false, -1, "", "pt"); len(items) != 0 {
+		t.Errorf("shield picker offers %d items", len(items))
+	}
+	nb := v.Swap(b, calc.Shield, 2101, -1)
+	if nb.Equip[calc.Weapon].Item != 1150 || nb.Equip[calc.Shield].Item != 0 {
+		t.Errorf("equip = %v", nb.Equip)
+	}
+}

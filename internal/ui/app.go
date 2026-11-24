@@ -44,6 +44,7 @@ type App struct {
 	view       view.BuildView // its windows
 	ready      bool
 	rev        int
+	hist       history
 
 	chat        []chatLine
 	needSave    bool
@@ -212,6 +213,7 @@ func (a *App) Build() calc.Build {
 // background (a newer change discards an older result).
 func (a *App) SetBuild(b calc.Build) {
 	a.mu.Lock()
+	a.record(b)
 	a.rev++
 	rev := a.rev
 	a.b = b.Clone()
@@ -363,6 +365,23 @@ func (a *App) shortcuts(gtx C) {
 		switch e.Name {
 		case "S":
 			a.saveBuild(false)
+		}
+	}
+	// A text field with the focus keeps these for its own text.
+	for {
+		ev, ok := gtx.Event(key.Filter{Name: "Z", Required: key.ModShortcut, Optional: key.ModShift},
+			key.Filter{Name: "Y", Required: key.ModShortcut})
+		if !ok {
+			break
+		}
+		e, ok := ev.(key.Event)
+		if !ok || e.State != key.Press || a.modal != nil {
+			continue
+		}
+		if e.Name == "Y" || e.Modifiers.Contain(key.ModShift) {
+			a.Redo()
+		} else {
+			a.Undo()
 		}
 	}
 }

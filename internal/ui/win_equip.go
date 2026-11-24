@@ -62,6 +62,8 @@ type slotState struct {
 	bestBtn               widget.Clickable
 	bestRef, bestGra      Select
 	bestRefine, bestGrade int
+	bestRolls             Checkbox
+	noBestRolls           bool // Melhor item without the best random options
 	bestFor               string // the slot bestRefine/bestGrade were set for
 	best                  *view.BestResult
 	bestRunning, bestOn   bool
@@ -185,7 +187,7 @@ func (a *App) equipSlot(gtx C, sv view.SlotView) D {
 		at = &Anchor{}
 		s.at[sv.Key] = at
 	}
-	if cl.Clicked(gtx) {
+	if cl.Clicked(gtx) && !sv.Blocked {
 		a.openSlot(sv.Key)
 		// The editor drops down under the slot.
 		a.wSlot.Pos = at.Origin.Add(image.Pt(0, gtx.Dp(equipSlotH)))
@@ -196,7 +198,9 @@ func (a *App) equipSlot(gtx C, sv view.SlotView) D {
 		w, h := gtx.Constraints.Max.X, gtx.Dp(equipSlotH)
 		r := image.Rectangle{Max: image.Pt(w, h)}
 		bg := ColPanel
-		if cl.Hovered() || a.slot.key == sv.Key && a.wSlot.Open {
+		if sv.Blocked {
+			bg = rgb(0xeef0f4)
+		} else if cl.Hovered() || a.slot.key == sv.Key && a.wSlot.Open {
 			bg = rgb(0xf3f7ff)
 		}
 		Fill(gtx, r, bg)
@@ -215,6 +219,9 @@ func (a *App) equipSlot(gtx C, sv view.SlotView) D {
 			}),
 			layout.Rigid(Gap(5, 0)),
 			layout.Flexed(1, func(gtx C) D {
+				if sv.Blocked {
+					return T(th, a.T("Bloqueado: arma de duas mãos")).Sz(SmallText).C(rgb(0x999999)).Lines(2).Wrapping().Layout(gtx)
+				}
 				if sv.Item == nil {
 					return T(th, a.T(sv.Label)).C(rgb(0x999999)).Layout(gtx)
 				}
@@ -223,7 +230,9 @@ func (a *App) equipSlot(gtx C, sv view.SlotView) D {
 			}),
 		)
 		st.Pop()
-		pointerCursor(gtx, r.Max)
+		if !sv.Blocked {
+			pointerCursor(gtx, r.Max)
+		}
 		return D{Size: r.Max}
 	})
 	if sv.Item != nil && cl.Hovered() {
@@ -299,6 +308,9 @@ func (a *App) slotBody(gtx C) D {
 		return T(th, a.T("Escolha um item")).Layout(gtx)
 	}
 	sv, label := a.slotView(v, s.key)
+	if sv.Blocked { // the weapon changed with the editor open
+		return T(th, a.T("Bloqueado: arma de duas mãos")).C(ColMuted).Layout(gtx)
+	}
 	b := v.Build
 	setBuild := func(nb calc.Build) { a.SetBuild(nb); a.search(0) }
 
@@ -413,7 +425,7 @@ func (a *App) slotEditor(sv view.SlotView, label string) layout.Widget {
 					var ctl []layout.Widget
 					if sv.Refineable {
 						var opts []Option
-						for r := 0; r <= 20; r++ {
+						for r := 0; r <= calc.MaxRefine(s.key); r++ {
 							opts = append(opts, Option{strconv.Itoa(r), "+" + strconv.Itoa(r)})
 						}
 						ctl = append(ctl, T(th, a.T("Refino")).W(), func(gtx C) D {
@@ -624,6 +636,7 @@ func (a *App) pickList(gtx C) D {
 	// Melhor carta's set rows: the same card with its set's other cards,
 	// under a key of their own (negative).
 	var combos map[int][]view.ComboPart
+	rollsOf := map[int]string{} // Melhor item: the random options counted
 	withTr := map[int][6]int{} // rows with the traits changed
 	keyOf := func(i int, it view.ItemView) int { return it.ID }
 	if s.bestOn {
@@ -644,6 +657,7 @@ func (a *App) pickList(gtx C) D {
 				keys = append(keys, k)
 				results = append(results, bi.Item)
 				gains[k] = bi.Gain
+				rollsOf[k] = bi.OptsText
 			}
 		}
 		keyOf = func(i int, it view.ItemView) int { return keys[i] }
@@ -717,6 +731,9 @@ func (a *App) pickList(gtx C) D {
 							name += " (MVP)"
 						}
 						nameW := T(th, name).W()
+						if t := rollsOf[key]; t != "" {
+							nameW = Col(1, T(th, name).W(), T(th, a.T("BA:")+" "+t).Sz(SmallText).C(ColLink).Lines(2).Wrapping().W())
+						}
 						if len(parts) > 0 {
 							var with []string
 							for _, p := range parts {
@@ -825,7 +842,15 @@ func (a *App) pick(id int) {
 		s.bestOn = false
 		a.equipDone()
 	} else if s.bestOn {
-		a.SetBuild(a.V.SwapAt(b, s.key, id, s.bestRefine, s.bestGrade))
+		var rolls [][2]int
+		if s.best != nil {
+			for _, bi := range s.best.Items {
+				if bi.Item.ID == id {
+					rolls = bi.Opts
+				}
+			}
+		}
+		a.SetBuild(a.V.SwapAtOpts(b, s.key, id, s.bestRefine, s.bestGrade, rolls))
 		a.Say(a.T("Item equipado."), false)
 		s.bestOn = false
 		a.equipDone()
@@ -1051,7 +1076,7 @@ func (a *App) swapBox(gtx C, sw view.SwapView) D {
 func (a *App) bestControls(gtx C) D {
 	th, s := a.Th, &a.slot
 	var refs []Option
-	for r := 0; r <= 20; r++ {
+	for r := 0; r <= calc.MaxRefine(s.key); r++ {
 		refs = append(refs, Option{strconv.Itoa(r), "+" + strconv.Itoa(r)})
 	}
 	grades := []Option{{"0", a.T("nenhum")}, {"1", "D"}, {"2", "C"}, {"3", "B"}, {"4", "A"}}
@@ -1079,6 +1104,16 @@ func (a *App) bestControls(gtx C) D {
 			}
 			return d
 		},
+		func(gtx C) D {
+			d, toggled := s.bestRolls.Layout(gtx, th, !s.noBestRolls, a.T("Bônus aleatórios"))
+			if toggled {
+				s.noBestRolls = !s.noBestRolls
+				if s.bestOn {
+					a.runBest()
+				}
+			}
+			return d
+		},
 	)(gtx)
 }
 
@@ -1088,11 +1123,11 @@ func (a *App) runBest() {
 	a.mu.Lock()
 	s.bestSeq++
 	seq, slot, b, lang := s.bestSeq, s.key, a.b.Clone(), a.Lang
-	refine, grade := s.bestRefine, s.bestGrade
+	refine, grade, rolls := s.bestRefine, s.bestGrade, !s.noBestRolls
 	s.bestOn, s.bestRunning, s.best = true, true, nil
 	a.mu.Unlock()
 	go func() {
-		res := a.V.BestItems(context.Background(), b, slot, refine, grade, lang)
+		res := a.V.BestItemsOpts(context.Background(), b, slot, refine, grade, rolls, lang)
 		a.mu.Lock()
 		if seq == s.bestSeq {
 			s.best, s.bestRunning = &res, false

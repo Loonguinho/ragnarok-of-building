@@ -297,6 +297,23 @@ func Caret(gtx C, c color.NRGBA) D {
 	return D{Size: image.Pt(s, s)}
 }
 
+// Chevron is the ⌄ / ⌃ of what folds away.
+func Chevron(gtx C, c color.NRGBA, up bool) D {
+	s := gtx.Dp(9)
+	u := float32(s) / 9
+	y0, y1 := 3*u, 6.5*u
+	if up {
+		y0, y1 = y1, y0
+	}
+	var p clip.Path
+	p.Begin(gtx.Ops)
+	p.MoveTo(f32.Pt(1*u, y0))
+	p.LineTo(f32.Pt(4.5*u, y1))
+	p.LineTo(f32.Pt(8*u, y0))
+	paint.FillShape(gtx.Ops, c, clip.Stroke{Path: p.End(), Width: 1.5 * u}.Op())
+	return D{Size: image.Pt(s, s)}
+}
+
 // Gear is the settings icon (eight teeth around a ring), size dp.
 func Gear(gtx C, c color.NRGBA, size unit.Dp) D {
 	s := float32(gtx.Dp(size))

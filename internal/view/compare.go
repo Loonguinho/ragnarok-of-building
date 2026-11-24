@@ -148,7 +148,7 @@ func (s *Server) comparePositions(slot string, e calc.Equip, cards []CompareOpt,
 		p := ComparePos{Index: i, Enchant: i >= it.Slots, Current: e.Cards[i]}
 		if p.Enchant {
 			for _, id := range c.Enchants[it.ID][i] {
-				if ci := c.Items[id]; ci != nil {
+				if ci := c.Items[id]; ci != nil && !calc.EnchantBlocked(it.ID, i, e.Cards, id) {
 					p.Options = append(p.Options, CompareOpt{id, ci.Name.Get(l)})
 				}
 			}

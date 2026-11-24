@@ -2,6 +2,7 @@ package view
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	"ragnarok-of-building/internal/calc"
@@ -105,11 +106,19 @@ func (v *Views) NewBuild(jobID int) calc.Build {
 // PickItems lists what the item picker offers (see pickItems); with a
 // target, gains has each result's expected damage change.
 func (v *Views) PickItems(b calc.Build, slot string, card bool, idx int, q, l string) (items []ItemView, gains map[int]StatLine) {
+	if slot == calc.Shield && calc.ShieldBlocked(b, v.s.opt.Catalog) {
+		return nil, nil
+	}
 	item := 0
 	if e, ok := b.Equip[slot]; ok {
 		item = e.Item
 	}
 	items = v.s.pickItems(slot, card, idx, item, b.Job, q, l)
+	if card && idx >= 0 {
+		items = slices.DeleteFunc(items, func(it itemView) bool {
+			return calc.EnchantBlocked(item, idx, b.Equip[slot].Cards, it.ID)
+		})
+	}
 	cardIdx := -1
 	if card {
 		cardIdx = idx

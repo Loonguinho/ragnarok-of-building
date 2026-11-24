@@ -201,14 +201,42 @@ func TestSkillPoints(t *testing.T) {
 	}
 }
 
-func TestAccessoryEitherSide(t *testing.T) {
+// TestAccessorySides: a one-sided accessory or card goes on its side only;
+// one saved on the other side moves over.
+func TestAccessorySides(t *testing.T) {
 	c := novice()
-	c.Items[2601] = &gamedata.Item{ID: 2601, Type: "Armor", Locations: []string{"Right_Accessory"}}
-	b := Build{Job: 0, BaseLv: 1, JobLv: 1, Stats: [6]int{1, 1, 1, 1, 1, 1},
-		Equip: map[string]Equip{AccLeft: {Item: 2601}}}
-	Normalize(&b, c)
-	if _, ok := b.Equip[AccLeft]; !ok {
-		t.Error("right-listed accessory dropped from the left slot")
+	acc := func(id int, loc string) {
+		c.Items[id] = &gamedata.Item{ID: id, Type: "Armor", Slots: 1, Locations: []string{loc}}
+	}
+	acc(2601, "Right_Accessory")
+	acc(2602, "Left_Accessory")
+	acc(2603, "Both_Accessory")
+	c.Items[4901] = &gamedata.Item{ID: 4901, Type: "Card", Locations: []string{"Left_Accessory"}}
+	if Fits(c.Items[2601], AccLeft) || !Fits(c.Items[2601], AccRight) || !Fits(c.Items[2603], AccLeft) || !Fits(c.Items[2603], AccRight) {
+		t.Error("accessory sides")
+	}
+	if CardFits(c.Items[4901], AccRight) || !CardFits(c.Items[4901], AccLeft) {
+		t.Error("card sides")
+	}
+	for _, tc := range []struct{ r, l, wr, wl Equip }{
+		{l: Equip{Item: 2601}, wr: Equip{Item: 2601}},
+		{r: Equip{Item: 2602}, l: Equip{Item: 2601}, wr: Equip{Item: 2601}, wl: Equip{Item: 2602}},
+		{r: Equip{Item: 2603}, l: Equip{Item: 2601}, wr: Equip{Item: 2601}, wl: Equip{Item: 2603}},
+		{r: Equip{Item: 2603, Cards: [4]int{4901}}, wl: Equip{Item: 2603, Cards: [4]int{4901}}},
+		{r: Equip{Item: 2603}, wr: Equip{Item: 2603}},
+	} {
+		b := Build{Equip: map[string]Equip{}}
+		if tc.r.Item != 0 {
+			b.Equip[AccRight] = tc.r
+		}
+		if tc.l.Item != 0 {
+			b.Equip[AccLeft] = tc.l
+		}
+		Normalize(&b, c)
+		got := [2]Equip{b.Equip[AccRight], b.Equip[AccLeft]}
+		if got[0].Item != tc.wr.Item || got[1].Item != tc.wl.Item || got[0].Cards != tc.wr.Cards || got[1].Cards != tc.wl.Cards {
+			t.Errorf("%v / %v -> %v", tc.r, tc.l, got)
+		}
 	}
 }
 
@@ -438,5 +466,49 @@ func TestSkillPointsBackward(t *testing.T) {
 	b.Skills = map[int]int{1: 12, 2: 7} // 19 > 18
 	if gi := SkillPointCheck(b, c); gi != 0 {
 		t.Errorf("total over budget: step %d, want 0", gi)
+	}
+}
+
+func TestShadowRefineCap(t *testing.T) {
+	for _, s := range Slots {
+		want := 20
+		switch s {
+		case ShArmor, ShWeapon, ShShield, ShShoes, ShAccR, ShAccL:
+			want = 10
+		}
+		if got := MaxRefine(s); got != want {
+			t.Errorf("MaxRefine(%s) = %d, want %d", s, got, want)
+		}
+	}
+	c := novice()
+	c.Items[24000] = &gamedata.Item{ID: 24000, Type: "ShadowGear", Locations: []string{ShArmor}, Refineable: true}
+	b := Build{Equip: map[string]Equip{ShArmor: {Item: 24000, Refine: 15}}}
+	Normalize(&b, c)
+	if got := b.Equip[ShArmor].Refine; got != 10 {
+		t.Errorf("shadow armor refine = %d, want 10", got)
+	}
+}
+
+// TestModuleShields: Escudo Automatron and Escudo Ilusión take the same
+// module at most twice.
+func TestModuleShields(t *testing.T) {
+	c := novice()
+	c.Items[310096] = &gamedata.Item{ID: 310096, Type: "Card", SubType: "Enchant"}
+	c.Items[310118] = &gamedata.Item{ID: 310118, Type: "Card", SubType: "Enchant"}
+	for _, id := range []int{460004, 460014, 460157, 460158, 2101} {
+		c.Items[id] = &gamedata.Item{ID: id, Type: "Armor", Locations: []string{"Left_Hand"}, Slots: 1}
+		b := Build{Equip: map[string]Equip{Shield: {Item: id, Cards: [4]int{0, 310096, 310096, 310096}}}}
+		Normalize(&b, c)
+		want := [4]int{0, 310096, 310096, 0}
+		if id == 2101 {
+			want[3] = 310096
+		}
+		if got := b.Equip[Shield].Cards; got != want {
+			t.Errorf("%d: cards = %v, want %v", id, got, want)
+		}
+	}
+	two := [4]int{0, 310118, 310096, 310096}
+	if !EnchantBlocked(460157, 1, two, 310096) || EnchantBlocked(460157, 1, two, 310118) || EnchantBlocked(460157, 2, two, 310096) {
+		t.Error("EnchantBlocked: two equal are fine, three are not")
 	}
 }

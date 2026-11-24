@@ -196,6 +196,8 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 	}
 	clientimport.MarkMVPCardsByName(c, db)
 	clientimport.DescEquip(c)
+	clientimport.DescSides(c)
+	clientimport.FixScripts(c)
 	clientimport.Ammo(c)
 	clientimport.DescLevels(c) // LATAM levels over rAthena's
 	clientimport.CostumeStones(c)
@@ -203,6 +205,8 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 		progress("Nomes dos bônus aleatórios não lidos: " + err.Error())
 	}
 	clientimport.ItemOptsFromRathena(c, db)
+	clientimport.FixShadowOpts(c)
+	clientimport.ShadowBooks(c)
 	aegis := clientimport.LatamAegis(filepath.Join(filepath.Dir(mobs), "item.json"), db.Aegis)
 	if _, err := clientimport.ItemOptCounts(c, filepath.Join(filepath.Dir(mobs), "extra-option-table.ts"), aegis); err != nil {
 		progress("Tabela de bônus aleatórios do latam-ro-calc não lida: " + err.Error())

@@ -39,6 +39,7 @@ type Context struct {
 	// The armor and weapon level of the item being evaluated (for a card,
 	// the item it is in): getequiparmorlv() / getequipweaponlv().
 	ArmorLv, WeaponLv int
+	Host              int // that item: getequipid(EQI_COMPOUND_ON), 0 = unknown
 }
 
 // WeaponTypes are rAthena's W_* weapon types by item SubType: a weapon's
@@ -655,7 +656,14 @@ func (p *parser) unary() int {
 			}
 			return v
 		case t.s == "getequipid":
-			if a := p.rawArgs(); len(a) == 1 && strings.HasPrefix(a[0], "EQI_") && p.ctx.SlotItem != nil {
+			a := p.rawArgs()
+			if len(a) == 1 && a[0] == "EQI_COMPOUND_ON" {
+				if p.ctx.Host == 0 {
+					p.bad = true
+				}
+				return p.ctx.Host
+			}
+			if len(a) == 1 && strings.HasPrefix(a[0], "EQI_") && p.ctx.SlotItem != nil {
 				return p.ctx.SlotItem[a[0]]
 			}
 			p.bad = true
@@ -700,6 +708,9 @@ func (p *parser) unary() int {
 			p.accept(",")
 			info := p.peek()
 			p.pos++
+			if info.s == "11" { // ITEMINFO_VIEW by number
+				info.s, info.kind = "VIEW", 'i'
+			}
 			if !p.accept(")") || info.kind != 'i' || p.ctx.ItemInfo == nil {
 				p.bad = true
 				return 0

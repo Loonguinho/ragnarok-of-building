@@ -17,6 +17,7 @@ import (
 // ---- Menu (win-menu) ----
 
 type menuState struct {
+	undo [2]widget.Clickable
 	toggles  []widget.Clickable
 	cmds     [5]widget.Clickable
 	gear     widget.Clickable
@@ -101,6 +102,8 @@ func (a *App) menuBody(gtx C) D {
 		}),
 		Gap(0, 4),
 		label("Build"),
+		func(gtx C) D { return a.undoButtons(gtx, &m.undo) },
+		Gap(0, 3),
 		grid(len(cmdLabels), func(i int) layout.Widget {
 			return func(gtx C) D {
 				return Button{Label: a.T(cmdLabels[i]), Wide: true}.Layout(gtx, th, &m.cmds[i])
@@ -379,7 +382,7 @@ func (a *App) classList(gtx C, v view.BuildView) D {
 			jid := id
 			if fresh {
 				s.newMode = false
-				a.SetBuild(a.V.NewBuild(jid))
+				a.OpenBuild(a.V.NewBuild(jid))
 				continue
 			}
 			a.Edit(func(b *calc.Build) {

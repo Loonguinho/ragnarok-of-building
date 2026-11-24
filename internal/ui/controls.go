@@ -27,6 +27,21 @@ type Button struct {
 	Disabled bool
 	Bold     bool
 	Wide     bool // fill the width available
+	Arrow    int  // an arrow after the label: ArrowDown (closed), ArrowUp (open)
+}
+
+// The arrows of what folds away.
+const (
+	ArrowDown = iota + 1
+	ArrowUp
+)
+
+// foldArrow points down when there is more to open, up when it is open.
+func foldArrow(open bool) int {
+	if open {
+		return ArrowUp
+	}
+	return ArrowDown
 }
 
 // Layout draws the button over the clickable.
@@ -55,7 +70,17 @@ func (b Button) draw(gtx C, th *Theme, hover, pressed, disabled bool) D {
 	g.Constraints.Min = image.Point{}
 	td := t.Layout(g)
 	call := m.Stop()
-	w := max(td.Size.X+gtx.Dp(16), gtx.Dp(b.MinWidth))
+	arrow, gap := 0, 0
+	if b.Arrow != 0 {
+		arrow = gtx.Dp(9)
+		if b.Label != "" {
+			gap = gtx.Dp(4)
+		} else {
+			td.Size.X = 0
+		}
+	}
+	content := td.Size.X + gap + arrow
+	w := max(content+gtx.Dp(16), gtx.Dp(b.MinWidth))
 	if b.Wide {
 		w = max(w, gtx.Constraints.Max.X)
 	}
@@ -69,9 +94,14 @@ func (b Button) draw(gtx C, th *Theme, hover, pressed, disabled bool) D {
 	rad := gtx.Dp(3)
 	VGradient(gtx, r, top, bot, rad, rad, rad, rad)
 	Border(gtx, r, ColBorder, 1, rad)
-	st := op.Offset(image.Pt((w-td.Size.X)/2, (h-td.Size.Y)/2)).Push(gtx.Ops)
+	st := op.Offset(image.Pt((w-content)/2, (h-td.Size.Y)/2)).Push(gtx.Ops)
 	call.Add(gtx.Ops)
 	st.Pop()
+	if b.Arrow != 0 {
+		st := op.Offset(image.Pt((w-content)/2+td.Size.X+gap, (h-arrow)/2)).Push(gtx.Ops)
+		Chevron(gtx, ColTitleText, b.Arrow == ArrowUp)
+		st.Pop()
+	}
 	return D{Size: r.Max}
 }
 

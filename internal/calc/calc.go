@@ -62,6 +62,8 @@ const (
 	ShAccL     = "Shadow_Left_Accessory"
 	Ammo       = "Ammo" // arrows, bullets, grenades, kunai...
 	maxRefine  = 20
+	// Shadow gear refines to +10 only.
+	maxShadowRefine = 10
 	// MaxRandomOpts is how many random options an item holds (client: 5).
 	MaxRandomOpts = 5
 )
@@ -69,6 +71,35 @@ const (
 // Slots lists every slot the build supports.
 var Slots = []string{HeadTop, HeadMid, HeadLow, Armor, Weapon, Shield, Garment, Shoes, AccRight, AccLeft,
 	ShArmor, ShWeapon, ShShield, ShShoes, ShAccR, ShAccL, CosTop, CosMid, CosLow, CosGarment, Ammo}
+
+// MaxRefine is the highest refine of what is worn in the slot.
+func MaxRefine(slot string) int {
+	if strings.HasPrefix(slot, "Shadow_") {
+		return maxShadowRefine
+	}
+	return maxRefine
+}
+
+// moduleShields are the Escudo Ilusión A/B and Escudo Automatron A/B: their
+// three modules cannot all be the same.
+var moduleShields = []int{460004, 460014, 460157, 460158}
+
+// EnchantBlocked reports an enchant that position idx of the item cannot
+// take with the cards and enchants in its other positions.
+func EnchantBlocked(item, idx int, cards [4]int, enchant int) bool {
+	if enchant == 0 || idx < 1 || idx > 3 || !slices.Contains(moduleShields, item) {
+		return false
+	}
+	cards[idx] = enchant
+	return cards[1] == cards[2] && cards[2] == cards[3]
+}
+
+// ShieldBlocked reports a two-handed weapon, which leaves no room for a
+// shield.
+func ShieldBlocked(b Build, c *gamedata.Catalog) bool {
+	w, ok := b.Equip[Weapon]
+	return ok && c.Items[w.Item].HasLocation("Both_Hand")
+}
 
 // IsCostume reports a costume (visual) slot.
 func IsCostume(slot string) bool { return strings.HasPrefix(slot, "Costume_") }
@@ -232,6 +263,7 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 			b.Traits[i] = clamp(b.Traits[i], 0, 100)
 		}
 	}
+	sideAccessories(b, c)
 	for slot, e := range b.Equip {
 		it := c.Items[e.Item]
 		if !slices.Contains(Slots, slot) || it == nil || !Fits(it, slot) {
@@ -243,7 +275,7 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 		if !j.CanEquip(it) {
 			notes = append(notes, it.Name.Get("pt")+": pelos dados do rAthena esta classe não usaria este item.")
 		}
-		e.Refine = clamp(e.Refine, 0, maxRefine)
+		e.Refine = clamp(e.Refine, 0, MaxRefine(slot))
 		if !it.Refineable {
 			e.Refine = 0
 		}
@@ -291,10 +323,13 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 				e.Cards[i] = 0
 			}
 		}
+		if EnchantBlocked(e.Item, 3, e.Cards, e.Cards[3]) {
+			e.Cards[3] = 0
+		}
 		b.Equip[slot] = e
 	}
 	// A two-handed weapon leaves no room for a shield.
-	if w, ok := b.Equip[Weapon]; ok && c.Items[w.Item].HasLocation("Both_Hand") {
+	if ShieldBlocked(*b, c) {
 		delete(b.Equip, Shield)
 	}
 	normalizeSkills(b, c)
@@ -430,6 +465,38 @@ func SkillPointCheck(b Build, c *gamedata.Catalog) int {
 	return -1
 }
 
+// sideAccessories puts accessories worn on the wrong side on their own: the
+// builds saved up to beta.7 could hold any accessory on either side, and
+// replays were read with the sides swapped.
+func sideAccessories(b *Build, c *gamedata.Catalog) {
+	score := func(slot string, e Equip) int {
+		it := c.Items[e.Item]
+		if it == nil || !Fits(it, slot) {
+			return 0
+		}
+		n := 10
+		for i, cd := range e.Cards {
+			if card := c.Items[cd]; card != nil && i < it.Slots && CardFits(card, slot) {
+				n++
+			}
+		}
+		return n
+	}
+	r, okR := b.Equip[AccRight]
+	l, okL := b.Equip[AccLeft]
+	if !okR && !okL || score(AccRight, l)+score(AccLeft, r) <= score(AccRight, r)+score(AccLeft, l) {
+		return
+	}
+	delete(b.Equip, AccRight)
+	delete(b.Equip, AccLeft)
+	if okL {
+		b.Equip[AccRight] = l
+	}
+	if okR {
+		b.Equip[AccLeft] = r
+	}
+}
+
 // Fits reports whether an item can be equipped in a slot. Items without
 // rAthena data (LATAM-only, Type "") cannot be checked and are allowed.
 func Fits(it *gamedata.Item, slot string) bool {
@@ -449,9 +516,7 @@ func Fits(it *gamedata.Item, slot string) bool {
 			return true
 		case l == "Both_Hand" && slot == Weapon:
 			return true
-		// Accessories go in either slot in-game, whatever side rAthena lists
-		// (replays show "right" accessories worn on the left).
-		case (l == "Both_Accessory" || l == "Right_Accessory" || l == "Left_Accessory") && (slot == AccRight || slot == AccLeft):
+		case l == "Both_Accessory" && (slot == AccRight || slot == AccLeft):
 			return true
 		case l == "Shadow_Both_Accessory" && (slot == ShAccR || slot == ShAccL):
 			return true
@@ -488,7 +553,7 @@ func CardFits(card *gamedata.Item, slot string) bool {
 			return true
 		case l == "Both_Hand" && slot == Weapon:
 			return true
-		case (l == "Both_Accessory" || l == "Right_Accessory" || l == "Left_Accessory") && (slot == AccRight || slot == AccLeft):
+		case l == "Both_Accessory" && (slot == AccRight || slot == AccLeft):
 			return true
 		case strings.HasPrefix(l, "Head_") && strings.HasPrefix(slot, "Head_"):
 			return true
@@ -648,7 +713,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		seen[e.Item] = true
 		ctx := sbase
 		ctx.Refine, ctx.Grade = e.Refine, e.Grade
-		ctx.ArmorLv, ctx.WeaponLv = it.ArmorLv, it.WeaponLv
+		ctx.ArmorLv, ctx.WeaponLv, ctx.Host = it.ArmorLv, it.WeaponLv, it.ID
 		res := script.Eval(itemScript(it, &r.SkippedScriptEffects), ctx)
 		lenv.overLatam(it, e.Item, slot, true, e.Refine, &res)
 		effects.add(e.Item, it, ctx, res.Autobonus, slot, true, e.Refine)
@@ -670,7 +735,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 				// Cards and enchants read the refine and grade of the item they are in.
 				cctx := sbase
 				cctx.Refine, cctx.Grade = e.Refine, e.Grade
-				cctx.ArmorLv, cctx.WeaponLv = it.ArmorLv, it.WeaponLv // the item the card is in
+				cctx.ArmorLv, cctx.WeaponLv, cctx.Host = it.ArmorLv, it.WeaponLv, it.ID // the item the card is in
 				cr := script.Eval(itemScript(ci, &r.SkippedScriptEffects), cctx)
 				lenv.overLatam(ci, cd, slot, false, e.Refine, &cr)
 				effects.add(cd, ci, cctx, cr.Autobonus, slot, false, e.Refine)

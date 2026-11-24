@@ -231,7 +231,7 @@ func (a *App) openCode(code string, keep bool) bool {
 	if !keep {
 		a.savedID = ""
 	}
-	a.SetBuild(b)
+	a.OpenBuild(b)
 	return true
 }
 
@@ -647,6 +647,7 @@ func (a *App) helpBody(gtx C) D {
 		row("Alt+L", "Compartilhar Build"), row("Alt+E", "Banco de Itens"), row("Alt+H", "Esta lista de comandos"), row("Alt+K", "Comparar itens"), row("Alt+T", "Comparar talentos"), row("Alt+G", "Comparar conjuntos"), row("Alt+W", "Janelas flutuantes (liga/desliga)"),
 		T(th, a.T("A mesma tecla de novo fecha a janela (ou a traz para a frente).")).Sz(SmallText).C(ColMuted).Wrapping().W(),
 		sec("Build"),
+		row("Ctrl+Z", "Desfaz a última mudança do build"), row("Ctrl+Y", "Refaz a mudança desfeita"),
 		row("Ctrl+S", "Salvar o build"), row("Alt+J", "Trocar a classe (lista de classes)"),
 		row("Shift+clique", "Nos botões + e − dos atributos: ±10 pontos"),
 		sec("Habilidades"),

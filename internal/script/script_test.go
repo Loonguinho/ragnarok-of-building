@@ -168,3 +168,19 @@ func TestGetItemInfo(t *testing.T) {
 		}
 	}
 }
+
+// TestCompoundOn: a card reads the weapon it is in (Carta Bellare Mutante),
+// and ITEMINFO_VIEW may come by number.
+func TestCompoundOn(t *testing.T) {
+	info := func(item int, what string) (int, bool) {
+		return map[int]int{1: WeaponTypes["Gatling"], 2: WeaponTypes["Rifle"]}[item], what == "VIEW"
+	}
+	src := `if (getiteminfo(getequipid(EQI_COMPOUND_ON), ITEMINFO_VIEW) == W_GATLING) { bonus bLongAtkRate,5+getrefine(); }
+if (getiteminfo(getequipid(EQI_HAND_R),11) == W_GATLING) { bonus bHit,20; }`
+	for host, want := range map[int]int{1: 16, 2: 0} {
+		r := Eval(src, Context{Refine: 11, Host: host, SlotItem: map[string]int{"EQI_HAND_R": host}, ItemInfo: info})
+		if r.Bonus["bLongAtkRate"] != want || (r.Bonus["bHit"] == 20) != (want > 0) {
+			t.Errorf("in item %d: %v, want long %d", host, r.Bonus, want)
+		}
+	}
+}

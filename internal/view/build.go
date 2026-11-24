@@ -142,6 +142,7 @@ type slotView struct {
 	Cards            []*itemView // len = item slots
 	Refineable       bool
 	Gradable         bool
+	Blocked          bool // the shield slot under a two-handed weapon
 	CardSlots        int // positions below this are card slots; above, enchants
 }
 
@@ -201,6 +202,7 @@ func (s *Server) buildView(b calc.Build, l string) buildView {
 
 	mk := func(info slotInfo) slotView {
 		sv := slotView{Key: info.Key, Label: info.Label, Side: info.Side}
+		sv.Blocked = info.Key == calc.Shield && calc.ShieldBlocked(b, c)
 		if e, ok := b.Equip[info.Key]; ok {
 			if it := c.Items[e.Item]; it != nil {
 				iv := viewItem(it, l)

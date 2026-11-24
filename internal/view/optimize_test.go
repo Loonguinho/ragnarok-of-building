@@ -34,7 +34,7 @@ func TestOptimizeCards(t *testing.T) {
 	suggested := func(r optResult, card int) (n int, at []int) {
 		for _, g := range r.Groups {
 			for _, o := range g.Options {
-				if o.Item.ID == card {
+				if o.Item.ID == card && o.Kind != "set" {
 					n++
 					at = append(at, o.Index)
 				}
@@ -63,6 +63,17 @@ func TestOptimizeCards(t *testing.T) {
 	if got := names(s.pickItems(calc.Weapon, true, 0, 1201, 0, "", "pt")); !strings.Contains(got, "Carta Forte") {
 		t.Errorf("card picker filtered by mistake: %s", got)
 	}
+	// MVP cards can be left out.
+	c.Items[4003].MVPCard = true
+	for no, want := range map[bool]int{false: 3, true: 0} {
+		nb := b
+		calc.Normalize(&nb, c)
+		r := s.optimizeWith(context.Background(), nb, OptOptions{Cards: true, NoMVP: no}, "pt")
+		if n, _ := suggested(r, 4003); n != want {
+			t.Errorf("NoMVP %v: MVP card suggested %d times, want %d", no, n, want)
+		}
+	}
+	c.Items[4003].MVPCard = false
 	// Once every slot holds it, nothing is better.
 	b.Equip[calc.Weapon] = calc.Equip{Item: 1201, Cards: [4]int{4003, 4003, 4003, 4100}}
 	for _, g := range run(b).Groups {

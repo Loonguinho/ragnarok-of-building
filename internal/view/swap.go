@@ -91,11 +91,6 @@ func (s *Server) swapItem(b calc.Build, slot string, id, card int) calc.Build {
 			}
 		}
 	}
-	if slot == calc.Shield {
-		if w := c.Items[b.Equip[calc.Weapon].Item]; w != nil && w.HasLocation("Both_Hand") {
-			delete(nb.Equip, calc.Weapon)
-		}
-	}
 	for _, t := range targets {
 		nb.Equip[t] = e
 	}

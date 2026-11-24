@@ -56,7 +56,7 @@ func (a *App) importReplayFile(path string) {
 			a.replay = replayState{dmg: dmg}
 			a.savedID = ""
 			a.mu.Unlock()
-			a.SetBuild(b)
+			a.OpenBuild(b)
 			if dmg != nil {
 				a.showReplayDamage = true
 			}

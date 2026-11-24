@@ -48,7 +48,11 @@ func (v *Views) BestCardsTraits(ctx context.Context, b calc.Build, slot string, 
 	}
 	var ids []int
 	if ench, ok := c.Enchants[host.ID]; ok && idx >= host.Slots {
-		ids = append(ids, ench[idx]...)
+		for _, id := range ench[idx] {
+			if !calc.EnchantBlocked(host.ID, idx, b.Equip[slot].Cards, id) {
+				ids = append(ids, id)
+			}
+		}
 	} else {
 		for _, it := range c.Items {
 			if it.Type == "Card" && calc.CardFits(it, slot) && it.Name.Get(l) != "" &&
@@ -183,7 +187,7 @@ func (s *Server) comboPlacements(b calc.Build, slot string, idx, id int, goal st
 				continue
 			}
 			it := c.Items[p]
-			if it == nil || it.Type != "Card" || it.SubType == "Enchant" {
+			if it == nil || it.Type != "Card" || it.SubType == "Enchant" && !isStone(it) {
 				ok = false // a set with an item (not a card): out of scope
 				break
 			}
@@ -215,7 +219,12 @@ func (s *Server) comboPlacements(b calc.Build, slot string, idx, id int, goal st
 				if host == nil || !calc.CardFits(c.Items[p], sl) {
 					continue
 				}
-				for k := 0; k < host.Slots && k < 4; k++ {
+				from, to := 0, min(host.Slots, 4)
+				if calc.IsCostume(sl) { // its one stone
+					from = stoneIndex(e)
+					to = from + 1
+				}
+				for k := from; k < to; k++ {
 					if used[[2]any{sl, k}] {
 						continue
 					}

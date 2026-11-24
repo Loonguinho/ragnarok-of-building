@@ -21,6 +21,7 @@ import (
 // Nothing scrolls but the three columns, each inside itself.
 
 type shellState struct {
+	undo   [2]widget.Clickable
 	btns   []widget.Clickable
 	cur    *Window
 	left   ScrollList
@@ -301,7 +302,7 @@ func (a *App) shellFooter(gtx C) D {
 		layout.Rigid(ws[0]),
 		layout.Flexed(1, func(gtx C) D { return D{Size: image.Pt(gtx.Constraints.Min.X, 0)} }),
 		layout.Rigid(func(gtx C) D {
-			var bs []layout.Widget
+			bs := []layout.Widget{func(gtx C) D { return a.undoButtons(gtx, &s.undo) }}
 			for i, l := range labels {
 				i, l := i, l
 				bs = append(bs, func(gtx C) D { return Button{Label: a.T(l)}.Layout(gtx, th, &s.cmds[i]) })

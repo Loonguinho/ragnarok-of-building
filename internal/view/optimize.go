@@ -29,7 +29,10 @@ const (
 type OptOptions struct {
 	Goal                   string // GoalDamage (default), GoalPhysDef, GoalMagDef
 	Items, Cards, Enchants bool
+	NoMVP                  bool // leave MVP cards out
 	Refine, Grade          int // of the items it suggests (those that take them)
+	Opts                   bool // random options of the worn items; best rolls on the items it suggests
+	Costumes               bool // enchant stones of the worn costumes, and their sets
 	Traits                 bool // also search trait distributions (4th classes)
 }
 
@@ -44,6 +47,15 @@ type optOption struct {
 	Slot     string
 	Index    int
 	Positive bool
+	Name     string      // what it is, when it is not just the item (random options, sets)
+	Tiers    []optOption // the family's levels ("Grau Físico" 1 to 5), lowest first
+	Steps    []OptStep   // what it gives at higher refines and grades of its item
+	Tag      string      // "carta de <skill>": listed for the attack chosen
+	Later    bool        // it only pays off at one of the Steps
+	Opt      [2]int      // Kind "opt": the random option and value
+	Opts     [][2]int    // items: the random options it was measured with
+	OptsText string
+	Parts    []ComboPart // Kind "set": the stones and where they go
 }
 
 type optGroup struct {
@@ -78,6 +90,11 @@ type optResult struct {
 	// Traits: the best trait distribution found, with its enchants; nil when
 	// none beats the build's.
 	Traits *TraitCol
+	// NoSlot: card sets for the attack's skill that the items worn have no
+	// slot for.
+	NoSlot []string
+	// NoCostume: the costume slots with nothing worn (no stones to test).
+	NoCostume []string
 }
 
 // optPosition is one card position to optimize.
@@ -89,6 +106,30 @@ type optPosition struct {
 	enchant bool
 	current int
 	pool    []*gamedata.Item
+	// Random options: the rolls tried at position index of the item.
+	opts [][2]int
+}
+
+func (p *optPosition) size() int {
+	if p.opts != nil {
+		return len(p.opts)
+	}
+	return len(p.pool)
+}
+
+// build is the build with candidate k in the position (cards, enchants and
+// random options).
+func (p *optPosition) build(b calc.Build, k int) calc.Build {
+	return editSlots(b, p.slots, func(e *calc.Equip) {
+		switch {
+		case p.opts == nil:
+			e.Cards[p.index] = p.pool[k].ID
+		case p.index < len(e.Opts):
+			e.Opts[p.index] = p.opts[k]
+		default:
+			e.Opts = append(e.Opts, p.opts[k])
+		}
+	})
 }
 
 // optCards lists the cards once (the catalog never changes).
@@ -139,11 +180,22 @@ func (s *Server) optimizeWith(ctx context.Context, b calc.Build, o OptOptions, l
 	base := s.optScore(b, o.Goal)
 	res.Base = fmtInt(int64(base + 0.5))
 
+	code := ""
+	if o.Goal == GoalDamage {
+		code = s.attackCode(b)
+	}
+	skillTag := ""
+	if sk := c.Skills[b.Atk.Skill]; sk != nil {
+		skillTag = tr(l, "carta de") + " " + sk.Name.Get(l)
+	}
 	cards := s.optCards()
 	var pos []optPosition
 	if o.Items {
 		job := c.Jobs[b.Job]
 		for _, info := range append(append([]slotInfo{}, equipSlots...), shadowSlots...) {
+			if info.Key == calc.Shield && calc.ShieldBlocked(b, c) {
+				continue
+			}
 			var pool []*gamedata.Item
 			for _, it := range c.Items {
 				if it.Type != "" && it.Type != "Card" && calc.Fits(it, info.Key) && job.CanEquip(it) && it.Name.Get(l) != "" {
@@ -177,7 +229,7 @@ func (s *Server) optimizeWith(ctx context.Context, b calc.Build, o OptOptions, l
 		}
 		var pool []*gamedata.Item
 		for _, cd := range cards {
-			if calc.CardFits(cd, info.Key) {
+			if calc.CardFits(cd, info.Key) && !(o.NoMVP && cd.MVPCard) {
 				pool = append(pool, cd)
 			}
 		}
@@ -194,7 +246,7 @@ func (s *Server) optimizeWith(ctx context.Context, b calc.Build, o OptOptions, l
 			case enchants && len(ench[i]) > 0:
 				p.enchant = true
 				for _, id := range ench[i] {
-					if ei := c.Items[id]; ei != nil {
+					if ei := c.Items[id]; ei != nil && !calc.EnchantBlocked(it.ID, i, e.Cards, id) {
 						p.pool = append(p.pool, ei)
 					}
 				}
@@ -208,6 +260,35 @@ func (s *Server) optimizeWith(ctx context.Context, b calc.Build, o OptOptions, l
 			}
 			pos = append(pos, p)
 		}
+		// Random options: the rolls in use and the next free one (a position
+		// cannot be skipped). Only those whose range is known.
+		if spec := c.ItemOpts[it.ID]; o.Opts && spec != nil {
+			for i := 0; i < len(spec.Positions) && i <= len(e.Opts); i++ {
+				p := optPosition{slots: linked, label: info.Label, index: i}
+				cur := [2]int{}
+				if i < len(e.Opts) {
+					cur = e.Opts[i]
+				}
+				for _, r := range spec.Positions[i] {
+					if r.Max != 0 && c.RandomOpts[r.ID] != nil && (cur[0] != r.ID || cur[1] < r.Max) {
+						p.opts = append(p.opts, [2]int{r.ID, r.Max})
+					}
+				}
+				if len(p.opts) > 0 {
+					pos = append(pos, p)
+				}
+			}
+		}
+	}
+	if o.Costumes {
+		var worn []string
+		worn, res.NoCostume = s.stoneSlots(b, l)
+		for _, sl := range worn {
+			e := b.Equip[sl]
+			i := stoneIndex(e)
+			pos = append(pos, optPosition{slots: []string{sl}, label: slotLabel(sl), index: i, enchant: true,
+				current: e.Cards[i], pool: s.stones(sl)})
+		}
 	}
 	if len(pos) == 0 {
 		res.NoItems = true
@@ -217,14 +298,17 @@ func (s *Server) optimizeWith(ctx context.Context, b calc.Build, o OptOptions, l
 	// Evaluate every (position, card) in parallel.
 	type job struct{ p, k int }
 	vals := make([][]float64, len(pos))
+	later := make([][]float64, len(pos)) // enchants: at a high refine and grade
 	var jobs []job
 	for pi, p := range pos {
-		vals[pi] = make([]float64, len(p.pool))
-		for k := range p.pool {
+		vals[pi] = make([]float64, p.size())
+		later[pi] = make([]float64, p.size())
+		for k := range p.size() {
 			vals[pi][k] = -1
 			jobs = append(jobs, job{pi, k})
 		}
 	}
+	parent := ctx
 	ctx, cancel := context.WithTimeout(ctx, optTimeout)
 	defer cancel()
 	ch := make(chan job)
@@ -242,14 +326,22 @@ func (s *Server) optimizeWith(ctx context.Context, b calc.Build, o OptOptions, l
 					vals[j.p][j.k] = s.optScore(s.swapAt(b, p.slots[0], p.pool[j.k].ID, o.Refine, o.Grade), o.Goal)
 					continue
 				}
-				nb := b
-				nb.Equip = maps.Clone(b.Equip)
-				for _, k := range p.slots {
-					e := nb.Equip[k]
-					e.Cards[p.index] = p.pool[j.k].ID
-					nb.Equip[k] = e
-				}
+				nb := p.build(b, j.k)
 				vals[j.p][j.k] = s.optScore(nb, o.Goal)
+				if p.opts == nil && (p.enchant || boostsSkill(p.pool[j.k], code)) && vals[j.p][j.k] <= base*1.0005 && scalesWithItem(p.pool[j.k]) {
+					host := c.Items[b.Equip[p.slots[0]].Item]
+					up := func(e *calc.Equip) {
+						if host.Refineable {
+							e.Refine = max(e.Refine, min(laterRefine, calc.MaxRefine(p.slots[0])))
+						}
+						if host.Gradable {
+							e.Grade = 4
+						}
+					}
+					if hb := s.optScore(editSlots(b, p.slots, up), o.Goal); hb > 0 {
+						later[j.p][j.k] = s.optScore(editSlots(nb, p.slots, up), o.Goal) / hb
+					}
+				}
 			}
 		}()
 	}
@@ -287,11 +379,20 @@ feed:
 			label, kind = tr(l, p.label), "item"
 		case p.enchant:
 			label, kind = tr(l, p.label)+" · "+tr(l, "Encantamento")+" (slot "+strconv.Itoa(p.index+1)+")", "enchant"
+			if calc.IsCostume(p.slots[0]) {
+				label = tr(l, p.label) + " · " + tr(l, "Encantamento")
+			}
+		case p.opts != nil:
+			label, kind = tr(l, p.label)+" · "+tr(l, "Bônus aleatório")+" "+strconv.Itoa(p.index+1), "opt"
 		}
 		g := optGroup{Kind: kind, Slot: p.slots[0], Label: label, Index: p.index, Enchant: p.enchant}
 		if ci := c.Items[p.current]; p.current != 0 && ci != nil {
 			v := viewItem(ci, l)
 			g.Current = &v
+		}
+		if kind == "opt" {
+			s.optRolls(&res, g, p, vals[pi], base, b, pct, l)
+			continue
 		}
 		idx := make([]int, 0, len(p.pool))
 		for k, v := range vals[pi] {
@@ -314,12 +415,12 @@ feed:
 				continue
 			}
 			seen[fam] = true
-			opt := optOption{Item: viewItem(p.pool[k], l), Kind: kind, Value: fmtInt(int64(vals[pi][k] + 0.5)),
+			opt := optOption{Tiers: s.optTiers(p, vals[pi], fam, pct, kind, l), Item: viewItem(p.pool[k], l), Kind: kind, Value: fmtInt(int64(vals[pi][k] + 0.5)),
 				Gain: pct(vals[pi][k]), Slot: g.Slot, Index: p.index, Positive: true}
 			if p.item {
 				// What it was measured at: Normalize drops what the item can't take.
 				if p.pool[k].Refineable {
-					opt.Refine = o.Refine
+					opt.Refine = min(o.Refine, calc.MaxRefine(g.Slot))
 				}
 				if p.pool[k].Gradable {
 					opt.Grade = o.Grade
@@ -327,9 +428,37 @@ feed:
 			}
 			g.Options = append(g.Options, opt)
 		}
+		mine := s.skillCards(p, vals[pi], later[pi], base, g.Options, code, pct, skillTag, l)
+		for _, m := range mine {
+			seen[optFamily(m.Item.Name)] = true
+		}
+		for i := range g.Options {
+			if p.enchant || p.item || !boostsSkill(c.Items[g.Options[i].Item.ID], code) {
+				continue
+			}
+			g.Options[i].Tag = skillTag
+		}
+		// Enchants that only pay off at a higher refine or grade.
+		var lk []int
+		for k, r := range later[pi] {
+			if r > 1.003 && p.pool[k].ID != p.current && !seen[optFamily(p.pool[k].Name.Get(l))] {
+				lk = append(lk, k)
+			}
+		}
+		sort.SliceStable(lk, func(a, z int) bool { return later[pi][lk[a]] > later[pi][lk[z]] })
+		var laterOpts []optOption
+		for _, k := range lk {
+			fam := optFamily(p.pool[k].Name.Get(l))
+			if seen[fam] || len(laterOpts) >= optLaterMax {
+				continue
+			}
+			seen[fam] = true
+			laterOpts = append(laterOpts, optOption{Item: viewItem(p.pool[k], l), Kind: kind, Gain: pct(vals[pi][k]), Later: true,
+				Slot: g.Slot, Index: p.index, Tiers: s.optTiers(p, vals[pi], fam, pct, kind, l)})
+		}
 		// Skill enchants that don't touch the chosen attack: measure each on
 		// the learned skill it boosts.
-		if len(g.Options) == 0 && p.enchant && o.Goal == GoalDamage {
+		if len(g.Options) == 0 && p.enchant && o.Goal == GoalDamage && !calc.IsCostume(g.Slot) {
 			if heldID, held := s.optHeldSkill(b, p.current, l); heldID != 0 {
 				if heldID != b.Atk.Skill { // for the attack itself it is simply the best
 					g.SkillHeld = held
@@ -338,6 +467,7 @@ feed:
 				g.Options = s.optSkillEnchants(b, p, l)
 			}
 		}
+		g.Options = append(append(g.Options, mine...), laterOpts...)
 		if len(g.Options) == 0 {
 			// Keep the position listed, saying why nothing is suggested.
 			g.Best = p.current != 0
@@ -353,6 +483,35 @@ feed:
 		}
 		res.Groups = append(res.Groups, g)
 	}
+	ctx2, cancel2 := context.WithTimeout(parent, extraTimeout)
+	defer cancel2()
+	if o.Costumes {
+		opts, n := s.stoneSets(ctx2, b, o.Goal, l)
+		res.Tested += n
+		if len(opts) > 0 {
+			res.Groups = append(res.Groups, optGroup{Kind: "set", Slot: "set", Label: tr(l, "Conjunto de visuais"), Options: opts})
+		}
+	}
+	if o.Cards {
+		tag := ""
+		if code != "" {
+			tag = tr(l, "conjunto de") + " " + c.Skills[b.Atk.Skill].Name.Get(l)
+		}
+		cardTag := ""
+		if code != "" {
+			cardTag = tr(l, "cartas de") + " " + c.Skills[b.Atk.Skill].Name.Get(l)
+		}
+		groups, m := s.multiCards(ctx2, b, pos, vals, later, o, code, cardTag, l)
+		res.Groups = append(res.Groups, groups...)
+		res.Tested += m
+		opts, n, missing := s.cardSets(ctx2, b, o, tag, l)
+		res.NoSlot = missing
+		res.Tested += n
+		if len(opts) > 0 {
+			res.Groups = append(res.Groups, optGroup{Kind: "set", Slot: "cards", Label: tr(l, "Conjunto de cartas"), Options: opts})
+		}
+	}
+	s.optDetails(ctx2, b, &res, o, pct, l)
 	// Biggest gains first.
 	sort.SliceStable(res.Groups, func(a, z int) bool {
 		return gainOf(res.Groups[a]) > gainOf(res.Groups[z])
@@ -423,7 +582,7 @@ func (s *Server) optSkillEnchants(b calc.Build, p optPosition, l string) []optOp
 				continue
 			}
 			g := v / base
-			hits = append(hits, hit{optOption{Item: viewItem(it, l), Value: fmtInt(int64(v + 0.5)), Gain: pctOf(g, l),
+			hits = append(hits, hit{optOption{Item: viewItem(it, l), Kind: "enchant", Value: fmtInt(int64(v + 0.5)), Gain: pctOf(g, l),
 				Skill: c.Skills[id].Name.Get(l), Slot: p.slots[0], Index: p.index, Positive: true}, g})
 			break
 		}
@@ -452,15 +611,15 @@ func pctOf(ratio float64, l string) string {
 	return "+" + txt + "%"
 }
 
-var optTier = regexp.MustCompile(`\s+(\+?\d+|[IVX]+|(?i:nv|lv)\.?\s*\d+)$`)
+var optTier = regexp.MustCompile(`\s+(\+?\d+|[IVX]+|(?i:nv|lv)\.?\s*\d+)(\)?)$`)
 
 // optFamily strips a trailing tier ("Insígnia do Talento 10" -> "Insígnia do Talento").
 func optFamily(name string) string {
-	return strings.ToLower(optTier.ReplaceAllString(strings.TrimSpace(name), ""))
+	return strings.ToLower(optTier.ReplaceAllString(strings.TrimSpace(name), "$2"))
 }
 
 func gainOf(g optGroup) float64 {
-	if len(g.Options) == 0 {
+	if len(g.Options) == 0 || g.Options[0].Later {
 		return 0
 	}
 	f, _ := strconv.ParseFloat(strings.NewReplacer("+", "", "%", "", ",", ".").Replace(g.Options[0].Gain), 64)

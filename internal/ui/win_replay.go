@@ -116,7 +116,7 @@ func (a *App) replayBody(gtx C) D {
 	}
 	total := func(label, v string) layout.Widget {
 		return func(gtx C) D {
-			return Box{Bg: ColWhite, Line: ColListBorder, Radius: 3, Pad: Inset(3, 8, 3, 8)}.Layout(gtx,
+			return Box{Bg: ColPanel, Line: ColListBorder, Radius: 3, Pad: Inset(3, 8, 3, 8)}.Layout(gtx,
 				Col(0, T(th, a.T(label)).Sz(SmallText).C(ColMuted).W(), B(th, v).Sz(13).W()))
 		}
 	}

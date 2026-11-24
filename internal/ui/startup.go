@@ -81,7 +81,7 @@ func (s *Startup) Frame(gtx C) D {
 				s.list.ScrollToEnd = true
 				gtx.Constraints.Max.Y = gtx.Dp(220)
 				gtx.Constraints.Min.Y = gtx.Dp(120)
-				return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(4, 6, 4, 6)}.Layout(gtx, func(gtx C) D {
+				return Box{Bg: ColPanel, Line: ColListBorder, Pad: Inset(4, 6, 4, 6)}.Layout(gtx, func(gtx C) D {
 					gtx.Constraints.Min.X = gtx.Constraints.Max.X
 					return s.list.Layout(gtx, len(st.Lines), func(gtx C, i int) D {
 						return T(th, st.Lines[i]).Wrapping().Layout(gtx)

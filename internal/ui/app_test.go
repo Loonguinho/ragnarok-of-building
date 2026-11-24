@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"image"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -32,6 +33,9 @@ type harness struct {
 
 func newHarness(t *testing.T) *harness {
 	t.Helper()
+	if os.Getenv("RO_DARK") != "" { // screenshots of the dark theme
+		SetDark(true)
+	}
 	cat, err := gamedata.Load(filepath.Join("..", "..", "data", "gen", "catalog.json.gz"))
 	if err != nil {
 		t.Skip("no generated catalog:", err)
@@ -105,7 +109,7 @@ func TestStatPlus(t *testing.T) {
 	h := newHarness(t)
 	before := h.a.Build().Stats[0]
 	// FOR's "+" in the attributes card (single window).
-	h.click(304, 181)
+	h.click(304, 196)
 	if got := h.a.Build().Stats[0]; got != before+1 {
 		t.Fatalf("FOR %d -> %d, want +1", before, got)
 	}
@@ -243,7 +247,7 @@ func TestSelectPick(t *testing.T) {
 func TestStatTyped(t *testing.T) {
 	h := newHarness(t)
 	in := &h.a.status.stat[0]
-	h.click(226, 181) // FOR's box (single window)
+	h.click(226, 196) // FOR's box (single window)
 	if !in.focused {
 		t.Fatal("FOR's box did not take the focus")
 	}

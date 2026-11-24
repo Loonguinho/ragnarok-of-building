@@ -23,6 +23,8 @@ func init() { runNative = nativeMain }
 
 // nativeMain never returns: Gio's app.Main keeps the main thread.
 func nativeMain(st *startup, o options, log *slog.Logger) {
+	stateFile := filepath.Join("data", "ui.json")
+	ui.UseSavedTheme(stateFile) // before the startup screen
 	th := ui.NewTheme()
 	w := new(app.Window)
 	w.Option(app.Title(appTitle), app.Size(unit.Dp(1440), unit.Dp(900)), app.MinSize(unit.Dp(640), unit.Dp(480)))
@@ -41,17 +43,19 @@ func nativeMain(st *startup, o options, log *slog.Logger) {
 			st.fail(err)
 			return
 		}
-		a := ui.NewApp(v, th, filepath.Join("data", "ui.json"))
+		a := ui.NewApp(v, th, stateFile)
 		a.Icons = ui.NewIcons(view.NewIconCache(filepath.Join("data", "cache", "img")).Get, w.Invalidate)
 		a.Invalidate = w.Invalidate
 		a.SavedFile = "builds.json"
 		a.OpenFile = openFileDialog
+		a.OnTheme = func(on bool) { go darkTitleBar(on) }
 		simulator.Store(a)
 		w.Invalidate()
 	}()
 
 	go func() {
 		var ops op.Ops
+		titled := false
 		for {
 			switch e := w.Event().(type) {
 			case app.DestroyEvent:
@@ -65,6 +69,10 @@ func nativeMain(st *startup, o options, log *slog.Logger) {
 				}
 				os.Exit(0)
 			case app.FrameEvent:
+				if !titled {
+					titled = true
+					go darkTitleBar(ui.IsDark())
+				}
 				gtx := app.NewContext(&ops, e)
 				if a := simulator.Load(); a != nil {
 					a.Frame(gtx)

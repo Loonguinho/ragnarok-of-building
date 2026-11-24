@@ -72,7 +72,7 @@ func (s *SideTabs) Layout(gtx C, a *App, tabs []SideTab, content layout.Widget) 
 	g.Constraints.Max.X -= tw
 	g.Constraints.Min.X = g.Constraints.Max.X
 	g.Constraints.Min.Y = max(g.Constraints.Min.Y, len(tabs)*th+gtx.Dp(6))
-	cd := Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(3, 3, 3, 3)}.Layout(g, func(gtx C) D {
+	cd := Box{Bg: ColPanel, Line: ColListBorder, Pad: Inset(3, 3, 3, 3)}.Layout(g, func(gtx C) D {
 		gtx.Constraints.Min.Y = max(gtx.Constraints.Min.Y, len(tabs)*th)
 		return content(gtx)
 	})
@@ -95,9 +95,9 @@ func (s *SideTabs) Layout(gtx C, a *App, tabs []SideTab, content layout.Widget) 
 			on := i == s.Cur
 			rr := image.Rectangle{Max: sz}
 			if on {
-				FillRound(gtx, image.Rectangle{Max: image.Pt(sz.X+1, sz.Y)}, ColWhite, gtx.Dp(4), 0, 0, gtx.Dp(4))
+				FillRound(gtx, image.Rectangle{Max: image.Pt(sz.X+1, sz.Y)}, ColPanel, gtx.Dp(4), 0, 0, gtx.Dp(4))
 				Border(gtx, image.Rectangle{Max: image.Pt(sz.X+gtx.Dp(4), sz.Y)}, ColListBorder, 1, gtx.Dp(4))
-				Fill(gtx, image.Rect(sz.X-1, 1, sz.X+gtx.Dp(4), sz.Y-1), ColWhite)
+				Fill(gtx, image.Rect(sz.X-1, 1, sz.X+gtx.Dp(4), sz.Y-1), ColPanel)
 			} else {
 				top, bot := colTabOff, colTabOffB
 				if cl.Hovered() {

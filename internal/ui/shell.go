@@ -179,7 +179,7 @@ func (a *App) shellColumn(gtx C, sl *ScrollList, w layout.Widget) D {
 
 // card is a white box (the mockup's panels).
 func card(gtx C, w layout.Widget) D {
-	return Box{Bg: ColWhite, Line: ColListBorder, Radius: 3, Pad: Inset(8, 10, 8, 10)}.Layout(gtx, func(gtx C) D {
+	return Box{Bg: ColPanel, Line: ColListBorder, Radius: 3, Pad: Inset(8, 10, 8, 10)}.Layout(gtx, func(gtx C) D {
 		gtx.Constraints.Min.X = gtx.Constraints.Max.X
 		return w(gtx)
 	})
@@ -435,7 +435,7 @@ func (a *App) resumoBody(gtx C) D {
 	}
 	return Col(10,
 		func(gtx C) D {
-			return Box{Bg: ColWhite, Line: rgb(0x7d9bd1), Radius: 3, Pad: Inset(8, 10, 10, 10)}.Layout(gtx, func(gtx C) D {
+			return Box{Bg: ColPanel, Line: rgb(0x7d9bd1), Radius: 3, Pad: Inset(8, 10, 10, 10)}.Layout(gtx, func(gtx C) D {
 				gtx.Constraints.Min.X = gtx.Constraints.Max.X
 				return Col(5,
 					B(th, a.T("Resumo")).Sz(13).C(ColTitleText).W(),

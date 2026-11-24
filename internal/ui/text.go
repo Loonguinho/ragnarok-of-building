@@ -87,7 +87,7 @@ func ColorLine(line string, def color.NRGBA) []Span {
 		if i > 0 {
 			out = append(out, Span{line[:i], cur})
 		}
-		cur = rgb(uint32(v))
+		cur = descColor(uint32(v))
 		if v == 0 {
 			cur = def
 		}

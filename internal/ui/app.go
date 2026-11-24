@@ -26,6 +26,8 @@ type App struct {
 	Icons *Icons
 	Lang  string
 
+	// OnTheme tells the host the theme changed (the system's title bar).
+	OnTheme func(dark bool)
 	// Invalidate asks the window for a new frame (set by the host).
 	Invalidate func()
 	// Saved is the saved-builds file (builds.json next to the program).
@@ -52,7 +54,7 @@ type App struct {
 
 	// Windows.
 	wMenu, wBasic, wStatus, wEquip, wSkills, wBonus, wDamage, wBuffs, wOptimize *Window
-	wSaved, wShare, wHelp, wSlot, wRdmg, wItems, wCompare, wTraits              *Window
+	wSaved, wShare, wHelp, wSlot, wRdmg, wItems, wCompare, wTraits, wSets       *Window
 	wSettings                                                                   *Window // a tab of the single window
 
 	menu   menuState
@@ -69,6 +71,7 @@ type App struct {
 	replay replayState
 	opt    optimizeState
 	traits traitsState
+	sets   setsState
 	items  itemsState
 	shell  shellState
 
@@ -83,6 +86,7 @@ type chatLine struct {
 // uiState is what data/ui.json keeps between runs.
 type uiState struct {
 	Lang     string                 `json:"lang"`
+	Light    bool                   `json:"light,omitempty"` // the theme is dark unless set
 	Floating bool                   `json:"floating"`
 	Build    string                 `json:"build"`           // share code of the last build
 	Saved    string                 `json:"saved,omitempty"` // its saved build's id
@@ -158,6 +162,8 @@ func (a *App) makeWindows() {
 	a.wCompare.Body = a.compareBody
 	a.wTraits = d.Add(&Window{ID: "win-traits", Title: "Comparar talentos", Hotkey: "T", Col: 2, Float: true, Width: 860, NoShowAll: true})
 	a.wTraits.Body = a.traitsBody
+	a.wSets = d.Add(&Window{ID: "win-sets", Title: "Comparar conjuntos", Hotkey: "G", Col: 2, Float: true, Width: 960, NoShowAll: true})
+	a.wSets.Body = a.setsBody
 	a.wBonus.Body = a.bonusBody
 	a.wDamage.Body = a.damageBody
 	a.wEquip.Body = a.equipBody
@@ -279,6 +285,23 @@ func (a *App) SetLang(l string) {
 	a.SetBuild(a.Build())
 }
 
+// SetTheme switches between the light and the dark theme, from the next
+// frame on (never halfway through one).
+func (a *App) SetTheme(on bool) {
+	a.later(func() {
+		if on == dark {
+			return
+		}
+		SetDark(on)
+		a.mu.Lock()
+		a.needSave = true
+		a.mu.Unlock()
+		if a.OnTheme != nil {
+			a.OnTheme(on)
+		}
+	})
+}
+
 // Frame draws one frame.
 func (a *App) Frame(gtx C) D {
 	a.mu.Lock()
@@ -294,7 +317,7 @@ func (a *App) Frame(gtx C) D {
 	a.updateTitles()
 	if !ready {
 		backdrop(gtx, gtx.Constraints.Max)
-		return layout.Center.Layout(gtx, T(a.Th, a.T("Calculando…")).C(ColWhite).W())
+		return layout.Center.Layout(gtx, T(a.Th, a.T("Calculando…")).C(ColOnFill).W())
 	}
 	if a.showReplayDamage {
 		a.showReplayDamage = false
@@ -365,6 +388,7 @@ func (a *App) updateTitles() {
 	a.wItems.Title = a.T("Banco de Itens")
 	a.wCompare.Title = a.T("Comparar itens")
 	a.wTraits.Title = a.T("Comparar talentos")
+	a.wSets.Title = a.T("Comparar conjuntos")
 	SearchHint = a.T("Buscar…")
 	a.wSlot.Title = a.slotTitle()
 }
@@ -389,7 +413,7 @@ var saveMu sync.Mutex
 
 // snapshot is the state to keep (taken on the UI goroutine).
 func (a *App) snapshot() uiState {
-	st := uiState{Lang: a.Lang, Floating: a.Desk.Floating, Build: view.EncodeBuild(a.Build()), Saved: a.savedID, Windows: map[string]windowState{}}
+	st := uiState{Lang: a.Lang, Light: !dark, Floating: a.Desk.Floating, Build: view.EncodeBuild(a.Build()), Saved: a.savedID, Windows: map[string]windowState{}}
 	for _, w := range a.Desk.Windows {
 		st.Windows[w.ID] = windowState{Open: w.Open, X: w.Pos.X, Y: w.Pos.Y, Placed: w.Placed, Min: w.Min}
 	}

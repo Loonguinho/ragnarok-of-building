@@ -48,7 +48,7 @@ func (b Button) draw(gtx C, th *Theme, hover, pressed, disabled bool) D {
 		t = t.Bold()
 	}
 	if disabled {
-		t = t.C(color.NRGBA{R: 0x99, G: 0x99, B: 0x99, A: 0xff})
+		t = t.C(rgb(0x999999))
 	}
 	m := op.Record(gtx.Ops)
 	g := gtx
@@ -77,6 +77,9 @@ func (b Button) draw(gtx C, th *Theme, hover, pressed, disabled bool) D {
 
 func lighten(c color.NRGBA) color.NRGBA {
 	f := func(v uint8) uint8 { return uint8(min(255, int(v)*106/100)) }
+	if dark { // a percentage barely shows on dark colors
+		f = func(v uint8) uint8 { return uint8(min(255, int(v)+14)) }
+	}
 	return color.NRGBA{R: f(c.R), G: f(c.G), B: f(c.B), A: c.A}
 }
 
@@ -94,7 +97,7 @@ func SmallBtn(gtx C, th *Theme, cl *widget.Clickable, label string, top, bottom,
 		Border(gtx, r, line, 1, 2)
 		txt := B(th, label).Sz(SmallText).C(ColTitleText)
 		if disabled {
-			txt = txt.C(color.NRGBA{R: 0x2b, G: 0x2b, B: 0x2b, A: 0x59})
+			txt = txt.C(rgbA(0x2b2b2b, 0x59))
 		}
 		m := op.Record(gtx.Ops)
 		g := gtx
@@ -117,10 +120,10 @@ func SmallBtn(gtx C, th *Theme, cl *widget.Clickable, label string, top, bottom,
 
 // PlusBtn and MinusBtn are the stat buttons.
 func PlusBtn(gtx C, th *Theme, cl *widget.Clickable, disabled bool) D {
-	return SmallBtn(gtx, th, cl, "+", ColWhite, rgb(0xf0d98a), rgb(0xa08a3a), disabled)
+	return SmallBtn(gtx, th, cl, "+", ColBtnTop, rgb(0xf0d98a), rgb(0xa08a3a), disabled)
 }
 func MinusBtn(gtx C, th *Theme, cl *widget.Clickable, disabled bool) D {
-	return SmallBtn(gtx, th, cl, "-", ColWhite, rgb(0xd9dfeb), ColBorder, disabled)
+	return SmallBtn(gtx, th, cl, "-", ColBtnTop, rgb(0xd9dfeb), ColBorder, disabled)
 }
 
 // YesNo is the Sim/Não pair of the Buffs window.
@@ -144,7 +147,7 @@ func (y *YesNo) Layout(gtx C, th *Theme, on bool, yes, no string) (D, int, bool)
 				g.Constraints.Min = image.Point{}
 				t := T(th, label).Sz(SmallText)
 				if active {
-					t = t.Bold().C(ColWhite)
+					t = t.Bold().C(ColOnFill)
 				}
 				td := t.Layout(g)
 				call := m.Stop()
@@ -190,7 +193,7 @@ func (c *Checkbox) Layout(gtx C, th *Theme, checked bool, label string) (D, bool
 			layout.Rigid(func(gtx C) D {
 				s := gtx.Dp(13)
 				r := image.Rectangle{Max: image.Pt(s, s)}
-				Fill(gtx, r, ColWhite)
+				Fill(gtx, r, ColPanel)
 				Border(gtx, r, ColBorder, 1, 2)
 				if checked {
 					in := gtx.Dp(3)

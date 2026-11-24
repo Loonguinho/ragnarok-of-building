@@ -92,7 +92,7 @@ func TestFloatBlocksPointer(t *testing.T) {
 	if !image.Pt(304, 181).In(w.rect) {
 		t.Skip("the help window does not cover the button")
 	}
-	h.click(304, 181)
+	h.click(304, 196)
 	if got := h.a.Build().Stats[0]; got != before {
 		t.Errorf("the press went through: FOR %d -> %d", before, got)
 	}

@@ -34,6 +34,7 @@ type Desk struct {
 
 	popup    *Popup        // the open dropdown/menu (one at a time)
 	tip      layout.Widget // tooltip of this frame
+	tall     tallTip
 	mouse    image.Point
 	mouseTag bool
 }
@@ -120,7 +121,7 @@ func (d *Desk) syncGroups() {
 // autoClose closes the AutoClose windows a press at p is outside of
 // (unless it lands in another floating window or a popup is open).
 func (d *Desk) autoClose(p image.Point) {
-	if d.popup != nil {
+	if d.popup != nil || d.tall.on && p.In(d.tall.rect) {
 		return
 	}
 	for _, w := range d.Windows {
@@ -408,7 +409,7 @@ func (d *Desk) layoutFloats(gtx C, th *Theme, size image.Point, ws []*Window) {
 // stays in view.
 func (d *Desk) layoutFloat(gtx C, th *Theme, size image.Point, w *Window, cw int) {
 	w.Pos.Y = max(0, min(w.Pos.Y, size.Y-gtx.Dp(TitleH)-gtx.Dp(8)))
-	room := size.Y - gtx.Dp(16)
+	room := size.Y - gtx.Dp(68) // fits where a window first shows
 	if w.Dropdown {
 		room = size.Y - w.Pos.Y - gtx.Dp(8)
 	}

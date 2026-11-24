@@ -30,6 +30,7 @@ var (
 	procCoUninitialize  = ole32.NewProc("CoUninitialize")
 	procCoTaskMemFree   = ole32.NewProc("CoTaskMemFree")
 	procGetOpenFileName = syscall.NewLazyDLL("comdlg32.dll").NewProc("GetOpenFileNameW")
+	procDwmSetAttribute = syscall.NewLazyDLL("dwmapi.dll").NewProc("DwmSetWindowAttribute")
 )
 
 const (
@@ -132,6 +133,21 @@ func focusExisting() {
 	}
 	procShowWindow.Call(hwnd, swRestore)
 	procSetForeground.Call(hwnd)
+}
+
+// darkTitleBar makes the window's title bar dark or light (Windows 10 2004
+// and newer; older ones keep theirs).
+func darkTitleBar(on bool) {
+	hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(utf16(appTitle))))
+	if hwnd == 0 || procDwmSetAttribute.Find() != nil {
+		return
+	}
+	var v int32
+	if on {
+		v = 1
+	}
+	const useImmersiveDarkMode = 20
+	procDwmSetAttribute.Call(hwnd, useImmersiveDarkMode, uintptr(unsafe.Pointer(&v)), unsafe.Sizeof(v))
 }
 
 type browseInfo struct {

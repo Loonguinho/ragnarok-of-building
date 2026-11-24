@@ -3,6 +3,7 @@ package ui
 import (
 	"image"
 	"strings"
+	"time"
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"
@@ -82,7 +83,7 @@ func (d *Desk) layoutOverlay(gtx C, size image.Point) {
 			if p.Width > 0 {
 				g.Constraints.Min.X, g.Constraints.Max.X = p.Width, p.Width
 			}
-			pd := Box{Bg: ColWhite, Line: rgb(0x7f9db9)}.Layout(g, p.Content)
+			pd := Box{Bg: ColPanel, Line: rgb(0x7f9db9)}.Layout(g, p.Content)
 			call := m.Stop()
 			at := p.At
 			// Keep it on screen.
@@ -104,24 +105,100 @@ func (d *Desk) layoutOverlay(gtx C, size image.Point) {
 			off.Pop()
 		}
 	}
-	if d.tip != nil {
-		m := op.Record(gtx.Ops)
-		g := gtx
-		g.Constraints = layout.Constraints{Max: image.Pt(gtx.Dp(340), size.Y)}
-		td := d.tip(g)
-		call := m.Stop()
-		at := d.mouse.Add(image.Pt(gtx.Dp(14), gtx.Dp(16)))
-		if at.X+td.Size.X > size.X {
-			at.X = max(0, d.mouse.X-td.Size.X-gtx.Dp(8))
+	d.layoutTip(gtx, size)
+}
+
+// tallTip is a tooltip taller than the screen: it stays where it showed,
+// the mouse can go onto it, and the wheel scrolls it.
+type tallTip struct {
+	on     bool
+	w      layout.Widget // what it shows, while the mouse is on it
+	at     image.Point
+	h      int // its whole height
+	rect   image.Rectangle
+	scroll int
+	until  time.Time // kept until then, for the mouse to reach it
+	tag    bool
+}
+
+// tipGrace is how long a tall tooltip waits for the mouse.
+const tipGrace = 350 * time.Millisecond
+
+func (d *Desk) layoutTip(gtx C, size image.Point) {
+	t := &d.tall
+	for {
+		ev, ok := gtx.Event(pointer.Filter{Target: &t.tag, Kinds: pointer.Scroll | pointer.Move | pointer.Press | pointer.Release | pointer.Enter | pointer.Leave,
+			ScrollY: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}})
+		if !ok {
+			break
 		}
+		if e, ok := ev.(pointer.Event); ok && e.Kind == pointer.Scroll {
+			t.scroll += int(e.Scroll.Y)
+		}
+	}
+	tip := d.tip
+	if tip == nil && t.on {
+		in := d.mouse.In(t.rect)
+		if in || gtx.Now.Before(t.until) {
+			tip = t.w
+			if in {
+				t.until = gtx.Now.Add(tipGrace)
+			} else {
+				gtx.Execute(op.InvalidateCmd{At: t.until})
+			}
+		}
+	} else if tip != nil {
+		t.w, t.until = tip, gtx.Now.Add(tipGrace)
+	}
+	if tip == nil {
+		*t = tallTip{}
+		return
+	}
+	m := op.Record(gtx.Ops)
+	g := gtx
+	g.Constraints = layout.Constraints{Max: image.Pt(gtx.Dp(340), 1<<20)}
+	td := tip(g)
+	call := m.Stop()
+	pad := gtx.Dp(8)
+	maxH := size.Y - 2*pad
+	at := d.mouse.Add(image.Pt(gtx.Dp(14), gtx.Dp(16)))
+	if at.X+td.Size.X > size.X {
+		at.X = max(0, d.mouse.X-td.Size.X-pad)
+	}
+	if td.Size.Y <= maxH {
+		t.on = false
 		if at.Y+td.Size.Y > size.Y {
-			at.Y = max(0, d.mouse.Y-td.Size.Y-gtx.Dp(8))
+			at.Y = max(0, d.mouse.Y-td.Size.Y-pad)
 		}
 		off := op.Offset(at).Push(gtx.Ops)
 		Shadow(gtx, image.Rectangle{Max: td.Size}, gtx.Dp(3))
 		call.Add(gtx.Ops)
 		off.Pop()
+		return
 	}
+	if !t.on || t.h != td.Size.Y {
+		t.on, t.h, t.scroll, t.at = true, td.Size.Y, 0, image.Pt(at.X, pad)
+	}
+	t.scroll = max(0, min(t.scroll, td.Size.Y-maxH))
+	r := image.Rectangle{Max: image.Pt(td.Size.X, maxH)}
+	t.rect = r.Add(t.at)
+	off := op.Offset(t.at).Push(gtx.Ops)
+	defer off.Pop()
+	Shadow(gtx, r, gtx.Dp(3))
+	cl := clip.Rect(r).Push(gtx.Ops)
+	// Over what is behind, so nothing there takes the mouse.
+	event.Op(gtx.Ops, &t.tag)
+	in := op.Offset(image.Pt(0, -t.scroll)).Push(gtx.Ops)
+	call.Add(gtx.Ops)
+	in.Pop()
+	// The scroll bar.
+	bw := gtx.Dp(5)
+	th := max(gtx.Dp(24), maxH*maxH/td.Size.Y)
+	y := (maxH - th) * t.scroll / (td.Size.Y - maxH)
+	Fill(gtx, image.Rect(r.Max.X-bw, 0, r.Max.X, maxH), colScrollBg)
+	Fill(gtx, image.Rect(r.Max.X-bw, y, r.Max.X, y+th), ColBorder)
+	cl.Pop()
+	Border(gtx, r, ColBorder, 1, gtx.Dp(3))
 }
 
 // TipBox is the tooltip frame (.ro-tooltip).
@@ -274,7 +351,7 @@ func (s *Select) Layout(gtx C, th *Theme, d *Desk, opts []Option, cur string, wi
 	h := gtx.Dp(BtnH)
 	dims := s.btn.Layout(gtx, func(gtx C) D {
 		r := image.Rectangle{Max: image.Pt(w, h)}
-		Fill(gtx, r, ColWhite)
+		Fill(gtx, r, ColPanel)
 		Border(gtx, r, ColBorder, 1, 2)
 		g := gtx
 		g.Constraints = layout.Constraints{Max: image.Pt(w-gtx.Dp(18), h)}

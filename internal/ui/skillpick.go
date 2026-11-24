@@ -189,7 +189,7 @@ func (a *App) skillPicker(gtx C, b calc.Build, d view.DamageView) D {
 						FillRound(gtx, r, ColHover, 3, 3, 3, 3)
 						Border(gtx, r, ColListBorder, 1, 3)
 					default:
-						FillRound(gtx, r, ColWhite, 3, 3, 3, 3)
+						FillRound(gtx, r, ColPanel, 3, 3, 3, 3)
 						Border(gtx, r, ColListBorder, 1, 3)
 					}
 					layout.Center.Layout(gtx, func(gtx C) D { return a.Icons.Icon(gtx, view.SkillIcon(id), 24) })

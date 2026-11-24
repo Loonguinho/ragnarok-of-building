@@ -188,7 +188,7 @@ func (a *App) traitCol(gtx C, c view.TraitCol, i int, off bool) D {
 			return Button{Label: a.T("Aplicar"), Disabled: off}.Layout(gtx, th, &a.traits.apply[min(i, len(a.traits.apply)-1)])
 		})
 	}
-	bg := ColWhite
+	bg := ColPanel
 	if i == 0 {
 		bg = rgb(0xf6f8fc)
 	}
@@ -222,7 +222,7 @@ func (a *App) optTraits(c *view.TraitCol) layout.Widget {
 				text += " · " + e.Name + " (" + e.SlotLabel + ")"
 			}
 		}
-		return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(4, 6, 4, 6)}.Layout(gtx, func(gtx C) D {
+		return Box{Bg: ColPanel, Line: ColListBorder, Pad: Inset(4, 6, 4, 6)}.Layout(gtx, func(gtx C) D {
 			gtx.Constraints.Min.X = gtx.Constraints.Max.X
 			return Col(3,
 				Row(6, B(th, a.T("Mudando os talentos")).W(), B(th, c.Gain.Diff).C(ColUp).W()),

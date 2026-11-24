@@ -22,6 +22,7 @@ type menuState struct {
 	gear     widget.Clickable
 	settings Popup
 	setRows  [1]widget.Clickable
+	themes   [2]widget.Clickable // light, dark
 	langs    []widget.Clickable
 	anchor   Anchor
 }
@@ -181,6 +182,11 @@ func (a *App) settingsMenu(gtx C) D {
 			a.SetLang(l[0])
 		}
 	}
+	for i := range m.themes {
+		if m.themes[i].Clicked(gtx) {
+			a.SetTheme(i == 1)
+		}
+	}
 	row := func(cl *widget.Clickable, label, kbd string) layout.Widget {
 		return func(gtx C) D {
 			return cl.Layout(gtx, func(gtx C) D {
@@ -214,6 +220,26 @@ func (a *App) settingsMenu(gtx C) D {
 						return m.langs[i].Layout(gtx, func(gtx C) D {
 							t := B(th, upper(l[0])).C(ColLink)
 							if l[0] != a.Lang {
+								t = t.C(rgbA(0x1d4fa8, 0x90))
+							}
+							d := t.Layout(gtx)
+							pointerCursor(gtx, d.Size)
+							return d
+						})
+					})
+				}
+				return Row(6, kids...)(gtx)
+			})
+		},
+		func(gtx C) D {
+			return Inset(4, 8, 4, 8).Layout(gtx, func(gtx C) D {
+				kids := []layout.Widget{T(th, a.T("Tema")+":").W()}
+				for i, name := range []string{"Claro", "Escuro"} {
+					i, name := i, name
+					kids = append(kids, func(gtx C) D {
+						return m.themes[i].Layout(gtx, func(gtx C) D {
+							t := B(th, a.T(name)).C(ColLink)
+							if (i == 1) != dark {
 								t = t.C(rgbA(0x1d4fa8, 0x90))
 							}
 							d := t.Layout(gtx)
@@ -577,7 +603,7 @@ func (a *App) statusBody(gtx C) D {
 		pools += fmt.Sprintf(" %s %d", a.T("· AP"), r.AP)
 	}
 	kids = append(kids, Gap(0, 3), func(gtx C) D {
-		return Box{Bg: ColWhite, Line: ColSep, Pad: Inset(3, 4, 3, 4)}.Layout(gtx, func(gtx C) D {
+		return Box{Bg: ColPanel, Line: ColSep, Pad: Inset(3, 4, 3, 4)}.Layout(gtx, func(gtx C) D {
 			gtx.Constraints.Min.X = gtx.Constraints.Max.X
 			return T(th, pools).Layout(gtx)
 		})

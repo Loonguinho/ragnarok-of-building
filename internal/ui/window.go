@@ -236,7 +236,7 @@ func (w *Window) layout(gtx C, th *Theme, d *Desk, floating bool) D {
 		g.Constraints = layout.Constraints{Max: image.Pt(gtx.Dp(13), gtx.Dp(13))}
 		st := op.Offset(image.Pt(right-gtx.Dp(13), gtx.Dp(3))).Push(gtx.Ops)
 		defer st.Pop()
-		SmallBtn(g, th, &w.close, "×", ColWhite, rgb(0xc9d6ee), ColBorder, false)
+		SmallBtn(g, th, &w.close, "×", ColBtnTop, rgb(0xc9d6ee), ColBorder, false)
 	}()
 	right -= gtx.Dp(13) + gtx.Dp(3)
 	func() {
@@ -248,7 +248,7 @@ func (w *Window) layout(gtx C, th *Theme, d *Desk, floating bool) D {
 		if w.Min {
 			sym = "+"
 		}
-		SmallBtn(g, th, &w.mini, sym, ColWhite, rgb(0xc9d6ee), ColBorder, false)
+		SmallBtn(g, th, &w.mini, sym, ColBtnTop, rgb(0xc9d6ee), ColBorder, false)
 	}()
 	right -= gtx.Dp(13) + gtx.Dp(4)
 	if w.TitleExtra != nil {
@@ -331,7 +331,7 @@ func (w *Window) layoutDropdown(gtx C, d *Desk, width int) D {
 	full := image.Rectangle{Max: image.Pt(width, bd.Size.Y+2)}
 	w.blockPointer(gtx, full)
 	Shadow(gtx, full, gtx.Dp(4))
-	Fill(gtx, full, ColWhite)
+	Fill(gtx, full, ColPanel)
 	st := op.Offset(image.Pt(1, 1)).Push(gtx.Ops)
 	call.Add(gtx.Ops)
 	st.Pop()

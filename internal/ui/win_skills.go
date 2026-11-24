@@ -96,7 +96,7 @@ func (a *App) skillsBody(gtx C) D {
 		},
 		Gap(0, 6),
 		func(gtx C) D {
-			return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(6, 6, 6, 6)}.Layout(gtx, func(gtx C) D {
+			return Box{Bg: ColPanel, Line: ColListBorder, Pad: Inset(6, 6, 6, 6)}.Layout(gtx, func(gtx C) D {
 				gtx.Constraints.Min.X = gtx.Constraints.Max.X
 				var rows []layout.Widget
 				for _, row := range tab.Rows {
@@ -261,7 +261,9 @@ func (a *App) skillCellW(gtx C, c view.SkillCell, levels map[int]int) D {
 		)(gtx)
 	})
 	if locked {
-		Fill(gtx, r, rgbA(0xffffff, 0x70))
+		veil := ColPanel // fades the icon into the panel
+		veil.A = 0x70
+		Fill(gtx, r, veil)
 	}
 	area := clip.Rect(r).Push(gtx.Ops)
 	event.Op(gtx.Ops, &cell.tag)

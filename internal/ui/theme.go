@@ -20,7 +20,7 @@ import (
 	"golang.org/x/image/font/gofont/goregular"
 )
 
-// Colors of ro-ui.css (:root).
+// Colors of ro-ui.css (:root); dark.go has their dark versions.
 var (
 	ColText       = rgb(0x2b2b2b)
 	ColTitleA     = rgb(0xf4f8ff)
@@ -33,10 +33,6 @@ var (
 	ColBtnB       = rgb(0xd3d9e4)
 	ColSelect     = rgb(0xb9d2ff)
 	ColHover      = rgb(0xe8f0ff)
-	ColHP         = rgb(0x3fbf3f)
-	ColSP         = rgb(0x3f6fdf)
-	ColEXP        = rgb(0xe0b030)
-	ColAP         = rgb(0xe0702f)
 	ColSystem     = rgb(0xffe36b)
 	ColUp         = rgb(0x1d7a2a)
 	ColDown       = rgb(0xb42318)
@@ -47,18 +43,16 @@ var (
 	ColLabel      = rgb(0x4a4a6a)
 	ColListBorder = rgb(0xb7bcc6)
 	ColSep        = rgb(0xc4c8d0)
-	ColWhite      = rgb(0xffffff)
+	ColPanel      = rgb(0xffffff)   // lists, cards and inputs
+	ColBtnTop     = rgb(0xffffff)   // top of the small +, - and × buttons
+	ColOnFill     = plain(0xffffff) // text over a colored fill or the sky
 	ColTipBG      = rgb(0xfffff4)
 	ColShadow     = color.NRGBA{A: 0x50}
-	ColChatBG     = color.NRGBA{A: 0x8c}
+	ColChatBG     = color.NRGBA{A: 0xe6}
 	ColSkyA       = rgb(0x8fb7d9)
 	ColSkyB       = rgb(0xa7c98a)
 	ColSkyC       = rgb(0x6f9a55)
 )
-
-func rgb(c uint32) color.NRGBA {
-	return color.NRGBA{R: uint8(c >> 16), G: uint8(c >> 8), B: uint8(c), A: 0xff}
-}
 
 // Sizes (CSS px = Gio dp).
 const (

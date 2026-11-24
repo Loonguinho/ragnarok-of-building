@@ -60,7 +60,7 @@ func (in *Input) Layout(gtx C, th *Theme, width unit.Dp) (d D, changed, submitte
 	}
 	in.focused = focused
 	r := image.Rectangle{Max: image.Pt(w, h)}
-	Fill(gtx, r, ColWhite)
+	Fill(gtx, r, ColPanel)
 	line := ColBorder
 	if focused {
 		line = rgb(0x7f9fd9)
@@ -196,18 +196,18 @@ func flexMap(n int, f func(i int) layout.FlexChild) []layout.FlexChild {
 
 // Bar is the HP/SP/EXP bar (.ro-bar): pct 0..100 with a centered caption.
 func Bar(gtx C, th *Theme, pct int, top, bottom color.NRGBA, caption string) D {
-	w, h := gtx.Constraints.Max.X, gtx.Dp(12)
+	w, h := gtx.Constraints.Max.X, gtx.Dp(15)
 	r := image.Rectangle{Max: image.Pt(w, h)}
-	FillRound(gtx, r, rgb(0x555555), 2, 2, 2, 2)
+	FillRound(gtx, r, plain(0x3d4350), 2, 2, 2, 2)
 	fw := w * min(max(pct, 0), 100) / 100
 	if fw > 0 {
 		VGradient(gtx, image.Rect(1, 1, fw-1, h-1), top, bottom, 1, 1, 1, 1)
 	}
-	Border(gtx, r, rgb(0x333333), 1, 2)
+	Border(gtx, r, plain(0x333333), 1, 2)
 	m := op.Record(gtx.Ops)
 	g := gtx
 	g.Constraints = layout.Constraints{Max: image.Pt(w, h)}
-	td := T(th, caption).Sz(TinyText).C(ColWhite).Layout(g)
+	td := B(th, caption).C(ColOnFill).Layout(g)
 	call := m.Stop()
 	st := op.Offset(image.Pt((w-td.Size.X)/2, (h-td.Size.Y)/2)).Push(gtx.Ops)
 	call.Add(gtx.Ops)
@@ -215,12 +215,12 @@ func Bar(gtx C, th *Theme, pct int, top, bottom color.NRGBA, caption string) D {
 	return D{Size: r.Max}
 }
 
-// Bar colors.
+// Bar colors: dark enough for the white captions.
 var (
-	BarHP  = [2]color.NRGBA{rgb(0x7fe07f), ColHP}
-	BarSP  = [2]color.NRGBA{rgb(0x7f9fff), ColSP}
-	BarEXP = [2]color.NRGBA{rgb(0xffe38a), ColEXP}
-	BarAP  = [2]color.NRGBA{rgb(0xf5b07a), ColAP}
+	BarHP  = [2]color.NRGBA{plain(0x2f8a3a), plain(0x20692a)}
+	BarSP  = [2]color.NRGBA{plain(0x4169c8), plain(0x2c4d9f)}
+	BarEXP = [2]color.NRGBA{plain(0x9a7212), plain(0x77560a)}
+	BarAP  = [2]color.NRGBA{plain(0xbb5a22), plain(0x934214)}
 )
 
 // Sep is a 1px separator line with margins (border-top: 1px solid #c4c8d0).

@@ -336,7 +336,7 @@ func (a *App) compareCol(gtx C, res *view.CompareView, i int) D {
 			},
 		))
 	}
-	bg := ColWhite
+	bg := ColPanel
 	if i == 0 {
 		bg = rgb(0xf6f8fc)
 	}
@@ -387,7 +387,7 @@ func (a *App) compareTable(gtx C, res *view.CompareView) D {
 				return compareGrid(gtx, n, layout.Middle, label, cell)
 			})
 			call := m.Stop()
-			bg := ColWhite
+			bg := ColPanel
 			if ri%2 == 1 {
 				bg = rgb(0xf3f5f9)
 			}

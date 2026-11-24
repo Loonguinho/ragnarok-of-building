@@ -285,7 +285,7 @@ func (a *App) damageBody(gtx C) D {
 
 	if d.Target == nil {
 		kids = append(kids, func(gtx C) D {
-			return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(10, 10, 10, 10)}.Layout(gtx, func(gtx C) D {
+			return Box{Bg: ColPanel, Line: ColListBorder, Pad: Inset(10, 10, 10, 10)}.Layout(gtx, func(gtx C) D {
 				gtx.Constraints.Min.X = gtx.Constraints.Max.X
 				return T(th, a.T("Busque um monstro acima para calcular o dano.")).Sz(12).Layout(gtx)
 			})
@@ -357,7 +357,7 @@ func (a *App) ratioSource(d view.DamageView) layout.Widget {
 func (a *App) mobList(gtx C) D {
 	th, s := a.Th, &a.damage
 	gtx.Constraints.Max.Y = gtx.Dp(200)
-	return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(2, 2, 2, 2)}.Layout(gtx, func(gtx C) D {
+	return Box{Bg: ColPanel, Line: ColListBorder, Pad: Inset(2, 2, 2, 2)}.Layout(gtx, func(gtx C) D {
 		gtx.Constraints.Min.X = gtx.Constraints.Max.X
 		if len(s.mobs) == 0 {
 			return Inset(6, 6, 6, 6).Layout(gtx, T(th, a.T("Nenhum monstro encontrado.")).C(rgb(0x777777)).W())
@@ -405,7 +405,7 @@ func (a *App) targetCard(d view.DamageView) layout.Widget {
 	th := a.Th
 	return func(gtx C) D {
 		m := d.Target
-		return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(4, 6, 4, 6)}.Layout(gtx, func(gtx C) D {
+		return Box{Bg: ColPanel, Line: ColListBorder, Pad: Inset(4, 6, 4, 6)}.Layout(gtx, func(gtx C) D {
 			gtx.Constraints.Min.X = gtx.Constraints.Max.X
 			head := Row(6,
 				func(gtx C) D { return a.Icons.Icon(gtx, view.MonsterIcon(m.ID), 40) },

@@ -137,7 +137,12 @@ func (a *App) equipBody(gtx C) D {
 						return sprite(gtx)
 					}
 					gtx.Constraints.Max.X = gtx.Dp(midW)
-					return Col(6, sprite, a.petBlock(v.Buffs.Pet, midW))(gtx)
+					if a.sets.open.Clicked(gtx) {
+						a.showSets()
+					}
+					return Col(6, sprite, a.petBlock(v.Buffs.Pet, midW), func(gtx C) D {
+						return Button{Label: a.T("Comparar conjuntos")}.Layout(gtx, th, &a.sets.open)
+					})(gtx)
 				}),
 				layout.Rigid(Gap(6, 0)),
 				layout.Flexed(1, col("R")),
@@ -162,6 +167,9 @@ func itemTitle(it *view.ItemView, refine, grade int) string {
 	return b.String()
 }
 
+// equipSlotH is the height of a slot: the item art with a margin.
+const equipSlotH = unit.Dp(42)
+
 func (a *App) equipSlot(gtx C, sv view.SlotView) D {
 	th, s := a.Th, &a.equip
 	cl := s.slots[sv.Key]
@@ -180,14 +188,14 @@ func (a *App) equipSlot(gtx C, sv view.SlotView) D {
 	if cl.Clicked(gtx) {
 		a.openSlot(sv.Key)
 		// The editor drops down under the slot.
-		a.wSlot.Pos = at.Origin.Add(image.Pt(0, gtx.Dp(30)))
+		a.wSlot.Pos = at.Origin.Add(image.Pt(0, gtx.Dp(equipSlotH)))
 		a.wSlot.Placed = true
 	}
-	defer func() { at.Track(gtx, a.Desk, image.Pt(gtx.Constraints.Max.X, gtx.Dp(30))) }()
+	defer func() { at.Track(gtx, a.Desk, image.Pt(gtx.Constraints.Max.X, gtx.Dp(equipSlotH))) }()
 	d := cl.Layout(gtx, func(gtx C) D {
-		w, h := gtx.Constraints.Max.X, gtx.Dp(30)
+		w, h := gtx.Constraints.Max.X, gtx.Dp(equipSlotH)
 		r := image.Rectangle{Max: image.Pt(w, h)}
-		bg := ColWhite
+		bg := ColPanel
 		if cl.Hovered() || a.slot.key == sv.Key && a.wSlot.Open {
 			bg = rgb(0xf3f7ff)
 		}
@@ -199,11 +207,11 @@ func (a *App) equipSlot(gtx C, sv view.SlotView) D {
 		layout.Flex{Alignment: layout.Middle}.Layout(g,
 			layout.Rigid(func(gtx C) D {
 				if sv.Item == nil {
-					sz := image.Pt(gtx.Dp(24), gtx.Dp(24))
-					Fill(gtx, image.Rectangle{Max: sz}, rgb(0xeef0f4))
+					sz := image.Pt(gtx.Dp(36), gtx.Dp(36))
+					FillRound(gtx, image.Rectangle{Max: sz}, rgb(0xeef0f4), 3, 3, 3, 3)
 					return D{Size: sz}
 				}
-				return a.Icons.Icon(gtx, view.ItemIcon(sv.Item.ID), 24)
+				return a.Icons.Art(gtx, sv.Item.ID, 36)
 			}),
 			layout.Rigid(Gap(5, 0)),
 			layout.Flexed(1, func(gtx C) D {
@@ -395,8 +403,8 @@ func (a *App) slotEditor(sv view.SlotView, label string) layout.Widget {
 		head := func(gtx C) D {
 			return RowTop(8,
 				func(gtx C) D {
-					return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(4, 4, 4, 4)}.Layout(gtx, func(gtx C) D {
-						return a.Icons.Icon(gtx, view.ItemIcon(sv.Item.ID), 40)
+					return Box{Bg: ColPanel, Line: ColListBorder, Pad: Inset(4, 4, 4, 4)}.Layout(gtx, func(gtx C) D {
+						return a.Icons.Art(gtx, sv.Item.ID, 56)
 					})
 				},
 				func(gtx C) D {
@@ -439,7 +447,7 @@ func (a *App) slotEditor(sv view.SlotView, label string) layout.Widget {
 		if len(sv.Item.Desc) > 0 {
 			kids = append(kids, func(gtx C) D {
 				return s.desc.Layout(gtx, th, a.T("Descrição"), false, func(gtx C) D {
-					return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(5, 6, 5, 6)}.Layout(gtx, func(gtx C) D {
+					return Box{Bg: ColPanel, Line: ColListBorder, Pad: Inset(5, 6, 5, 6)}.Layout(gtx, func(gtx C) D {
 						gtx.Constraints.Min.X = gtx.Constraints.Max.X
 						return RichText(th, sv.Item.Desc, rgb(0x000000))(gtx)
 					})
@@ -448,7 +456,7 @@ func (a *App) slotEditor(sv view.SlotView, label string) layout.Widget {
 		}
 		if len(sv.Cards) > 0 {
 			kids = append(kids, func(gtx C) D {
-				return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(2, 4, 2, 4)}.Layout(gtx, func(gtx C) D {
+				return Box{Bg: ColPanel, Line: ColListBorder, Pad: Inset(2, 4, 2, 4)}.Layout(gtx, func(gtx C) D {
 					gtx.Constraints.Min.X = gtx.Constraints.Max.X
 					var rows []layout.Widget
 					for i, c := range sv.Cards {
@@ -474,11 +482,11 @@ func (a *App) cardRow(gtx C, sv view.SlotView, i int, c *view.ItemView) D {
 	th, s := a.Th, &a.slot
 	icon := func(gtx C) D {
 		if c == nil {
-			sz := image.Pt(gtx.Dp(24), gtx.Dp(24))
-			Fill(gtx, image.Rectangle{Max: sz}, rgb(0xeef0f4))
+			sz := image.Pt(gtx.Dp(32), gtx.Dp(32))
+			FillRound(gtx, image.Rectangle{Max: sz}, rgb(0xeef0f4), 3, 3, 3, 3)
 			return D{Size: sz}
 		}
-		return a.Icons.Icon(gtx, view.ItemIcon(c.ID), 24)
+		return a.Icons.Art(gtx, c.ID, 32)
 	}
 	name := func(gtx C) D {
 		if c == nil {
@@ -672,7 +680,7 @@ func (a *App) pickList(gtx C) D {
 	}
 	h := gtx.Dp(220)
 	gtx.Constraints.Min.Y, gtx.Constraints.Max.Y = h, h
-	return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(2, 2, 2, 2)}.Layout(gtx, func(gtx C) D {
+	return Box{Bg: ColPanel, Line: ColListBorder, Pad: Inset(2, 2, 2, 2)}.Layout(gtx, func(gtx C) D {
 		gtx.Constraints.Min = gtx.Constraints.Max
 		if len(results) == 0 {
 			msg := a.T("Nenhum item disponível.")
@@ -722,7 +730,12 @@ func (a *App) pickList(gtx C) D {
 								T(th, a.T("com os talentos")+" "+a.traitsText(tr)).Sz(SmallText).C(ColLink).Lines(2).Wrapping().W())
 						}
 						return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-							layout.Rigid(func(gtx C) D { return a.Icons.Icon(gtx, view.ItemIcon(it.ID), 24) }),
+							layout.Rigid(func(gtx C) D {
+								if s.card >= 0 { // a card or an enchant
+									return a.Icons.Art(gtx, it.ID, 32)
+								}
+								return a.Icons.Icon(gtx, view.ItemIcon(it.ID), 24)
+							}),
 							layout.Rigid(Gap(6, 0)),
 							layout.Flexed(1, nameW),
 							layout.Rigid(func(gtx C) D {
@@ -945,7 +958,7 @@ func (a *App) itemTipCap(gtx C, id int, sw *view.SwapView, caption string) D {
 					name += fmt.Sprintf(" [%d]", it.Slots)
 				}
 				return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-					layout.Rigid(func(gtx C) D { return a.Icons.Icon(gtx, view.ItemIcon(id), 24) }),
+					layout.Rigid(func(gtx C) D { return a.Icons.Art(gtx, id, 48) }),
 					layout.Rigid(Gap(6, 0)),
 					layout.Flexed(1, B(th, name).Wrapping().W()),
 					layout.Rigid(T(th, fmt.Sprintf("#%d", id)).Sz(SmallText).C(rgb(0x666677)).W()),
@@ -970,7 +983,7 @@ func (a *App) itemTipCap(gtx C, id int, sw *view.SwapView, caption string) D {
 	)(gtx)
 	call := m.Stop()
 	r := image.Rectangle{Max: d.Size}
-	FillRound(gtx, r, ColWhite, 3, 3, 3, 3)
+	FillRound(gtx, r, ColPanel, 3, 3, 3, 3)
 	call.Add(gtx.Ops)
 	Border(gtx, r, rgb(0x8a94a8), 1, 3)
 	return d

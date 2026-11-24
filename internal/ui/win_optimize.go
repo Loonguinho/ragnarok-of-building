@@ -263,7 +263,7 @@ func (a *App) optGroupRows(g view.OptGroup, gk string) layout.Widget {
 					d := hv.Layout(gtx, func(gtx C) D {
 						gtx.Constraints.Min.X = gtx.Constraints.Max.X
 						return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-							layout.Rigid(func(gtx C) D { return a.Icons.Icon(gtx, view.ItemIcon(o.Item.ID), 20) }),
+							layout.Rigid(func(gtx C) D { return a.Icons.Art(gtx, o.Item.ID, 28) }),
 							layout.Rigid(Gap(5, 0)),
 							layout.Flexed(1, func(gtx C) D {
 								ws := []layout.Widget{T(th, optName(o)).W()}
@@ -476,13 +476,13 @@ func (a *App) itemsBody(gtx C) D {
 		kids = append(kids, func(gtx C) D {
 			return RowTop(8,
 				func(gtx C) D {
-					return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(4, 4, 4, 4)}.Layout(gtx, func(gtx C) D {
+					return Box{Bg: ColPanel, Line: ColListBorder, Pad: Inset(4, 4, 4, 4)}.Layout(gtx, func(gtx C) D {
 						return a.Icons.Icon(gtx, view.ItemIcon(it.ID), 48)
 					})
 				},
 				func(gtx C) D {
 					gtx.Constraints.Max.X -= gtx.Dp(70)
-					return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(5, 6, 5, 6)}.Layout(gtx, func(gtx C) D {
+					return Box{Bg: ColPanel, Line: ColListBorder, Pad: Inset(5, 6, 5, 6)}.Layout(gtx, func(gtx C) D {
 						gtx.Constraints.Min.X = gtx.Constraints.Max.X
 						name := it.Name
 						if it.Slots > 0 {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"image/color"
 	"io"
 	"os"
 	"path/filepath"
@@ -93,7 +94,7 @@ func (a *App) layoutModal(gtx C) {
 		}
 	}
 	// Dim the desk; clicks there do nothing.
-	Fill(gtx, image.Rectangle{Max: size}, rgbA(0x000000, 0x40))
+	Fill(gtx, image.Rectangle{Max: size}, color.NRGBA{A: 0x40})
 	area := clip.Rect{Max: size}.Push(gtx.Ops)
 	event.Op(gtx.Ops, &m.catch)
 	area.Pop()
@@ -292,7 +293,7 @@ func (a *App) savedBody(gtx C) D {
 	} else {
 		kids = append(kids, func(gtx C) D {
 			gtx.Constraints.Max.Y = gtx.Dp(260)
-			return Box{Bg: ColWhite, Line: ColListBorder, Pad: Inset(2, 2, 2, 2)}.Layout(gtx, func(gtx C) D {
+			return Box{Bg: ColPanel, Line: ColListBorder, Pad: Inset(2, 2, 2, 2)}.Layout(gtx, func(gtx C) D {
 				gtx.Constraints.Min.X = gtx.Constraints.Max.X
 				s.list.Axis = layout.Vertical
 				return s.list.Layout(gtx, len(list), func(gtx C, i int) D {
@@ -643,7 +644,7 @@ func (a *App) helpBody(gtx C) D {
 		row("Alt+V", "Informações Básicas"), row("Alt+A", "Atributos"), row("Alt+Q", "Equipamentos"),
 		row("Alt+S", "Habilidades"), row("Alt+B", "Bônus do Equipamento"), row("Alt+D", "Alvo / Dano"),
 		row("Alt+U", "Buffs"), row("Alt+O", "Otimizador"), row("Alt+C", "Builds salvos"),
-		row("Alt+L", "Compartilhar Build"), row("Alt+E", "Banco de Itens"), row("Alt+H", "Esta lista de comandos"), row("Alt+W", "Janelas flutuantes (liga/desliga)"),
+		row("Alt+L", "Compartilhar Build"), row("Alt+E", "Banco de Itens"), row("Alt+H", "Esta lista de comandos"), row("Alt+K", "Comparar itens"), row("Alt+T", "Comparar talentos"), row("Alt+G", "Comparar conjuntos"), row("Alt+W", "Janelas flutuantes (liga/desliga)"),
 		T(th, a.T("A mesma tecla de novo fecha a janela (ou a traz para a frente).")).Sz(SmallText).C(ColMuted).Wrapping().W(),
 		sec("Build"),
 		row("Ctrl+S", "Salvar o build"), row("Alt+J", "Trocar a classe (lista de classes)"),

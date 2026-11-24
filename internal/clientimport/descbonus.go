@@ -57,7 +57,7 @@ func DescBonuses(c *gamedata.Catalog) (scripts, combos int) {
 		}
 		it.DescSkipped = skipped
 		for _, cb := range cbs {
-			if k := key(cb.Items); !have[k] {
+			if k := key(cb.Items); !have[k] && !setWithHost(c, cb) {
 				have[k] = true
 				c.Combos = append(c.Combos, gamedata.Combo{Items: cb.Items, Script: cb.Script})
 				combos++
@@ -65,6 +65,49 @@ func DescBonuses(c *gamedata.Catalog) (scripts, combos int) {
 		}
 	}
 	return scripts, combos
+}
+
+// setWithHost reports a set rAthena has too, with the item its enchant goes
+// on counted as one more piece (Dom Celestial + Báculo Celestial, where
+// rAthena also asks for the crown): both would count twice.
+func setWithHost(c *gamedata.Catalog, set DescCombo) bool {
+	parts := func(s string) []string {
+		var out []string
+		for _, p := range strings.Split(s, ";") {
+			if p = strings.TrimSpace(p); p != "" {
+				out = append(out, p)
+			}
+		}
+		slices.Sort(out)
+		return out
+	}
+	hosts := func(item int) bool { // takes an enchant of the set
+		for _, l := range c.Enchants[item] {
+			for _, e := range l {
+				if slices.Contains(set.Items, e) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	want := parts(set.Script)
+	for _, cb := range c.Combos {
+		if len(cb.Items) <= len(set.Items) || !slices.Equal(parts(cb.Script), want) {
+			continue
+		}
+		all := true
+		for _, id := range set.Items {
+			all = all && slices.Contains(cb.Items, id)
+		}
+		for _, id := range cb.Items {
+			all = all && (slices.Contains(set.Items, id) || hosts(id))
+		}
+		if all {
+			return true
+		}
+	}
+	return false
 }
 
 var (

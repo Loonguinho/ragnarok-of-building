@@ -217,6 +217,9 @@ func BuildCatalog(clientDir, rathenaDir, out string, progress Progress) (*gameda
 	if n, err := clientimport.LatamItemScripts(filepath.Join(filepath.Dir(mobs), "item.json"), c); err != nil {
 		progress("Scripts de itens do latam-ro-calc não lidos: " + err.Error())
 	} else {
+		if err := clientimport.PreviewTexts(c, filepath.Join(filepath.Dir(mobs), "item.json")); err != nil {
+			progress("Descrições dos itens futuros não lidas: " + err.Error())
+		}
 		k := calc.DecideLatamKeys(c, clientimport.DescReader(c))
 		progress(fmt.Sprintf("Scripts LATAM: %d itens lidos, %d com bônus corrigidos pela descrição.", n, k))
 	}

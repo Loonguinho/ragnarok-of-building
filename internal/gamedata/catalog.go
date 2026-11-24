@@ -78,6 +78,8 @@ type Item struct {
 	MVPCard     bool     `json:"mvpCard,omitempty"`   // a card only MVPs drop
 	DescEquip   bool     `json:"descEquip,omitempty"` // type/slot/ATK/DEF read from the client description (LATAM-only item)
 	Script      string   `json:"script,omitempty"`
+	// Preview: not in the LATAM client yet.
+	Preview bool `json:"preview,omitempty"`
 	// For items without an rAthena script: bonuses read from the client
 	// description (clientimport.DescScript) and the lines it skipped.
 	DescScript  string `json:"dscript,omitempty"`
@@ -224,6 +226,9 @@ func (j *Job) CanEquip(it *Item) bool {
 		}
 	}
 	if j.EquipGroup == "" {
+		return true
+	}
+	if j.Code == "JT_SPIRIT_HANDLER" && slices.Contains(it.EquipJobs, "Spirit_Handler") {
 		return true
 	}
 	if len(it.EquipJobs) > 0 && !slices.Contains(it.EquipJobs, "All") && !slices.Contains(it.EquipJobs, j.EquipGroup) {

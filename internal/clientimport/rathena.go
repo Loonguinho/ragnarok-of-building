@@ -11,6 +11,7 @@ import (
 // MergeRathena adds rAthena mechanics (job tables, status points, equipment
 // stats) to a catalog built from the client. Client text always wins.
 func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
+	addPreviewItems(c, db)
 	c.StatPoints = db.StatPoints
 	c.TraitPoints = db.TraitPoints
 	c.Refine = db.Refine

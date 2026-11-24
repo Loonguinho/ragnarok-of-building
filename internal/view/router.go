@@ -44,6 +44,7 @@ func New(opt Options) (*Views, error) {
 	}
 	s := &Server{opt: opt}
 	if opt.Catalog != nil {
+		completeSetTexts(opt.Catalog)
 		s.items = gamedata.NewItemIndex(opt.Catalog)
 	}
 	return &Views{s: s}, nil

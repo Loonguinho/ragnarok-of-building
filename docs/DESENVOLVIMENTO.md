@@ -30,6 +30,8 @@ go test ./...
 
 Re-run `go run ./cmd/import` after each game patch.
 
+**Linux (and macOS).** The same window runs there. The committed `data/gen/catalog.json.gz` is used, so no game client is needed: `go run ./cmd/app` from the repository. Gio needs cgo and the desktop libraries (Debian/Ubuntu: `gcc pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libvulkan-dev`). File and folder pickers use `zenity` or `kdialog` (osascript on macOS). Under `go run` the program works in the current folder instead of next to the temporary executable.
+
 **Languages.** The settings menu (the gear in the Menu window) has a PT / EN / ES picker, kept in `data/ui.json`. Game data (items, skills, classes, monsters) comes in each language from the client; the interface texts are in `internal/view/i18n_dict.go`, keyed by the Portuguese text.
 
 **Code.** `internal/calc` is the formula engine; `internal/view` computes what each window shows (build, equipment, buffs, damage, skill tree, optimizer, replay recap) as plain structs; `internal/edit` holds the editing rules (linked headgear slots, exclusive buffs, skill tree points); `internal/ui` draws the windows with Gio; `cmd/app` is the program (startup, import, window).

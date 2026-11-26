@@ -1,4 +1,4 @@
-.PHONY: run test vet build web web-serve
+.PHONY: run test vet build linux appimage web web-serve
 
 # The web build's version: busts the browser cache of app.wasm and the
 # catalog after each release.
@@ -17,6 +17,14 @@ vet:
 # The Windows program as released (icon, version, zip in dist/).
 build:
 	go run ./tools/buildexe
+
+# Linux: build next to the repository's data/ and open the window.
+linux:
+	go build -o RagnarokOfBuilding ./cmd/app && ./RagnarokOfBuilding
+
+# Linux: the AppImage as released (dist/RagnarokOfBuilding-<version>-x86_64.AppImage).
+appimage:
+	tools/appimage.sh
 
 # The browser version: a static site in dist/web. app.wasm also goes out
 # gzipped (the page unzips it), so the download is small on any host.

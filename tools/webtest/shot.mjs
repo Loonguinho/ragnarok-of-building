@@ -8,6 +8,8 @@
 //
 // Steps (JSON list, run in order; each key is one action):
 //   {"preload":"js"}        run js before the page's own scripts (put first)
+//   {"throttle":{"down":bytesPerSec,"latency":ms}}  slow the network (applied before loading)
+//   {"nocache":true}        disable the browser cache (a first visit)
 //   {"wait":s}              sleep s seconds (the app takes ~15 s to load headless)
 //   {"shot":"name"}         screenshot to <out-prefix>-name.png
 //   {"eval":"js"}           evaluate in the page and print the result
@@ -41,6 +43,10 @@ await send("Runtime.enable"); await send("Page.enable");
 await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
 for (const s of steps) if (s.preload) await send("Page.addScriptToEvaluateOnNewDocument", { source: s.preload });
 await send("Network.enable");
+for (const s of steps) {
+  if (s.throttle) await send("Network.emulateNetworkConditions", { offline: false, latency: s.throttle.latency || 0, downloadThroughput: s.throttle.down || -1, uploadThroughput: s.throttle.up || -1 });
+  if (s.nocache) await send("Network.setCacheDisabled", { cacheDisabled: true });
+}
 await send("Page.navigate", { url });
 const sleep = s => new Promise(r => setTimeout(r, s * 1000));
 for (const s of steps) {

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
 	"sync"
@@ -256,11 +257,17 @@ func (a *App) later(f func()) {
 	}
 }
 
+// ErrNoFile is what OpenFile returns when the player closes the picker
+// without choosing a file.
+var ErrNoFile = errors.New("nenhum arquivo escolhido")
+
 // openFile shows the file dialog and then calls then with the chosen file,
 // on the window's goroutine. The dialog must not be waited for inside a
 // frame: it is modal to the window and talks to it while open, so a frame
 // holding the window hangs the program (Windows ends it as not
 // responding).
+//
+// A failed read is told in the chat; a cancelled picker (ErrNoFile) is not.
 func (a *App) openFile(title, filter string, then func(data []byte)) {
 	if a.OpenFile == nil || !a.dialogOpen.CompareAndSwap(false, true) {
 		return
@@ -268,8 +275,11 @@ func (a *App) openFile(title, filter string, then func(data []byte)) {
 	go func() {
 		defer a.dialogOpen.Store(false)
 		_, data, err := a.OpenFile(title, filter)
-		if err == nil {
+		switch {
+		case err == nil:
 			a.later(func() { then(data) })
+		case !errors.Is(err, ErrNoFile):
+			a.later(func() { a.Say(err.Error(), true) })
 		}
 	}()
 }

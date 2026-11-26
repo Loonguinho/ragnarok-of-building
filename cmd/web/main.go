@@ -55,6 +55,7 @@ func main() {
 		a.OpenFile = openFile
 		a.SaveFile = saveFile
 		// Icons come in step 4 (Divine Pride needs a proxy in the browser).
+		saveOnHide(a)
 		ready <- a
 		w.Invalidate()
 	}()
@@ -146,6 +147,27 @@ func (s *status) fail(err error) {
 	s.err = err.Error()
 	s.mu.Unlock()
 	s.invalidate()
+}
+
+// saveOnHide writes a pending state when the tab is hidden or closed: the
+// state is written 400 ms after the last change, by a frame, and a hidden
+// tab gets no frames (a closed one never will). Gio sends no DestroyEvent
+// for a closing tab. Calling SaveNow from a JS event is safe here: the
+// page has one thread and JS events run only while every goroutine waits,
+// so no frame is halfway through.
+func saveOnHide(a *ui.App) {
+	doc := js.Global().Get("document")
+	save := js.FuncOf(func(js.Value, []js.Value) any {
+		if doc.Get("visibilityState").String() == "hidden" {
+			a.SaveNow()
+		}
+		return nil
+	})
+	doc.Call("addEventListener", "visibilitychange", save) // for the page's lifetime
+	js.Global().Call("addEventListener", "pagehide", js.FuncOf(func(js.Value, []js.Value) any {
+		a.SaveNow()
+		return nil
+	}))
 }
 
 // hideLoading removes index.html's loading message once the window draws.

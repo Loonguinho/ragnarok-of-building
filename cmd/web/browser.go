@@ -8,8 +8,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"ragnarok-of-building/internal/ui"
 	"strings"
+	"sync/atomic"
 	"syscall/js"
+	"time"
 )
 
 // maxOpenFile caps what the file picker reads (the replay limit is 16 MB;
@@ -52,6 +55,11 @@ func fetch(url string, progress func(n int64)) ([]byte, error) {
 // openFile shows the browser's file picker and reads the chosen file. The
 // picker opens only shortly after a click, which is when the window asks
 // for it.
+//
+// It must always return, or the window keeps thinking a picker is open:
+// a closed picker sends "cancel", and where the browser does not (Safari
+// before 16.4), the page getting focus back with no file chosen a moment
+// later counts as a cancel too.
 func openFile(title, filter string) (string, []byte, error) {
 	type result struct {
 		name string
@@ -73,14 +81,20 @@ func openFile(title, filter string) (string, []byte, error) {
 	input.Get("style").Set("display", "none")
 	doc.Get("body").Call("appendChild", input)
 
-	var onChange, onCancel, onRead, onFail js.Func
+	var onChange, onCancel, onRead, onFail, onFocus js.Func
 	release := func() {
+		input.Call("removeEventListener", "change", onChange)
+		input.Call("removeEventListener", "cancel", onCancel)
+		js.Global().Call("removeEventListener", "focus", onFocus)
 		input.Call("remove")
 		onChange.Release()
 		onCancel.Release()
 		onRead.Release()
 		onFail.Release()
+		onFocus.Release()
 	}
+	var started atomic.Bool // a file was chosen and is being read
+	focused := make(chan struct{}, 1)
 	var name string
 	onRead = js.FuncOf(func(_ js.Value, args []js.Value) any {
 		arr := js.Global().Get("Uint8Array").New(args[0])
@@ -96,24 +110,49 @@ func openFile(title, filter string) (string, []byte, error) {
 	onChange = js.FuncOf(func(js.Value, []js.Value) any {
 		files := input.Get("files")
 		if files.Get("length").Int() == 0 {
-			send(result{err: errors.New("nenhum arquivo escolhido")})
+			send(result{err: ui.ErrNoFile})
 			return nil
 		}
+		started.Store(true)
 		f := files.Index(0)
 		name = f.Get("name").String()
 		f.Call("slice", 0, maxOpenFile).Call("arrayBuffer").Call("then", onRead, onFail)
 		return nil
 	})
 	onCancel = js.FuncOf(func(js.Value, []js.Value) any {
-		send(result{err: errors.New("nenhum arquivo escolhido")})
+		send(result{err: ui.ErrNoFile})
+		return nil
+	})
+	onFocus = js.FuncOf(func(js.Value, []js.Value) any {
+		select {
+		case focused <- struct{}{}:
+		default:
+		}
 		return nil
 	})
 	input.Call("addEventListener", "change", onChange)
 	input.Call("addEventListener", "cancel", onCancel)
+	js.Global().Call("addEventListener", "focus", onFocus)
 	input.Call("click")
-	r := <-done
-	release()
-	return r.name, r.data, r.err
+	for {
+		select {
+		case r := <-done:
+			release()
+			return r.name, r.data, r.err
+		case <-focused:
+			// "change" may come just after the focus: give it a moment.
+			select {
+			case r := <-done:
+				release()
+				return r.name, r.data, r.err
+			case <-time.After(time.Second):
+			}
+			if !started.Load() {
+				release()
+				return "", nil, ui.ErrNoFile
+			}
+		}
+	}
 }
 
 // acceptOf turns "Replays (*.rrf)|*.rrf" into ".rrf" for <input accept>.

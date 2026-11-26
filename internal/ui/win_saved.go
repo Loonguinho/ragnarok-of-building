@@ -183,7 +183,7 @@ func (a *App) saveBuild(ask bool) {
 			list = append(list, e)
 		}
 		if err := view.WriteSaved(a.Store, list); err != nil {
-			a.Say(a.T("Não consegui gravar os builds no arquivo builds.json.")+" "+err.Error(), true)
+			a.Say(a.T("Não consegui gravar os builds.")+" "+err.Error(), true)
 			return
 		}
 		a.savedID = e.ID
@@ -383,6 +383,10 @@ func (a *App) importSaved() {
 
 // importSavedFile merges a backup's contents.
 func (a *App) importSavedFile(raw []byte) {
+	if len(raw) > maxReplay { // the hosts read at most one byte more
+		a.Say(a.T("Arquivo grande demais (máx. 16 MB)."), true)
+		return
+	}
 	var wrapped struct {
 		Builds []view.SavedBuild `json:"builds"`
 	}

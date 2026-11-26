@@ -63,6 +63,16 @@ make run          # the desktop program, unchanged
 - Called once per candidate in the six worker pools: `optimize.go`, `swap.go`, `best.go`, `bestcard.go`, `traits.go` (`evalAll`), `optextra.go` (`runPar`). The UI already runs all of these in goroutines, never inside a frame.
 - Measured in headless Chrome: optimizer (Dano, default options) finishes in < 5 s, page paints ~40 fps meanwhile, longest gap 260 ms; with "Considerar mudar os talentos" ~47 fps, longest gap 359 ms. Results match the desktop's shape (full list, traits suggestion).
 
+### Review fixes (code review of the PR `edudebortoli/ragnarok-of-building` main ← `Loonguinho:web`)
+- **Open errors were silent**: `App.openFile` now shows a failed read in the chat; a cancelled picker returns `ui.ErrNoFile` and stays quiet (desktop and web hosts return it).
+- **Picker could stick forever** (no `cancel` event in Safari < 16.4): the web `openFile` also treats "page got focus back, no file chosen 1 s later" as a cancel; listeners are removed before release. Verified: after a `cancel` event, and after a `focus` event, the hidden input is gone and the next click opens a new picker.
+- **Last change lost on tab close**: `cmd/web` `saveOnHide` calls `SaveNow` on `visibilitychange` (hidden) and `pagehide`. Verified: edit a stat, navigate away immediately, come back — the edit is there.
+- **yield**: all searches waiting at once share one frame (`nextFrame` channel closed by the frame), so two concurrent searches can't steal each other's frame and all of them stop so the page can draw. Re-measured: ~47 fps, longest gap 239 ms.
+- Save error no longer names `builds.json` ("Não consegui gravar os builds."; EN/ES updated); a builds backup over 16 MB gets the size message instead of a JSON error.
+- Replay import verified in the browser through the real picker (CDP `Page.setInterceptFileChooserDialog` + `DOM.setFileInputFiles` with `internal/replay/testdata/synthetic.rrf`).
+
+**Desktop is discontinued** (decision 2026-11-26): the `desktop` branch is kept as a snapshot; test and verify only the web build from now on.
+
 ## Verified (2026-11-26, headless Chrome on Linux, driven over the DevTools protocol)
 - `go vet` + `go test ./...` pass; vet passes for Linux, `GOOS=windows`, and `GOOS=js GOARCH=wasm`.
 - Desktop program still starts (Linux, `go run ./cmd/app`).
@@ -73,7 +83,7 @@ make run          # the desktop program, unchanged
 
 ## Not yet tested (do these by hand in a real browser)
 1. **Alt shortcuts in a real Chrome/Firefox window**: synthetic keys from DevTools never trigger browser shortcuts, so check that Alt+D doesn't jump to the address bar and Alt+E/Alt+F don't open menus (Windows/Linux).
-2. **Import replay** (button "Importar replay"): the picker shows only `.rrf`; the build opens; Cancel does nothing and a second click still works. Test file: `internal/replay/testdata/synthetic.rrf`.
+2. **Import replay** in a real browser (headless already passed): the picker shows only `.rrf`; Cancel does nothing and a second click still works — try Safari too, it is the browser the focus fallback is for.
 3. **A file over 16 MB** → "Arquivo grande demais (máx. 16 MB)."
 4. **Builds**: Salvar, rename, delete; reload and they're still there.
 5. **Export builds** → a `builds-ragnarok-of-building-<date>.json` download; **Import** it back.
@@ -81,7 +91,6 @@ make run          # the desktop program, unchanged
 7. **Firefox** as well as Chrome (WebGL, file picker `cancel` event).
 8. **Private window**: the app should still open (storage errors are ignored, nothing saved).
 9. **Optimizer** on a slow machine/phone: the page should keep repainting (hover, scroll) while it runs; note the 30 s timeout may give partial results more often than on the desktop (one core instead of all).
-10. Desktop regression list from step 1: state, saved builds, export/import, replay import, icons, startup from the release zip.
 
 ## Known limits / decisions
 - **Size**: `app.wasm` is 27 MB (6.8 MB gzipped) + 4.3 MB catalog ≈ 11 MB first visit if the host gzips. **Check GitHub Pages actually gzips `.wasm`**; if not, fall back to Cloudflare Pages or ship a pre-gzipped file decompressed with `DecompressionStream`.
@@ -89,7 +98,6 @@ make run          # the desktop program, unchanged
 - **Searches use one core** in the browser (`runtime.NumCPU()` = 1), so they are slower than the desktop; the optimizer's 30 s timeout may cut more searches short.
 - **Icons off** on web until the Worker exists (`a.Icons` is nil; the UI handles nil).
 - **Fonts**: no Tahoma in the browser; Go fonts are used (as on Linux).
-- **State saves after 400 ms of no changes**; closing the tab within that window loses the last change. Possible fix: save on `visibilitychange`, but `SaveNow` must run on the UI goroutine (use `App.later` or a frame).
 - **localStorage** is ~5 MB per site; builds are small, but a write error is shown if full.
 - Memory: catalog ~64 MB live, ~115 MB peak while loading.
 

@@ -533,7 +533,7 @@ var dict = map[string][2]string{
 	"Baixar um arquivo com todos os builds salvos":          {"Download a file with every saved build", "Descargar un archivo con todos los builds guardados"},
 	"Juntar os builds de um arquivo exportado":              {"Merge the builds of an exported file", "Unir los builds de un archivo exportado"},
 	`Build "%s" salvo.`:                                     {`Build "%s" saved.`, `Build "%s" guardado.`},
-	"Não consegui gravar os builds no arquivo builds.json.": {"Could not write the builds to builds.json.", "No pude escribir los builds en builds.json."},
+	"Não consegui gravar os builds.": {"Could not save the builds.", "No pude guardar los builds."},
 	"Este arquivo não é um backup de builds.":               {"This file is not a builds backup.", "Este archivo no es una copia de builds."},
 	"%s build(s) importado(s).":                             {"%s build(s) imported.", "%s build(s) importado(s)."},
 	"Salvos no arquivo builds.json, na pasta do programa.":  {"Saved in builds.json, in the program's folder.", "Guardados en builds.json, en la carpeta del programa."},

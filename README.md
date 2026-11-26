@@ -6,12 +6,12 @@
 
 **Monte sua build de Ragnarok Online LATAM, veja o dano e descubra o que melhorar.**
 
-[![Versão](https://img.shields.io/github/v/release/ragnarok-of-building/ragnarok-of-building?include_prereleases&label=vers%C3%A3o&color=3f6fb5)](../../releases)
-[![Downloads](https://img.shields.io/github/downloads/ragnarok-of-building/ragnarok-of-building/total?label=downloads&color=3f6fb5)](../../releases)
-[![Testes](https://img.shields.io/github/actions/workflow/status/ragnarok-of-building/ragnarok-of-building/ci.yml?branch=main&label=testes)](../../actions)
+[![Versão](https://img.shields.io/github/v/release/ragnarok-of-building/rob?include_prereleases&label=vers%C3%A3o&color=3f6fb5)](../../releases)
+[![Downloads](https://img.shields.io/github/downloads/ragnarok-of-building/rob/total?label=downloads&color=3f6fb5)](../../releases)
+[![Testes](https://img.shields.io/github/actions/workflow/status/ragnarok-of-building/rob/ci.yml?branch=main&label=testes)](../../actions)
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-lightgrey)](LICENSE)
 
-### [▶️ Abrir no navegador](https://ragnarok-of-building.github.io/ragnarok-of-building/) · [⬇️ Baixar para Windows](../../releases)
+### [▶️ Abrir no navegador](https://ragnarok-of-building.github.io/rob/) · [⬇️ Baixar para Windows](../../releases)
 
 Português · English · Español
 
@@ -43,7 +43,7 @@ Português · English · Español
 
 ## Como usar
 
-**No navegador:** abra [ragnarok-of-building.github.io/ragnarok-of-building/](https://ragnarok-of-building.github.io/ragnarok-of-building/). Não precisa instalar nada; os builds ficam guardados neste navegador. Para mandar um build a alguém, use **Compartilhar → Link**.
+**No navegador:** abra [ragnarok-of-building.github.io/rob/](https://ragnarok-of-building.github.io/rob/). Não precisa instalar nada; os builds ficam guardados neste navegador. Para mandar um build a alguém, use **Compartilhar → Link**.
 
 **No Windows:**
 

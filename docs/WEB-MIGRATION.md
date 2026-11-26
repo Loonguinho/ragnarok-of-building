@@ -1,34 +1,45 @@
 # Web migration: progress and handoff
 
-Status log for moving Ragnarok of Building to the browser. Read this first when picking the work up (person or Claude session). Branch: **`web`**. Last updated 2026-11-26 (step 3).
+Read this first when picking the work up (person or Claude session). Last updated 2026-11-26.
+
+## Start here
+
+- **Live:** https://ragnarok-of-building.github.io/rob/ — the same Gio program compiled to WebAssembly, on GitHub Pages.
+- **Repo:** `ragnarok-of-building/rob` (moved from `Loonguinho/ragnarok-of-building`, then renamed; GitHub redirects the old URLs). On another clone: `git remote set-url origin https://github.com/ragnarok-of-building/rob.git`.
+- **Desktop is discontinued** (decision 2026-11-26). Work and test only the web build. The `desktop` branch is a frozen snapshot; `cmd/app`, `tools/buildexe`, `release.yml` and `view.IconCache` still exist and can be removed when convenient.
+- **Deploys:** every push to `main` runs `.github/workflows/web.yml` → Pages. `ci.yml` runs on every push (vet desktop + wasm, tests). Both green.
+- **Branches:** `main` = what's live. `web` = where this work was done (merged into `main` by PR #1; later commits on it still need merging). `desktop` = snapshot. `legacy-web` = the old HTMX server, unused.
+- **Run locally:** `make web-serve` → http://localhost:8080. `make vet`, `make test`.
+- **Test in a browser from a script:** `tools/webtest/shot.mjs` (headless Chrome over DevTools; usage in its header). The Claude in Chrome extension is the other option when connected.
+
+### What's left (in order)
+1. **Merge `web` into `main`** if it has commits `main` lacks (README/doc links, `tools/webtest`).
+2. **Check the live site in a normal browser** — see "Not yet tested" below (Alt shortcuts, file picker Cancel, Safari, Firefox, copy-to-clipboard, private window).
+3. **Icons from the client's `data.grf`** — decided, needs the Windows PC with the LATAM client; checklist in "TODO: icons".
+4. Optional: `yield()` in `Compare`, `CompareSets`, `BestSetEnchants` if they feel stuck in the browser.
+5. Optional: root address `https://ragnarok-of-building.github.io/` by renaming the repo to `ragnarok-of-building.github.io` — before announcing, since saved builds live per address (localStorage is per origin). Same for a custom domain: `ragnarok-of-building.com` was free on 2026-11-26 but is not bought (buy → DNS records → Settings → Pages → Custom domain).
+6. Optional: remove the desktop code.
 
 ## Goal
 
-Run **the same Gio app**, compiled to WebAssembly, as a static site on **GitHub Pages**. The old HTMX server (`legacy-web` branch) is not revived. Originally a Cloudflare Worker was to proxy Divine Pride icons and paste.rs; **dropped** (see step 4). The desktop program must keep working as it does today.
-
-## Branches
-
-| Branch | What it is |
-|---|---|
-| `main` | Desktop program; also opens on Linux/macOS since `7c77e9b`. |
-| `desktop` | Snapshot of the desktop program before the web work (`7c77e9b`). |
-| `web` | This migration. Merge into `main` when the web version ships. |
-| `legacy-web` | The retired HTMX server version. Not used. |
+Run **the same Gio app**, compiled to WebAssembly, as a static site on **GitHub Pages**. The old HTMX server (`legacy-web` branch) is not revived. A Cloudflare Worker was planned to proxy Divine Pride icons and paste.rs; **dropped** (see step 4a): no Worker, no Cloudflare account needed.
 
 ## Where things stand
 
 | Step | Status | Commit |
 |---|---|---|
 | 1. Refactors with no web code (store, files as bytes, icons as bytes, `gamedata.Read`) | ✅ done | `7d51675` |
-| 2. `cmd/web` + `web/index.html`, icons off, `make web-serve` | ✅ done, runs in Chrome (see "Verified") | `dee9a57` |
-| 3. `yield()` so the optimizer doesn't freeze the page | ✅ done | this commit |
-| 4a. Share links (`#b=`), no paste on web | ✅ done | this commit |
-| 4b. Icons from the client `.grf` | 📝 **TODO** — decided, waiting for the client (see "TODO: icons") | |
-| 5. GitHub Pages workflow + docs + README link | ✅ **live** at https://ragnarok-of-building.github.io/ragnarok-of-building/ (PR #1, `f28ccc6`) | this commit |
+| 2. `cmd/web` + `web/index.html`, icons off, `make web-serve` | ✅ done | `dee9a57` |
+| 3. `yield()` so searches don't freeze the page | ✅ done | `dfb4f05` |
+| Code review fixes (picker, save on tab close, errors, yield) | ✅ done | `bc36982` |
+| 4a. Share links (`#b=`), no paste on web | ✅ done | `d0d8cff` |
+| 4b. Icons from the client `.grf` | 📝 **TODO** — decided, waiting for the client (see "TODO: icons") | `91699a5` (plan) |
+| 5. GitHub Pages workflow, gzipped wasm, CI fix, docs | ✅ **live** (PR #1 merged as `f28ccc6`) | `10e7ddf` |
+| Links to the live address, `tools/webtest` | ✅ on `web` | `66c246f` + next |
 
 ## Testing in a browser without the Chrome extension
 
-Headless Chrome's `--virtual-time-budget` does not wait for CPU work, so screenshots come out on the loading screen. What worked: start `google-chrome --headless=new --remote-debugging-port=9333 --enable-unsafe-swiftshader --use-angle=swiftshader`, and drive it with a ~40-line Node 24 script (built-in `WebSocket`) over the DevTools protocol: `Page.navigate`, wait ~15 s, `Input.dispatchMouseEvent`/`dispatchKeyEvent`/`insertText`, `Runtime.evaluate`, `Page.captureScreenshot`. To measure responsiveness, inject a `requestAnimationFrame` counter that records the longest gap between frames. Window coordinates at 1440×900: Otimizador button (85,212), Calcular (601,219), FOR field (228,196).
+Headless Chrome's `--virtual-time-budget` does not wait for CPU work, so screenshots come out on the loading screen. What worked: start `google-chrome --headless=new --remote-debugging-port=9333 --enable-unsafe-swiftshader --use-angle=swiftshader`, and drive it with `tools/webtest/shot.mjs` (Node 24, built-in `WebSocket`, no packages) over the DevTools protocol: `Page.navigate`, wait ~15 s, `Input.dispatchMouseEvent`/`dispatchKeyEvent`/`insertText`, `Runtime.evaluate`, `Page.captureScreenshot`. To measure responsiveness, inject a `requestAnimationFrame` counter that records the longest gap between frames. Window coordinates at 1440×900: Otimizador button (85,212), Calcular (601,219), FOR field (228,196). File pickers: `Page.setInterceptFileChooserDialog` + `DOM.setFileInputFiles` (the script's `intercept`/`choose` steps). This machine's headless Chrome rejects external HTTPS certificates, so to test what is deployed, download the files with `curl` and serve them locally under `/rob/`.
 
 ## How to run it
 
@@ -145,5 +156,5 @@ Domain: `ragnarok-of-building.com` was free on 2026-11-26 but is **not bought**;
 **How it went live (for reference):**
 1. Merge `web` into `main` (fast-forward: `git switch main && git merge --ff-only web && git push`).
 2. GitHub → Settings → Pages → Source: **GitHub Actions**.
-3. The `web` workflow runs on that push (or start it from the Actions tab). The site: https://ragnarok-of-building.github.io/ragnarok-of-building/
+3. The `web` workflow runs on that push (or start it from the Actions tab). The site: https://ragnarok-of-building.github.io/rob/
 4. Check in a real browser: loads, Alt shortcuts, import a replay, save builds, share link, the "Not yet tested" list above.

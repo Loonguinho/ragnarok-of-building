@@ -24,7 +24,7 @@ Run **the same Gio app**, compiled to WebAssembly, as a static site on **GitHub 
 | 3. `yield()` so the optimizer doesn't freeze the page | ✅ done | this commit |
 | 4a. Share links (`#b=`), no paste on web | ✅ done | this commit |
 | 4b. Icons from the client `.grf` | 📝 **TODO** — decided, waiting for the client (see "TODO: icons") | |
-| 5. GitHub Pages workflow + docs + README link | ✅ done — goes live once `web` is merged to `main` and Pages is switched on | this commit |
+| 5. GitHub Pages workflow + docs + README link | ✅ **live** at https://ragnarok-of-building.github.io/ragnarok-of-building/ (PR #1, `f28ccc6`) | this commit |
 
 ## Testing in a browser without the Chrome extension
 
@@ -138,8 +138,12 @@ Already in place: `internal/grf` reads `data.grf` (`grf.Open`, `Archive.Find`, `
 - Verified locally: gzip path and the no-`DecompressionStream` fallback both load; served from a `/ragnarok-of-building/` subfolder (as Pages does) the app loads and a `#b=` link opens its build.
 - README: "▶️ Abrir no navegador" link and browser instructions; `docs/DESENVOLVIMENTO.md`: "Web version" section.
 
-**To go live (manual, once):**
+**Live since 2026-11-26.** The repo moved to the `ragnarok-of-building` GitHub organization (old `Loonguinho/...` links redirect); PR #1 merged `web` into `main` and the `web` workflow published it. Checked: every file serves (Pages does **not** compress `.wasm` — 26.9 MB raw — so `app.wasm.gz` matters), and the deployed files, run locally, open a `#b=` link and run the optimizer. (This machine's headless Chrome fails TLS to external sites — an untrusted-CA problem on the machine, not the site — so the live URL itself still needs a look in a normal browser.)
+
+Domain: `ragnarok-of-building.com` was free on 2026-11-26 but is **not bought**; GitHub's "InvalidDNSError" came from trying it before buying. For the site at the root (`https://ragnarok-of-building.github.io/`), rename the repo to `ragnarok-of-building.github.io` — do it before announcing, since saved builds live per address.
+
+**How it went live (for reference):**
 1. Merge `web` into `main` (fast-forward: `git switch main && git merge --ff-only web && git push`).
 2. GitHub → Settings → Pages → Source: **GitHub Actions**.
-3. The `web` workflow runs on that push (or start it from the Actions tab). The site: https://loonguinho.github.io/ragnarok-of-building/
+3. The `web` workflow runs on that push (or start it from the Actions tab). The site: https://ragnarok-of-building.github.io/ragnarok-of-building/
 4. Check in a real browser: loads, Alt shortcuts, import a replay, save builds, share link, the "Not yet tested" list above.

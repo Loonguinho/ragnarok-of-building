@@ -10,7 +10,7 @@ The game data is read from, in order: a `data.grf` and `System` folder copied ne
 
 ## Web version
 
-The same Gio program, compiled to WebAssembly (`cmd/web`), published on GitHub Pages at <https://loonguinho.github.io/ragnarok-of-building/>.
+The same Gio program, compiled to WebAssembly (`cmd/web`), published on GitHub Pages at <https://ragnarok-of-building.github.io/ragnarok-of-building/>.
 
 - `make web` builds the static site into `dist/web`: `index.html` (from `web/`, with the version stamped in), `wasm_exec.js`, `app.wasm` and `app.wasm.gz` (the page unzips it with `DecompressionStream`; browsers without it take the plain file), `catalog.json.gz` (the committed one) and `icon.png`. URLs carry `?v=<git describe>` so a release is never mixed with cached files.
 - `make web-serve` serves it on <http://localhost:8080>.

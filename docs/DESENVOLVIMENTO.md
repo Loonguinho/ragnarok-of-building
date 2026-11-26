@@ -8,6 +8,16 @@ The old web version (HTMX pages, the hosted server and its Docker image) was ret
 
 The game data is read from, in order: a `data.grf` and `System` folder copied next to the executable; the `catalog.json.gz` there; the installed client; the `catalog.json.gz` attached to the program's release, downloaded once. Without a catalog it finds the RO LATAM client (or asks for its folder), downloads rAthena's tables and latam-ro-calc's monster list once, and builds the catalog from that client; after each game patch it rebuilds it by itself.
 
+## Web version
+
+The same Gio program, compiled to WebAssembly (`cmd/web`), published on GitHub Pages at <https://ragnarok-of-building.github.io/rob/>.
+
+- `make web` builds the static site into `dist/web`: `index.html` (from `web/`, with the version stamped in), `wasm_exec.js`, `app.wasm` and `app.wasm.gz` (the page unzips it with `DecompressionStream`; browsers without it take the plain file), `catalog.json.gz` (the committed one) and `icon.png`. URLs carry `?v=<git describe>` so a release is never mixed with cached files.
+- `make web-serve` serves it on <http://localhost:8080>.
+- The `web` workflow publishes it at every push to `main` (and by hand from the Actions tab). One-time setup: **Settings → Pages → Source: GitHub Actions**.
+- In the browser: one thread (searches call `view.yield` so the page keeps drawing), window state and saved builds in `localStorage` (this browser only), files through the browser's picker and downloads, share links as `#b=<code>`, no paste.rs (it refuses pages), no icons yet (Divine Pride refuses us; they will come from the client's `data.grf`).
+- Progress, decisions and the to-do list: [WEB-MIGRATION.md](WEB-MIGRATION.md).
+
 ## Publishing a version
 
 To publish a version, push a tag: `git tag v0.1.0` then `git push origin v0.1.0`. The `release` workflow tests, builds `cmd/app` for Windows and attaches the zip to a new release. GitHub has no game client, so the catalog the zip ships is the committed `data/gen/catalog.json.gz`: after a game patch, run `go run ./cmd/import` and commit it before tagging. To build it locally: `go run ./tools/buildexe` (or `go build -ldflags -H=windowsgui -o RagnarokOfBuilding.exe ./cmd/app`).
@@ -29,6 +39,8 @@ go test ./...
 ```
 
 Re-run `go run ./cmd/import` after each game patch.
+
+**Linux (and macOS).** The same window runs there. The committed `data/gen/catalog.json.gz` is used, so no game client is needed: `go run ./cmd/app` from the repository. Gio needs cgo and the desktop libraries (Debian/Ubuntu: `gcc pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libvulkan-dev`). File and folder pickers use `zenity` or `kdialog` (osascript on macOS). Under `go run` the program works in the current folder instead of next to the temporary executable.
 
 **Languages.** The settings menu (the gear in the Menu window) has a PT / EN / ES picker, kept in `data/ui.json`. Game data (items, skills, classes, monsters) comes in each language from the client; the interface texts are in `internal/view/i18n_dict.go`, keyed by the Portuguese text.
 

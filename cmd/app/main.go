@@ -23,7 +23,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -51,9 +50,14 @@ const (
 	logFile       = `RagnarokOfBuilding.log`
 )
 
-// runNative opens the program's window (native.go) and never
-// returns.
+// runNative opens the program's window (native.go) and never returns.
 var runNative func(st *startup, o options, log *slog.Logger)
+
+// isGoRun says whether exe was built by `go run` (in a go-build folder
+// under the temporary directory).
+func isGoRun(exe string) bool {
+	return strings.Contains(filepath.ToSlash(exe), "/go-build")
+}
 
 type options struct {
 	reimport bool
@@ -73,14 +77,14 @@ func run() error {
 	flag.StringVar(&o.client, "client", "", "RO LATAM client folder (default: RO_CLIENT in .env, else the usual install folders)")
 	flag.Parse()
 
-	// Work next to the executable, wherever it was started from.
+	// Work next to the executable, wherever it was started from; under
+	// `go run` the executable sits in a temporary build folder, so stay in
+	// the folder it was run from (the repository). In the Linux AppImage
+	// (read-only) the files go to the user's data folder instead.
 	if dir, err := workDir(); err == nil {
 		if err := os.Chdir(dir); err != nil {
 			return err
 		}
-	}
-	if runNative == nil {
-		return errors.New("o Ragnarok of Building roda no Windows")
 	}
 	if !singleInstance() {
 		focusExisting()
@@ -257,6 +261,11 @@ func workDir() (string, error) {
 	exe, err := os.Executable()
 	if err != nil {
 		return "", err
+	}
+	// Under `go run` the executable sits in a temporary build folder: stay
+	// in the folder the program was started from (the repository).
+	if isGoRun(exe) {
+		return ".", nil
 	}
 	if os.Getenv("APPIMAGE") == "" {
 		return filepath.Dir(exe), nil

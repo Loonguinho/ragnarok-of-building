@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"ragnarok-of-building/internal/ui"
+	"runtime"
 	"strings"
 )
 
-// Outside Windows: no single-instance check, no native folder picker, and
-// the file dialog is zenity or kdialog when one is installed.
+// Linux and macOS pieces: messages on stderr and the system's file and
+// folder pickers (zenity or kdialog on Linux, osascript on macOS).
 
 func fatal(msg string) { fmt.Fprintln(os.Stderr, "ERRO:", msg) }
 
@@ -19,37 +21,76 @@ func singleInstance() bool { return true }
 
 func focusExisting() {}
 
-// pickFolder: no native picker here.
-var pickFolder func() (string, error)
-
-// darkTitleBar: the title bar follows the desktop's theme.
+// darkTitleBar: the desktop draws the title bar with its own theme.
 func darkTitleBar(bool) {}
 
-// openFileDialog asks for a file to open with zenity or kdialog; filter is
-// pairs of name and pattern separated by "|" ("Replays (*.rrf)|*.rrf").
-func openFileDialog(title, filter string) (string, error) {
+// filterPair is one "name|pattern" entry of a Windows-style filter.
+type filterPair struct{ name, patterns string }
+
+// parseFilter reads "Replays (*.rrf)|*.rrf|All|*.*" into pairs, with the
+// patterns separated by spaces ("*.a;*.b" -> "*.a *.b").
+func parseFilter(filter string) []filterPair {
 	parts := strings.Split(filter, "|")
-	var cmd *exec.Cmd
-	if p, err := exec.LookPath("zenity"); err == nil {
-		args := []string{"--file-selection", "--title=" + title}
-		for i := 0; i+1 < len(parts); i += 2 {
-			pats := strings.ReplaceAll(parts[i+1], ";", " ")
-			args = append(args, "--file-filter="+parts[i]+" | "+pats)
-		}
-		cmd = exec.Command(p, args...)
-	} else if p, err := exec.LookPath("kdialog"); err == nil {
-		var f []string
-		for i := 0; i+1 < len(parts); i += 2 {
-			f = append(f, strings.ReplaceAll(parts[i+1], ";", " ")+"|"+parts[i])
-		}
-		cmd = exec.Command(p, "--title", title, "--getopenfilename", ".", strings.Join(f, "\n"))
-	} else {
-		return "", errors.New("instale o zenity ou o kdialog para escolher arquivos")
+	var out []filterPair
+	for i := 0; i+1 < len(parts); i += 2 {
+		out = append(out, filterPair{parts[i], strings.ReplaceAll(parts[i+1], ";", " ")})
 	}
-	out, err := cmd.Output()
-	path := strings.TrimSpace(string(out))
+	return out
+}
+
+// openFileDialog asks for a file to open; filter is pairs of name and
+// pattern separated by "|" ("Replays (*.rrf)|*.rrf").
+func openFileDialog(title, filter string) (string, error) {
+	pairs := parseFilter(filter)
+	if runtime.GOOS == "darwin" {
+		return runPicker("osascript", "-e", `POSIX path of (choose file with prompt "`+escapeAS(title)+`")`)
+	}
+	if _, err := exec.LookPath("zenity"); err == nil {
+		args := []string{"--file-selection", "--title=" + title}
+		for _, p := range pairs {
+			args = append(args, "--file-filter="+p.name+" | "+p.patterns)
+		}
+		return runPicker("zenity", args...)
+	}
+	if _, err := exec.LookPath("kdialog"); err == nil {
+		var kf []string
+		for _, p := range pairs {
+			kf = append(kf, p.patterns+"|"+p.name)
+		}
+		return runPicker("kdialog", "--title", title, "--getopenfilename", ".", strings.Join(kf, "\n"))
+	}
+	return "", errNoPicker
+}
+
+// pickFolder opens the system's folder picker.
+var pickFolder = func() (string, error) {
+	const title = "Escolha a pasta do Ragnarok (a que tem o data.grf)"
+	if runtime.GOOS == "darwin" {
+		return runPicker("osascript", "-e", `POSIX path of (choose folder with prompt "`+escapeAS(title)+`")`)
+	}
+	if _, err := exec.LookPath("zenity"); err == nil {
+		return runPicker("zenity", "--file-selection", "--directory", "--title="+title)
+	}
+	if _, err := exec.LookPath("kdialog"); err == nil {
+		return runPicker("kdialog", "--title", title, "--getexistingdirectory", ".")
+	}
+	return "", errNoPicker
+}
+
+var errNoPicker = errors.New("instale o zenity ou o kdialog para escolher arquivos")
+
+// runPicker runs a dialog program and returns the path it printed; a
+// cancelled dialog exits non-zero (taken as no file chosen).
+func runPicker(name string, args ...string) (string, error) {
+	out, err := exec.Command(name, args...).Output()
+	path := strings.TrimRight(string(out), "\r\n")
 	if err != nil || path == "" {
-		return "", errors.New("nenhum arquivo escolhido")
+		return "", ui.ErrNoFile // cancelled
 	}
 	return path, nil
+}
+
+// escapeAS quotes a string for an AppleScript literal.
+func escapeAS(s string) string {
+	return strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s)
 }

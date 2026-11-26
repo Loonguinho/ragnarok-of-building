@@ -7,8 +7,6 @@ import (
 	"image"
 	"image/color"
 	"io"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -142,7 +140,7 @@ func (a *App) layoutModal(gtx C) {
 
 // ---- Saving, new build, clipboard ----
 
-func (a *App) loadSaved() []view.SavedBuild { return view.LoadSaved(a.SavedFile) }
+func (a *App) loadSaved() []view.SavedBuild { return view.LoadSaved(a.Store) }
 
 func (a *App) currentSaved() *view.SavedBuild {
 	for _, e := range a.loadSaved() {
@@ -184,7 +182,7 @@ func (a *App) saveBuild(ask bool) {
 		if !found {
 			list = append(list, e)
 		}
-		if err := view.WriteSaved(a.SavedFile, list); err != nil {
+		if err := view.WriteSaved(a.Store, list); err != nil {
 			a.Say(a.T("Não consegui gravar os builds no arquivo builds.json.")+" "+err.Error(), true)
 			return
 		}
@@ -266,7 +264,7 @@ func (a *App) savedBody(gtx C) D {
 						keep = append(keep, x)
 					}
 				}
-				view.WriteSaved(a.SavedFile, keep)
+				view.WriteSaved(a.Store, keep)
 				if a.savedID == e.ID {
 					a.savedID = ""
 				}
@@ -360,17 +358,21 @@ func sortSaved(list []view.SavedBuild) {
 	}
 }
 
-// exportSaved writes every saved build to a backup file next to the program.
+// exportSaved hands the player a backup file with every saved build (next
+// to the program on the desktop).
 func (a *App) exportSaved() {
+	if a.SaveFile == nil {
+		return
+	}
 	list := a.loadSaved()
 	b, _ := json.MarshalIndent(map[string]any{"app": "ragnarok-of-building", "version": 1, "builds": list}, "", " ")
 	name := "builds-ragnarok-of-building-" + time.Now().Format("2006-01-02") + ".json"
-	if err := os.WriteFile(name, b, 0o644); err != nil {
+	where, err := a.SaveFile(name, b)
+	if err != nil {
 		a.Say(err.Error(), true)
 		return
 	}
-	abs, _ := filepath.Abs(name)
-	a.Say(fmt.Sprintf(a.T("%d build(s) exportado(s) para %s"), len(list), abs), false)
+	a.Say(fmt.Sprintf(a.T("%d build(s) exportado(s) para %s"), len(list), where), false)
 }
 
 // importSaved merges a backup file (the export, or a plain list): a build
@@ -379,13 +381,8 @@ func (a *App) importSaved() {
 	a.openFile(a.T("Importar builds"), "JSON (*.json)|*.json", a.importSavedFile)
 }
 
-// importSavedFile merges the backup at path.
-func (a *App) importSavedFile(path string) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		a.Say(err.Error(), true)
-		return
-	}
+// importSavedFile merges a backup's contents.
+func (a *App) importSavedFile(raw []byte) {
 	var wrapped struct {
 		Builds []view.SavedBuild `json:"builds"`
 	}
@@ -417,7 +414,7 @@ func (a *App) importSavedFile(path string) {
 			n++
 		}
 	}
-	if err := view.WriteSaved(a.SavedFile, list); err != nil {
+	if err := view.WriteSaved(a.Store, list); err != nil {
 		a.Say(err.Error(), true)
 		return
 	}

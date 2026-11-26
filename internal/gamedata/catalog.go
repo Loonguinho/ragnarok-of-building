@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -401,7 +402,12 @@ func Load(path string) (*Catalog, error) {
 		return nil, err
 	}
 	defer f.Close()
-	zr, err := gzip.NewReader(f)
+	return Read(f)
+}
+
+// Read reads a gzipped catalog (what Save writes) from r.
+func Read(r io.Reader) (*Catalog, error) {
+	zr, err := gzip.NewReader(r)
 	if err != nil {
 		return nil, fmt.Errorf("gamedata: %w", err)
 	}

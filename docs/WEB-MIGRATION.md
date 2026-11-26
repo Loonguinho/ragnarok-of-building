@@ -23,7 +23,7 @@ Run **the same Gio app**, compiled to WebAssembly, as a static site on **GitHub 
 | 2. `cmd/web` + `web/index.html`, icons off, `make web-serve` | ✅ done, runs in Chrome (see "Verified") | `dee9a57` |
 | 3. `yield()` so the optimizer doesn't freeze the page | ✅ done | this commit |
 | 4a. Share links (`#b=`), no paste on web | ✅ done | this commit |
-| 4b. Icons | ⏳ **needs a decision** (see step 4) | |
+| 4b. Icons from the client `.grf` | 📝 **TODO** — decided, waiting for the client (see "TODO: icons") | |
 | 5. GitHub Pages workflow + docs + README link | ⏳ | |
 
 ## Testing in a browser without the Chrome extension
@@ -112,12 +112,24 @@ make run          # the desktop program, unchanged
 
 ## Next steps (detail)
 
-### Step 4b — icons (decision pending)
-Divine Pride is closed to us, so icons must come from somewhere we may use. Options:
-1. **Extract from the LATAM client** (recommended): item icons and item art are in `data.grf` under `data\texture\유저인터페이스\item\` and `...\collection\` (BMP, keyed by the item's resource name, which the catalog import already reads). Add a `cmd/import` step that writes them as PNGs, ship them with the site (one sprite sheet or a folder), serve with `view.NewWebIcons`. Needs the client, so it runs on the Windows PC. Skill icons are there too; monster pictures are sprites (`.spr`), harder — could stay text-only. Same legal footing as the catalog the repo already ships (game data © Gravity, README says so).
-2. **Ask Divine Pride** for permission / an API for images.
-3. **No icons** on web (works today; the UI copes).
-The `Icons.Get` hook already takes bytes, so any source plugs in.
+### TODO: icons from the client `.grf` (decided 2026-11-26)
+
+**Decision:** take icons from the LATAM client's `data.grf`, not Divine Pride. Same pixels (Divine Pride's images come from the client), every LATAM-only item covered, and no dependency on a site that now refuses us (403). **Blocked on:** the client is only on the Windows PC — do this from there (or with `RO_CLIENT=<copy of the client>` in `.env`).
+
+Already in place: `internal/grf` reads `data.grf` (`grf.Open`, `Archive.Find`, `Archive.Read`); the importer keeps each item's resource name (`it.Resource`, from `identifiedResourceName` in `internal/clientimport/import.go`); `Icons.Get` takes PNG bytes, so any source plugs in.
+
+- [ ] **Find the paths.** `go run ./cmd/grftool <client>/data.grf find item` and `... find collection`: expect `data\texture\유저인터페이스\item\<resource>.bmp` (24×24 icon) and `...\collection\<resource>.bmp` (75×100 art). Check how `internal/grf` spells the Korean folder (EUC-KR/CP949 bytes in the GRF).
+- [ ] **Skill icons.** Find where the client keeps them (`grftool find` a known skill's resource name; likely the same `item` folder) and how a skill ID maps to its file (skillinfo lub tables the importer already reads).
+- [ ] **BMP → PNG.** Decode the BMP (`golang.org/x/image/bmp`), turn the magenta key (`#FF00FF`, and near-magenta) into transparency, encode PNG.
+- [ ] **Import step.** `cmd/import` (or a new `cmd/iconimport`) writes the PNGs. Keep them out of `data/gen/catalog.json.gz`; decide the shipped form:
+  - a folder `web/icons/<kind>/<id>.png` copied by `make web` (simple; thousands of small requests, fine over HTTP/2), or
+  - one archive per kind (e.g. a zip or a packed file with an index) fetched once (fewer requests, more code).
+  Check the total size before choosing.
+- [ ] **Serve on web.** `view.NewWebIcons(base)`: GET `pageURL(base + rel)` via net/http (fetch), map today's Divine Pride–style paths (`ItemIcon`, `ItemArt`, `SkillIcon`, `JobIcon` in `view/imgcache.go`) to the new files. Wire `a.Icons = ui.NewIcons(...)` in `cmd/web/main.go`.
+- [ ] **Licence note.** README/DESENVOLVIMENTO: the icons are game data © Gravity, like the catalog the repo already ships.
+- [ ] **Later: monsters.** Their pictures are sprites (`data\sprite\몬스터\*.spr` + `.act`); draw the first frame of the idle action to PNG. More work, so after items and skills; the UI works without them meanwhile.
+- [ ] **Later: job icons** (`JobIcon`): find their files in the client the same way.
+- [ ] Desktop is discontinued, so its `view.IconCache` (Divine Pride) can be removed once the web uses the client icons.
 
 ### Step 5 — publish
 - `.github/workflows/web.yml` on `v*` tags + manual dispatch: checkout, setup-go, `go test ./...`, `make web`, `actions/upload-pages-artifact` (`dist/web`), `actions/deploy-pages`; permissions `pages: write`, `id-token: write`.

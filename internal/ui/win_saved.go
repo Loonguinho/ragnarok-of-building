@@ -233,7 +233,19 @@ func (a *App) openCode(code string, keep bool) bool {
 	return true
 }
 
-var codeInLink = regexp.MustCompile(`[?&]b=([A-Za-z0-9_-]+)`)
+// codeInLink finds the code in a share link: ?b= (older links) or #b= (the
+// web page's).
+var codeInLink = regexp.MustCompile(`[?&#]b=([A-Za-z0-9_-]+)`)
+
+// OpenShared opens a build code that came with the page's link, on the
+// window's goroutine (safe to call from anywhere).
+func (a *App) OpenShared(code string) {
+	a.later(func() {
+		if !a.openCode(code, false) {
+			a.Say(a.T("Não consegui abrir o build do link."), true)
+		}
+	})
+}
 
 // ---- Builds salvos (win-saved) ----
 
@@ -435,6 +447,10 @@ func (a *App) importText(v string, keep bool) {
 	if m := codeInLink.FindStringSubmatch(v); m != nil {
 		v = m[1]
 	} else if strings.HasPrefix(strings.ToLower(v), "http") || strings.HasPrefix(strings.ToLower(v), "paste.rs/") {
+		if a.NoPaste {
+			a.Say(a.T("Links do paste.rs não abrem no navegador: peça o link ou o código do build."), true)
+			return
+		}
 		a.Say(a.T("Lendo o paste…"), false)
 		go func() {
 			code, err := a.V.ReadPaste(context.Background(), v)
@@ -504,6 +520,9 @@ func (a *App) shareBody(gtx C) D {
 	v := a.View()
 	if s.asVal == "" {
 		s.asVal, s.toVal = "paste", "new"
+		if a.ShareURL != nil {
+			s.asVal = "link"
+		}
 	}
 	shown := v.Code
 	if s.pastedFor == v.Code && s.pasted != "" {
@@ -540,6 +559,10 @@ func (a *App) shareBody(gtx C) D {
 					a.Invalidate()
 				}
 			}()
+		case "link":
+			if a.ShareURL != nil {
+				a.copyText(gtx, a.ShareURL(v.Code), a.T("Link copiado!"))
+			}
 		case "text":
 			a.copyText(gtx, a.shareText(), a.T("Texto do build copiado! Cole no Discord ou no fórum."))
 		default:
@@ -557,7 +580,18 @@ func (a *App) shareBody(gtx C) D {
 		a.importText(s.importBox.Text(), s.toVal == "this")
 		s.importBox.Ed.SetText("")
 	}
-	asOpts := []Option{{"paste", a.T("Paste (paste.rs)")}, {"code", a.T("Só o código")}, {"text", a.T("Texto (Discord / fórum)")}}
+	var asOpts []Option
+	if a.ShareURL != nil {
+		asOpts = append(asOpts, Option{"link", a.T("Link (abre no navegador)")})
+	}
+	if !a.NoPaste {
+		asOpts = append(asOpts, Option{"paste", a.T("Paste (paste.rs)")})
+	}
+	asOpts = append(asOpts, Option{"code", a.T("Só o código")}, Option{"text", a.T("Texto (Discord / fórum)")})
+	shareNote := a.T("Paste cria um link curto no paste.rs com o resumo e o código do build (público para quem tiver o link).")
+	if a.NoPaste {
+		shareNote = a.T("O link abre este build no navegador de quem receber.")
+	}
 	toOpts := []Option{{"this", a.T("Importar para este build")}, {"new", a.T("Importar como build novo")}}
 	section := func(title string, w layout.Widget) layout.Widget {
 		return func(gtx C) D {
@@ -594,7 +628,7 @@ func (a *App) shareBody(gtx C) D {
 				)
 			},
 			T(th, a.T("O código guarda o build inteiro (classe, atributos, equipamento, habilidades e buffs). Quem abrir o link ou colar o código vê o mesmo build.")+" "+
-				a.T("Paste cria um link curto no paste.rs com o resumo e o código do build (público para quem tiver o link).")).Sz(SmallText).C(ColMuted).Wrapping().W(),
+				shareNote).Sz(SmallText).C(ColMuted).Wrapping().W(),
 		)),
 		section("Importar", Col(4,
 			T(th, a.T("Para importar um build, cole o link, o link do paste ou o código aqui:")).Wrapping().W(),

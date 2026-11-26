@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"regexp"
 	"sync"
 	"syscall/js"
 	"time"
@@ -54,8 +55,10 @@ func main() {
 		a.Invalidate = w.Invalidate
 		a.OpenFile = openFile
 		a.SaveFile = saveFile
-		// Icons come in step 4 (Divine Pride needs a proxy in the browser).
+		a.ShareURL = shareURL
+		a.NoPaste = true
 		saveOnHide(a)
+		openLinkedBuild(a)
 		ready <- a
 		w.Invalidate()
 	}()
@@ -166,6 +169,38 @@ func saveOnHide(a *ui.App) {
 	doc.Call("addEventListener", "visibilitychange", save) // for the page's lifetime
 	js.Global().Call("addEventListener", "pagehide", js.FuncOf(func(js.Value, []js.Value) any {
 		a.SaveNow()
+		return nil
+	}))
+}
+
+// shareURL is this page's address with the build after "#b=": the part
+// after # never reaches a server and has no practical length limit.
+func shareURL(code string) string { return pageBase() + "#b=" + code }
+
+// pageBase is the page's address without query or fragment.
+func pageBase() string {
+	loc := js.Global().Get("location")
+	return loc.Get("origin").String() + loc.Get("pathname").String()
+}
+
+var linkCode = regexp.MustCompile(`[?&#]b=([A-Za-z0-9_-]+)`)
+
+// openLinkedBuild opens the build in the page's link (#b=..., or ?b= from
+// older links), now and whenever the link changes while the page is open.
+// The code then leaves the address bar, so a reload keeps the player's
+// edits instead of reopening the linked build.
+func openLinkedBuild(a *ui.App) {
+	open := func() {
+		m := linkCode.FindStringSubmatch(js.Global().Get("location").Get("href").String())
+		if m == nil {
+			return
+		}
+		a.OpenShared(m[1])
+		js.Global().Get("history").Call("replaceState", nil, "", pageBase())
+	}
+	open()
+	js.Global().Call("addEventListener", "hashchange", js.FuncOf(func(js.Value, []js.Value) any {
+		open()
 		return nil
 	}))
 }

@@ -40,6 +40,12 @@ type App struct {
 	// SaveFile hands the player a file (builds backup) and says where it
 	// went.
 	SaveFile func(name string, data []byte) (where string, err error)
+	// ShareURL makes a link that opens a build code in this program (the
+	// web page); nil where there is none.
+	ShareURL func(code string) string
+	// NoPaste: the paste service cannot be reached from here (in the
+	// browser paste.rs refuses pages: it sends no CORS headers).
+	NoPaste bool
 
 	mu         sync.Mutex
 	jobs       []func()       // run by the next frame (see later)

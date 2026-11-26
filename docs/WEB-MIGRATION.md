@@ -4,7 +4,7 @@ Status log for moving Ragnarok of Building to the browser. Read this first when 
 
 ## Goal
 
-Run **the same Gio app**, compiled to WebAssembly, as a static site on **GitHub Pages**. The old HTMX server (`legacy-web` branch) is not revived. A small **Cloudflare Worker** proxies Divine Pride icons and paste.rs, which refuse browser requests (no CORS). The desktop program must keep working as it does today.
+Run **the same Gio app**, compiled to WebAssembly, as a static site on **GitHub Pages**. The old HTMX server (`legacy-web` branch) is not revived. Originally a Cloudflare Worker was to proxy Divine Pride icons and paste.rs; **dropped** (see step 4). The desktop program must keep working as it does today.
 
 ## Branches
 
@@ -22,7 +22,8 @@ Run **the same Gio app**, compiled to WebAssembly, as a static site on **GitHub 
 | 1. Refactors with no web code (store, files as bytes, icons as bytes, `gamedata.Read`) | ✅ done | `7d51675` |
 | 2. `cmd/web` + `web/index.html`, icons off, `make web-serve` | ✅ done, runs in Chrome (see "Verified") | `dee9a57` |
 | 3. `yield()` so the optimizer doesn't freeze the page | ✅ done | this commit |
-| 4. Cloudflare Worker, then icons + paste on web, then `?b=` links | ⏳ next | |
+| 4a. Share links (`#b=`), no paste on web | ✅ done | this commit |
+| 4b. Icons | ⏳ **needs a decision** (see step 4) | |
 | 5. GitHub Pages workflow + docs + README link | ⏳ | |
 
 ## Testing in a browser without the Chrome extension
@@ -62,6 +63,14 @@ make run          # the desktop program, unchanged
 - `internal/view/yield.go` (no-op off the browser) and `yield_js.go`: after each ~30 ms of work, wait for one `requestAnimationFrame` (or 50 ms if the tab is hidden and frames stop). A plain `time.Sleep(1ms)` is not enough: Gio paints only on animation frames, and a 1 ms sleep usually ends before one.
 - Called once per candidate in the six worker pools: `optimize.go`, `swap.go`, `best.go`, `bestcard.go`, `traits.go` (`evalAll`), `optextra.go` (`runPar`). The UI already runs all of these in goroutines, never inside a frame.
 - Measured in headless Chrome: optimizer (Dano, default options) finishes in < 5 s, page paints ~40 fps meanwhile, longest gap 260 ms; with "Considerar mudar os talentos" ~47 fps, longest gap 359 ms. Results match the desktop's shape (full list, traits suggestion).
+
+### Step 4a — share links without paste.rs
+- **No Worker.** Checked 2026-11-26: `static.divine-pride.net` now answers **403 to every request**, including the desktop program's own (`User-Agent: ragnarok-of-building`) — desktop icons are broken too. Divine Pride is refusing on purpose; a Worker that poses as a browser to get around that is not something we do. paste.rs sends no CORS headers (preflight 404).
+- Share on web = the page's own link: `https://<site>/#b=<code>` (`cmd/web` `shareURL`). The fragment never reaches a server; a typical code is ~180 chars.
+- `App.ShareURL` (nil on desktop) adds "Link (abre no navegador)" to the Share window, default on web. `App.NoPaste` (web) hides the paste option and answers pasted paste.rs links with a clear message.
+- `cmd/web` `openLinkedBuild`: opens `#b=` (and old `?b=`) at load and on `hashchange`, through `App.OpenShared` (runs on the UI goroutine), then `history.replaceState` drops the code so a reload keeps the player's edits.
+- `codeInLink` (ui and view) accepts `#b=` as well as `?b=`.
+- Verified in headless Chrome: replay build's code → fresh storage → open `/#b=<code>` → the replay build (FOR 120, +9 Faca, 613 dmg) shows and the address bar is back to `/`. Share window shows the Link option. **Not verified:** the copy to clipboard (headless has no clipboard).
 
 ### Review fixes (code review of the PR `edudebortoli/ragnarok-of-building` main ← `Loonguinho:web`)
 - **Open errors were silent**: `App.openFile` now shows a failed read in the chat; a cancelled picker returns `ui.ErrNoFile` and stays quiet (desktop and web hosts return it).
@@ -103,13 +112,12 @@ make run          # the desktop program, unchanged
 
 ## Next steps (detail)
 
-### Step 4 — Worker, icons, paste, `?b=` links
-- **First** test that Divine Pride answers a Worker (`curl` from a deployed Worker). If it's blocked too, pre-fetch icons into the site at release time instead.
-- `tools/worker/`: `GET /dp/images/...` (only paths matching `dpImgPath` in `view/imgcache.go`), fetched server-side, edge-cached 30 days, `Access-Control-Allow-Origin: <pages origin>`; `POST /paste` → paste.rs (body ≤ 16 KB), `GET /paste/<id>` → raw paste. Deploy with `wrangler deploy`.
-- `view.NewWebIcons(base)`: `GET base/rel` via net/http (fetch), keep the `dpImgPath` check. Wire `a.Icons` in `cmd/web/main.go`.
-- `PasteURL: workerBase + "/paste"`; `pasteRawURL` (`view/paste.go`) must map `paste.rs/<id>` to `<worker>/paste/<id>` when reading.
-- `?b=<code>` in the page URL opens that build (reuse the parser behind `openCode`, `win_saved.go`). Share window builds `https://<pages-url>/?b=<code>` on web.
-- `workerBase`, `siteURL`, `version` via `-ldflags -X`.
+### Step 4b — icons (decision pending)
+Divine Pride is closed to us, so icons must come from somewhere we may use. Options:
+1. **Extract from the LATAM client** (recommended): item icons and item art are in `data.grf` under `data\texture\유저인터페이스\item\` and `...\collection\` (BMP, keyed by the item's resource name, which the catalog import already reads). Add a `cmd/import` step that writes them as PNGs, ship them with the site (one sprite sheet or a folder), serve with `view.NewWebIcons`. Needs the client, so it runs on the Windows PC. Skill icons are there too; monster pictures are sprites (`.spr`), harder — could stay text-only. Same legal footing as the catalog the repo already ships (game data © Gravity, README says so).
+2. **Ask Divine Pride** for permission / an API for images.
+3. **No icons** on web (works today; the UI copes).
+The `Icons.Get` hook already takes bytes, so any source plugs in.
 
 ### Step 5 — publish
 - `.github/workflows/web.yml` on `v*` tags + manual dispatch: checkout, setup-go, `go test ./...`, `make web`, `actions/upload-pages-artifact` (`dist/web`), `actions/deploy-pages`; permissions `pages: write`, `id-token: write`.

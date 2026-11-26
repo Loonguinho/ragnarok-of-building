@@ -492,6 +492,12 @@ var dict = map[string][2]string{
 		"To import a build, paste its link, its paste link or its code here:",
 		"Para importar un build, pega el enlace, el enlace del paste o el código aquí:"},
 	"Paste (paste.rs)": {"Paste (paste.rs)", "Paste (paste.rs)"},
+	// ---- web page share links ----
+	"Link (abre no navegador)":                         {"Link (opens in the browser)", "Enlace (abre en el navegador)"},
+	"Link copiado!":                                    {"Link copied!", "¡Enlace copiado!"},
+	"O link abre este build no navegador de quem receber.": {"The link opens this build in the recipient's browser.", "El enlace abre este build en el navegador de quien lo reciba."},
+	"Não consegui abrir o build do link.":              {"Could not open the build in the link.", "No pude abrir el build del enlace."},
+	"Links do paste.rs não abrem no navegador: peça o link ou o código do build.": {"paste.rs links do not open in the browser: ask for the build's link or code.", "Los enlaces de paste.rs no abren en el navegador: pide el enlace o el código del build."},
 	"Paste cria um link curto no paste.rs com o resumo e o código do build (público para quem tiver o link).": {
 		"Paste makes a short paste.rs link with the build summary and code (public to anyone with the link).",
 		"Paste crea un enlace corto en paste.rs con el resumen y el código del build (público para quien tenga el enlace)."},

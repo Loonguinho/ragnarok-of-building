@@ -31,6 +31,10 @@ import (
 
 const appTitle = "Ragnarok of Building"
 
+// version is set by `make web` (-X main.version=...); it keeps browsers
+// from using a cached catalog from an older release.
+var version = "dev"
+
 func main() {
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})) // the browser console
 	files := store.Browser()
@@ -99,7 +103,7 @@ func main() {
 // views.
 func load(st *status, log *slog.Logger) (*view.Views, error) {
 	st.say("Baixando os dados do jogo…")
-	b, err := fetch(pageURL("catalog.json.gz"), func(n int64) {
+	b, err := fetch(pageURL("catalog.json.gz?v="+version), func(n int64) {
 		st.replaceLast(fmt.Sprintf("Baixando os dados do jogo… %.1f MB", float64(n)/(1<<20)))
 	})
 	if err != nil {

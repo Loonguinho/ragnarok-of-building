@@ -31,7 +31,7 @@
 </div>
 <div id="giowindow"></div>
 <noscript>O Ragnarok of Building precisa de JavaScript ligado.</noscript>
-<script src="wasm_exec.js"></script>
+<script src="wasm_exec.js?v=__VERSION__"></script>
 <script>
   // The window uses Alt+letter shortcuts (Alt+D, Alt+E...); keep the browser
   // from taking them (address bar, menus). The program still gets the key.
@@ -44,9 +44,14 @@
     const fill = document.getElementById("fill");
     try {
       if (!("WebAssembly" in window)) throw new Error("Este navegador não roda WebAssembly.");
-      const res = await fetch("app.wasm");
-      if (!res.ok) throw new Error("app.wasm: " + res.status);
-      // Content-Length may be the compressed size; the bar is a hint only.
+      // app.wasm.gz is a quarter of the size; browsers without
+      // DecompressionStream (Safari < 16.4) take the plain file.
+      const gz = "DecompressionStream" in window;
+      const file = (gz ? "app.wasm.gz" : "app.wasm") + "?v=__VERSION__";
+      const res = await fetch(file);
+      if (!res.ok) throw new Error(file + ": " + res.status);
+      // The bar is a hint: a host that compresses on the way sends the
+      // compressed size, and the reader counts unpacked bytes.
       const total = +res.headers.get("Content-Length") || 0;
       const reader = res.body.getReader();
       const parts = [];
@@ -61,9 +66,14 @@
       }
       fill.style.width = "100%";
       note.textContent = "Abrindo…";
-      const bytes = new Uint8Array(got);
+      let bytes = new Uint8Array(got);
       let at = 0;
       for (const p of parts) { bytes.set(p, at); at += p.length; }
+      // Unzip here unless the host already did (then it is no gzip any more).
+      if (gz && bytes[0] === 0x1f && bytes[1] === 0x8b) {
+        const out = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+        bytes = new Uint8Array(await new Response(out).arrayBuffer());
+      }
       const go = new Go();
       const { instance } = await WebAssembly.instantiate(bytes, go.importObject);
       go.run(instance); // the program removes #loading when its window draws

@@ -4,9 +4,16 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+      - name: Gio's system libraries
+        # cmd/app opens a Gio window on Linux too, which needs cgo and these.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-x11-dev libgles-dev libegl-dev libffi-dev libxcursor-dev libvulkan-dev
       - run: go vet ./...
+      - name: Vet the web build
+        run: GOOS=js GOARCH=wasm go vet ./internal/... ./cmd/web
       - run: go test ./...

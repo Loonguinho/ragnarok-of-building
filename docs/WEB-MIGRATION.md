@@ -24,7 +24,7 @@ Run **the same Gio app**, compiled to WebAssembly, as a static site on **GitHub 
 | 3. `yield()` so the optimizer doesn't freeze the page | ✅ done | this commit |
 | 4a. Share links (`#b=`), no paste on web | ✅ done | this commit |
 | 4b. Icons from the client `.grf` | 📝 **TODO** — decided, waiting for the client (see "TODO: icons") | |
-| 5. GitHub Pages workflow + docs + README link | ⏳ | |
+| 5. GitHub Pages workflow + docs + README link | ✅ done — goes live once `web` is merged to `main` and Pages is switched on | this commit |
 
 ## Testing in a browser without the Chrome extension
 
@@ -131,7 +131,15 @@ Already in place: `internal/grf` reads `data.grf` (`grf.Open`, `Archive.Find`, `
 - [ ] **Later: job icons** (`JobIcon`): find their files in the client the same way.
 - [ ] Desktop is discontinued, so its `view.IconCache` (Divine Pride) can be removed once the web uses the client icons.
 
-### Step 5 — publish
-- `.github/workflows/web.yml` on `v*` tags + manual dispatch: checkout, setup-go, `go test ./...`, `make web`, `actions/upload-pages-artifact` (`dist/web`), `actions/deploy-pages`; permissions `pages: write`, `id-token: write`.
-- One-time: repo Settings → Pages → source "GitHub Actions".
-- README: "▶️ Abrir no navegador" link next to the Windows download. `docs/DESENVOLVIMENTO.md`: web build, Worker, limits (single thread, data per browser, no client import).
+### Step 5 — publish (done)
+- `.github/workflows/web.yml`: on push to `main` and manual dispatch → vet (wasm) + `go test ./internal/...` → `make web` → `actions/upload-pages-artifact@v4` → `actions/deploy-pages@v4`. Runs on `main` rather than tags because the `github-pages` environment only lets the default branch deploy unless told otherwise.
+- `make web` now also writes `app.wasm.gz` (6.8 MB instead of 27 MB): the page fetches it and unzips with `DecompressionStream` (skipped if the host already unzipped it); browsers without it fetch `app.wasm`. So the download is small whether or not Pages compresses `.wasm`. `index.html`, `wasm_exec.js`, the wasm and the catalog URLs carry `?v=<git describe>` (`-X main.version` for the catalog).
+- **CI fix:** `ci` had been failing since `7c77e9b` (the Linux window port): `go vet ./...` on Ubuntu needs Gio's cgo libraries for `cmd/app`. `ci.yml` installs them (names checked on Ubuntu 24.04) and also vets the wasm build. Only `cmd/app` needs them; `internal/...` vets without cgo, so `web.yml` skips them.
+- Verified locally: gzip path and the no-`DecompressionStream` fallback both load; served from a `/ragnarok-of-building/` subfolder (as Pages does) the app loads and a `#b=` link opens its build.
+- README: "▶️ Abrir no navegador" link and browser instructions; `docs/DESENVOLVIMENTO.md`: "Web version" section.
+
+**To go live (manual, once):**
+1. Merge `web` into `main` (fast-forward: `git switch main && git merge --ff-only web && git push`).
+2. GitHub → Settings → Pages → Source: **GitHub Actions**.
+3. The `web` workflow runs on that push (or start it from the Actions tab). The site: https://loonguinho.github.io/ragnarok-of-building/
+4. Check in a real browser: loads, Alt shortcuts, import a replay, save builds, share link, the "Not yet tested" list above.

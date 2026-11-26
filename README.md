@@ -11,7 +11,7 @@
 [![Testes](https://img.shields.io/github/actions/workflow/status/Loonguinho/ragnarok-of-building/ci.yml?branch=main&label=testes)](../../actions)
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-lightgrey)](LICENSE)
 
-### [⬇️ Baixar para Windows](../../releases)
+### [▶️ Abrir no navegador](https://loonguinho.github.io/ragnarok-of-building/) · [⬇️ Baixar para Windows](../../releases)
 
 Português · English · Español
 
@@ -42,6 +42,10 @@ Português · English · Español
 </details>
 
 ## Como usar
+
+**No navegador:** abra [loonguinho.github.io/ragnarok-of-building/](https://loonguinho.github.io/ragnarok-of-building/). Não precisa instalar nada; os builds ficam guardados neste navegador. Para mandar um build a alguém, use **Compartilhar → Link**.
+
+**No Windows:**
 
 1. Baixe o `.zip` da [última versão](../../releases) e extraia em qualquer pasta.
 2. Abra o `RagnarokOfBuilding.exe`.

@@ -1,4 +1,8 @@
-.PHONY: run test vet build
+.PHONY: run test vet build web web-serve
+
+# The web build's version: busts the browser cache of app.wasm and the
+# catalog after each release.
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
 run:
 	go run ./cmd/app
@@ -8,7 +12,24 @@ test:
 
 vet:
 	go vet ./...
+	GOOS=js GOARCH=wasm go vet ./internal/... ./cmd/web
 
 # The Windows program as released (icon, version, zip in dist/).
 build:
 	go run ./tools/buildexe
+
+# The browser version: a static site in dist/web. app.wasm also goes out
+# gzipped (the page unzips it), so the download is small on any host.
+web:
+	rm -rf dist/web && mkdir -p dist/web
+	GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w -X main.version=$(VERSION)" -o dist/web/app.wasm ./cmd/web
+	gzip -9 -k -n dist/web/app.wasm
+	cp "$$(go env GOROOT)/lib/wasm/wasm_exec.js" dist/web/
+	sed 's/__VERSION__/$(VERSION)/g' web/index.html > dist/web/index.html
+	cp cmd/app/icon.png dist/web/icon.png
+	cp data/gen/catalog.json.gz dist/web/
+	touch dist/web/.nojekyll
+
+# Serve dist/web on http://localhost:8080.
+web-serve: web
+	go run ./tools/webserve

@@ -29,3 +29,6 @@ cmd/app/rsrc_windows_*.syso
 
 # Log of the program run from the repository folder
 RagnarokOfBuilding.log
+
+# Linux build of the program (make linux)
+/RagnarokOfBuilding

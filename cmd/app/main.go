@@ -18,7 +18,7 @@
 // catalog.json.gz placed there is used as is.
 //
 // Its files (.env, data\, builds.json, RagnarokOfBuilding.log) live next to
-// the executable.
+// the executable; in the Linux AppImage, in ~/.local/share/ragnarok-of-building.
 package main
 
 import (
@@ -51,8 +51,8 @@ const (
 	logFile       = `RagnarokOfBuilding.log`
 )
 
-// runNative opens the program's window (native_windows.go) and never
-// returns; nil where there is none.
+// runNative opens the program's window (native.go) and never
+// returns.
 var runNative func(st *startup, o options, log *slog.Logger)
 
 type options struct {
@@ -74,8 +74,8 @@ func run() error {
 	flag.Parse()
 
 	// Work next to the executable, wherever it was started from.
-	if exe, err := os.Executable(); err == nil {
-		if err := os.Chdir(filepath.Dir(exe)); err != nil {
+	if dir, err := workDir(); err == nil {
+		if err := os.Chdir(dir); err != nil {
 			return err
 		}
 	}
@@ -248,6 +248,68 @@ func checkSystem(dir string) error {
 	}
 	return fmt.Errorf("falta(m) %s nesta pasta.\n"+
 		"Copie a pasta System do jogo (ex.: C:\\Gravity\\Ragnarok\\System) para cá, ao lado do data.grf", strings.Join(missing, ", "))
+}
+
+// workDir is the folder the program keeps its files in: the executable's.
+// Inside an AppImage (read-only) it is the user's data folder instead,
+// given the catalog the AppImage ships whenever that one is newer.
+func workDir() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	if os.Getenv("APPIMAGE") == "" {
+		return filepath.Dir(exe), nil
+	}
+	base := os.Getenv("XDG_DATA_HOME")
+	if base == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		base = filepath.Join(home, ".local", "share")
+	}
+	dir := filepath.Join(base, "ragnarok-of-building")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	shipped := filepath.Join(os.Getenv("APPDIR"), "usr", "share", "ragnarok-of-building", sharedCatalog)
+	if src, err := os.Stat(shipped); err == nil {
+		dst, err := os.Stat(filepath.Join(dir, sharedCatalog))
+		if err != nil || src.ModTime().After(dst.ModTime()) {
+			if err := copyFile(shipped, filepath.Join(dir, sharedCatalog)); err != nil {
+				return "", err
+			}
+		}
+	}
+	return dir, nil
+}
+
+// copyFile copies src to dst through a temporary file, keeping src's time.
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	tmp := dst + ".tmp"
+	out, err := os.Create(tmp)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		os.Remove(tmp)
+		return err
+	}
+	if err := out.Close(); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	if st, err := in.Stat(); err == nil {
+		os.Chtimes(tmp, st.ModTime(), st.ModTime())
+	}
+	return os.Rename(tmp, dst)
 }
 
 func exists(p string) bool {

@@ -1,6 +1,6 @@
 # Web migration: progress and handoff
 
-Status log for moving Ragnarok of Building to the browser. Read this first when picking the work up (person or Claude session). Branch: **`web`**. Last updated 2026-11-26.
+Status log for moving Ragnarok of Building to the browser. Read this first when picking the work up (person or Claude session). Branch: **`web`**. Last updated 2026-11-26 (step 3).
 
 ## Goal
 
@@ -20,10 +20,14 @@ Run **the same Gio app**, compiled to WebAssembly, as a static site on **GitHub 
 | Step | Status | Commit |
 |---|---|---|
 | 1. Refactors with no web code (store, files as bytes, icons as bytes, `gamedata.Read`) | ✅ done | `7d51675` |
-| 2. `cmd/web` + `web/index.html`, icons off, `make web-serve` | ✅ done, runs in Chrome (see "Verified") | this commit |
-| 3. `yield()` so the optimizer doesn't freeze the page | ⏳ next | |
-| 4. Cloudflare Worker, then icons + paste on web, then `?b=` links | ⏳ | |
+| 2. `cmd/web` + `web/index.html`, icons off, `make web-serve` | ✅ done, runs in Chrome (see "Verified") | `dee9a57` |
+| 3. `yield()` so the optimizer doesn't freeze the page | ✅ done | this commit |
+| 4. Cloudflare Worker, then icons + paste on web, then `?b=` links | ⏳ next | |
 | 5. GitHub Pages workflow + docs + README link | ⏳ | |
+
+## Testing in a browser without the Chrome extension
+
+Headless Chrome's `--virtual-time-budget` does not wait for CPU work, so screenshots come out on the loading screen. What worked: start `google-chrome --headless=new --remote-debugging-port=9333 --enable-unsafe-swiftshader --use-angle=swiftshader`, and drive it with a ~40-line Node 24 script (built-in `WebSocket`) over the DevTools protocol: `Page.navigate`, wait ~15 s, `Input.dispatchMouseEvent`/`dispatchKeyEvent`/`insertText`, `Runtime.evaluate`, `Page.captureScreenshot`. To measure responsiveness, inject a `requestAnimationFrame` counter that records the longest gap between frames. Window coordinates at 1440×900: Otimizador button (85,212), Calcular (601,219), FOR field (228,196).
 
 ## How to run it
 
@@ -54,6 +58,11 @@ make run          # the desktop program, unchanged
 - `tools/webserve`: tiny static server (`application/wasm`, `Cache-Control: no-store`).
 - `Makefile`: `web`, `web-serve`; `vet` also vets the wasm build.
 
+### Step 3 — page stays responsive during searches
+- `internal/view/yield.go` (no-op off the browser) and `yield_js.go`: after each ~30 ms of work, wait for one `requestAnimationFrame` (or 50 ms if the tab is hidden and frames stop). A plain `time.Sleep(1ms)` is not enough: Gio paints only on animation frames, and a 1 ms sleep usually ends before one.
+- Called once per candidate in the six worker pools: `optimize.go`, `swap.go`, `best.go`, `bestcard.go`, `traits.go` (`evalAll`), `optextra.go` (`runPar`). The UI already runs all of these in goroutines, never inside a frame.
+- Measured in headless Chrome: optimizer (Dano, default options) finishes in < 5 s, page paints ~40 fps meanwhile, longest gap 260 ms; with "Considerar mudar os talentos" ~47 fps, longest gap 359 ms. Results match the desktop's shape (full list, traits suggestion).
+
 ## Verified (2026-11-26, headless Chrome on Linux, driven over the DevTools protocol)
 - `go vet` + `go test ./...` pass; vet passes for Linux, `GOOS=windows`, and `GOOS=js GOARCH=wasm`.
 - Desktop program still starts (Linux, `go run ./cmd/app`).
@@ -71,12 +80,13 @@ make run          # the desktop program, unchanged
 6. **Theme and language** persist after reload (Configurações).
 7. **Firefox** as well as Chrome (WebGL, file picker `cancel` event).
 8. **Private window**: the app should still open (storage errors are ignored, nothing saved).
-9. **Optimizer**: it will run but **freezes the page** until done; that's step 3.
+9. **Optimizer** on a slow machine/phone: the page should keep repainting (hover, scroll) while it runs; note the 30 s timeout may give partial results more often than on the desktop (one core instead of all).
 10. Desktop regression list from step 1: state, saved builds, export/import, replay import, icons, startup from the release zip.
 
 ## Known limits / decisions
 - **Size**: `app.wasm` is 27 MB (6.8 MB gzipped) + 4.3 MB catalog ≈ 11 MB first visit if the host gzips. **Check GitHub Pages actually gzips `.wasm`**; if not, fall back to Cloudflare Pages or ship a pre-gzipped file decompressed with `DecompressionStream`.
-- **One thread**: Go in wasm has no preemption, so CPU work freezes drawing. Catalog decode takes ~1–2 s (a status line is drawn first). The optimizer needs step 3.
+- **One thread**: Go in wasm has no preemption, so CPU work freezes drawing unless it calls `yield()`. Catalog decode takes ~1–2 s (a status line is drawn first). Searches yield (step 3); other one-off loops (`Compare`, `CompareSets`, `BestSetEnchants`) do not yet — add `yield()` there if they feel stuck.
+- **Searches use one core** in the browser (`runtime.NumCPU()` = 1), so they are slower than the desktop; the optimizer's 30 s timeout may cut more searches short.
 - **Icons off** on web until the Worker exists (`a.Icons` is nil; the UI handles nil).
 - **Fonts**: no Tahoma in the browser; Go fonts are used (as on Linux).
 - **State saves after 400 ms of no changes**; closing the tab within that window loses the last change. Possible fix: save on `visibilitychange`, but `SaveNow` must run on the UI goroutine (use `App.later` or a frame).
@@ -84,11 +94,6 @@ make run          # the desktop program, unchanged
 - Memory: catalog ~64 MB live, ~115 MB peak while loading.
 
 ## Next steps (detail)
-
-### Step 3 — keep the page responsive
-- Add `view.yield()`: `yield_js.go` does `time.Sleep(time.Millisecond)` at most every ~25 ms of work; `yield_other.go` is a no-op.
-- Call it once per candidate in the worker loops: `view/optimize.go:316`, `swap.go:197`, `best.go:119`, `bestcard.go:77`, `traits.go:222`, `optextra.go:76`. (`runtime.NumCPU()` is 1 in wasm, so each pool already has one worker.)
-- Test: run the optimizer in the browser; the window must keep redrawing (progress, hover).
 
 ### Step 4 — Worker, icons, paste, `?b=` links
 - **First** test that Divine Pride answers a Worker (`curl` from a deployed Worker). If it's blocked too, pre-fetch icons into the site at release time instead.

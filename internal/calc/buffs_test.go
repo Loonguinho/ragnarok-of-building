@@ -124,7 +124,8 @@ func TestClassBuffScripts(t *testing.T) {
 		for _, b := range bs {
 			for v, src := range b.Scripts {
 				n++
-				if b.Name == maximizePower && src == "" { // works on the damage itself
+				_, onRatio := ratioBuffs[b.Skill]
+				if (b.Name == maximizePower || onRatio) && src == "" { // works on the damage itself
 					continue
 				}
 				res := script.Eval(src, script.Context{BaseLv: 200, JobLv: 50})

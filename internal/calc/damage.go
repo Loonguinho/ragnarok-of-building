@@ -80,6 +80,9 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 	if ratio <= 0 {
 		ratio = 100
 	}
+	if f == nil || !f.Magic {
+		ratio += ratioBuffAdd(b) // Força Violenta / Violentíssima (smith_buffs.go)
+	}
 	d.Ratio, d.Hits = ratio, hits
 	if f != nil && f.Magic {
 		md := magicDamage(b, r, c, m, a, f, ratio, hits)

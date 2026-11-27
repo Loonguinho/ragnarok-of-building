@@ -26,15 +26,41 @@ var buffExtra = map[string]string{"BS_ADRENALINE": "bonus bAspdFixed,7; bonus bA
 // to see the damage without them (ClassBuff.AutoSkill).
 var autoBuffs = map[string]bool{"WS_OVERTHRUSTMAX": true}
 
+// ratioBuffs add points to the physical attack's ratio, per level, and give
+// no ATK%: rAthena (battle_calc_attack_skill_ratio) adds Força Violenta's
+// and Força Violentíssima's value to skillratio, so +100 doubles a basic
+// attack (the client's "ATQ +100%") but adds less than 1% to a 10.000%
+// skill. An Engenheiro replay (2026-11-27) agrees: Laser Triplo with
+// Força Violentíssima 5 dealt 47,8M; as ATK% +100 it came to 56,5M.
+// Keyed by the skill; ratioBuffScripts drops their client scripts.
+var ratioBuffs = map[string]struct {
+	state string
+	perLv int
+}{
+	"BS_OVERTHRUST":    {"Power-Thrust", 5},
+	"WS_OVERTHRUSTMAX": {"Maximum Power-Thrust", 20},
+}
+
+// ratioBuffAdd is what the active ratio buffs add to a physical attack's
+// ratio (Força Violenta does not count with Força Violentíssima: see
+// keepMaxOverthrust).
+func ratioBuffAdd(b Build) float64 {
+	add := 0
+	for _, rb := range ratioBuffs {
+		if lv := b.Atk.States[stateKey(rb.state)]; lv > 0 {
+			add += lv * rb.perLv
+		}
+	}
+	return float64(add)
+}
+
 func init() {
 	on := [][2]string{{"0", "—"}, {"1", "Sim"}}
 	regClassBuffs("JT_BLACKSMITH", []ClassBuff{
-		// Força Violenta: the user's weapon ATK +5% per level.
+		// Força Violenta: +5 per level on the attack's ratio (ratioBuffs).
 		// Not with Força Violentíssima: see keepMaxOverthrust.
 		{Name: "Power-Thrust", Skill: "BS_OVERTHRUST", Label: "Força Violenta",
-			Choices: levelChoices(5), Scripts: map[int]string{
-				1: "bonus bAtkRate,5;", 2: "bonus bAtkRate,10;", 3: "bonus bAtkRate,15;",
-				4: "bonus bAtkRate,20;", 5: "bonus bAtkRate,25;"}},
+			Choices: levelChoices(5), Scripts: map[int]string{1: "", 2: "", 3: "", 4: "", 5: ""}}, // ratioBuffs
 		// Manejo Perfeito: no size penalty on any weapon.
 		{Name: "Weapon Perfection", Skill: "BS_WEAPONPERFECT", Label: "Manejo Perfeito", Toggle: true,
 			Choices: on, Scripts: map[int]string{1: "bonus bNoSizeFix;"}},

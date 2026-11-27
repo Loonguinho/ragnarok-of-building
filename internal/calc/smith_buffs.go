@@ -15,6 +15,11 @@ const maximizePower = "Maximize Power"
 // group of their own.
 var buffExcl = map[string]string{}
 
+// autoBuffs are support buffs a character keeps on itself: they count at
+// the level learned in the skill tree, and the Buffs tab can turn them off
+// to see the damage without them (ClassBuff.AutoSkill).
+var autoBuffs = map[string]bool{"WS_OVERTHRUSTMAX": true}
+
 func init() {
 	on := [][2]string{{"0", "—"}, {"1", "Sim"}}
 	regClassBuffs("JT_BLACKSMITH", []ClassBuff{

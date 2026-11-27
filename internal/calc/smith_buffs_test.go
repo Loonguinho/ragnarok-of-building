@@ -52,3 +52,27 @@ func TestSmithBuffs(t *testing.T) {
 		t.Errorf("Força Violenta 5: max %d, not above %d", pt.Max, plain.Max)
 	}
 }
+
+// TestAutoSupportBuff: Força Violentíssima learned counts by itself at its
+// level; "—" (autoOff) keeps it off.
+func TestAutoSupportBuff(t *testing.T) {
+	c, err := gamedata.Load(filepath.Join("..", "..", "data", "gen", "catalog.json.gz"))
+	if err != nil {
+		t.Skip("catalog not generated")
+	}
+	b := Build{Job: 4253, BaseLv: 200, JobLv: 50, Skills: map[int]int{486: 3}}
+	Normalize(&b, c)
+	if got := b.Atk.States["s_maximumpowerthrust"]; got != 3 {
+		t.Fatalf("learned at 3, state %d", got)
+	}
+	b.Atk.States["s_maximumpowerthrust"] = autoOff
+	Normalize(&b, c)
+	if got := b.Atk.States["s_maximumpowerthrust"]; got != autoOff {
+		t.Fatalf("turned off, state %d", got)
+	}
+	nb := Build{Job: 4253, BaseLv: 200, JobLv: 50}
+	Normalize(&nb, c)
+	if got := nb.Atk.States["s_maximumpowerthrust"]; got != 0 {
+		t.Fatalf("not learned, state %d", got)
+	}
+}

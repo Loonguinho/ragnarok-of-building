@@ -374,11 +374,22 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 	for _, cb := range ClassBuffsFor(c, b.Job) {
 		own[cb.Key] = &cb
 		allowed[cb.Key] = true
+		// A support buff counts by itself at the level learned, unless the
+		// player turned it off.
+		if cb.AutoSkill != 0 && at.States[cb.Key] == 0 {
+			if lv := b.Skills[cb.AutoSkill]; lv > 0 {
+				if at.States == nil {
+					at.States = map[string]int{}
+				}
+				at.States[cb.Key] = lv
+			}
+		}
 	}
 	for k, v := range at.States {
 		switch {
 		case !allowed[k] || v == 0:
 			delete(at.States, k)
+		case v == autoOff && own[k] != nil && own[k].AutoSkill != 0:
 		case own[k] != nil && own[k].validValue(v):
 		default:
 			at.States[k] = clamp(v, 0, max(10, top[k]))

@@ -58,6 +58,7 @@ for (const s of steps) {
   if (s.shot) { const r = await send("Page.captureScreenshot", { format: "png" }); fs.writeFileSync(`${out}-${s.shot}.png`, Buffer.from(r.result.data, "base64")); console.log("shot", s.shot); }
   if (s.eval) { const r = await send("Runtime.evaluate", { expression: s.eval, awaitPromise: true, returnByValue: true }); console.log("eval:", JSON.stringify(r.result?.result?.value ?? r.result)); }
   if (s.click) { for (const type of ["mouseMoved", "mousePressed", "mouseReleased"]) await send("Input.dispatchMouseEvent", { type, x: s.click[0], y: s.click[1], button: "left", clickCount: 1 }); await sleep(0.3); }
+  if (s.move) { await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: s.move[0], y: s.move[1] }); await sleep(0.3); }
   if (s.key) { const k = s.key; const mods = k.alt ? 1 : 0; await send("Input.dispatchKeyEvent", { type: "keyDown", key: k.key, code: k.code, modifiers: mods, windowsVirtualKeyCode: k.vk || k.key.toUpperCase().charCodeAt(0) }); await send("Input.dispatchKeyEvent", { type: "keyUp", key: k.key, code: k.code, modifiers: mods, windowsVirtualKeyCode: k.vk || k.key.toUpperCase().charCodeAt(0) }); await sleep(0.3); }
   if (s.type) { await send("Input.insertText", { text: s.type }); await sleep(0.3); }
   if (s.reload) { await send("Page.reload"); }

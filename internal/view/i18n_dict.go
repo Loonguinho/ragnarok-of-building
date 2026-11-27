@@ -587,6 +587,7 @@ var dict = map[string][2]string{
 	"Feminino":             {"Female", "Femenino"},
 	"Cabelo":               {"Hair", "Pelo"},
 	"Mostrar visuais":      {"Show costumes", "Mostrar visuales"},
+	"Encantamentos":        {"Enchants", "Encantamientos"},
 	"Baixar um arquivo com todos os builds salvos":         {"Download a file with every saved build", "Descargar un archivo con todos los builds guardados"},
 	"Juntar os builds de um arquivo exportado":             {"Merge the builds of an exported file", "Unir los builds de un archivo exportado"},
 	`Build "%s" salvo.`:                                    {`Build "%s" saved.`, `Build "%s" guardado.`},

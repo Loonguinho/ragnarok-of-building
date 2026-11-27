@@ -150,11 +150,36 @@ type Skill struct {
 	// level table (clientimport.SkillDescEffects); nil when it has none the
 	// simulator understands.
 	Effects *SkillEffects `json:"effects,omitempty"`
+	// Times: cast, fixed cast, after-cast delay and cooldown per level
+	// (rAthena skill_db.yml); nil when it lists none.
+	Times *SkillTimes `json:"times,omitempty"`
 	// Weapons are the weapon types the skill requires (rAthena skill_db
 	// Requires: Weapon); empty = any.
 	Weapons []string `json:"weapons,omitempty"`
 	// Passive: rAthena gives it no TargetType (never cast).
 	Passive bool `json:"passive,omitempty"`
+}
+
+// SkillTimes are a skill's times in ms, one per level (index level-1).
+type SkillTimes struct {
+	Cast     []int `json:"cast,omitempty"`     // variable cast
+	Fixed    []int `json:"fixed,omitempty"`    // fixed cast
+	After    []int `json:"after,omitempty"`    // after-cast delay
+	Cooldown []int `json:"cooldown,omitempty"` // cooldown
+}
+
+// At are the times at level lv (0 where the skill has none).
+func (t *SkillTimes) At(lv int) (cast, fixed, after, cooldown int) {
+	if t == nil || lv < 1 {
+		return
+	}
+	get := func(v []int) int {
+		if len(v) == 0 {
+			return 0
+		}
+		return v[min(lv, len(v))-1]
+	}
+	return get(t.Cast), get(t.Fixed), get(t.After), get(t.Cooldown)
 }
 
 // SkillEffects: what a buff or passive gives at each level, from the

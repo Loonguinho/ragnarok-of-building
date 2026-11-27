@@ -89,8 +89,14 @@ func (a *App) equippedTip(gtx C, sv view.SlotView) D {
 			})
 		})
 	}
+	// The slot's item comes without its description (the site loads them
+	// apart): it is read as the other item tips read it.
+	desc := it.Desc
+	if full := a.V.Item(it.ID, a.Lang); full != nil {
+		desc = full.Desc
+	}
 	kids = append(kids, func(gtx C) D {
-		return Inset(5, 6, 5, 6).Layout(gtx, RichText(th, it.Desc, rgb(0x000000)))
+		return Inset(5, 6, 5, 6).Layout(gtx, RichText(th, desc, rgb(0x000000)))
 	})
 	d := Col(0, kids...)(gtx)
 	call := m.Stop()

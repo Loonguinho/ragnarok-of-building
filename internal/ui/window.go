@@ -43,6 +43,11 @@ type Window struct {
 	// Dropdown: drawn as a dropdown's list (no title bar, a plain white
 	// box) hanging from what opened it; Escape closes it.
 	Dropdown bool
+	// Fresh: the body is drawn for the first time since the window opened
+	// (or since its tab was chosen, or it was restored): a search field
+	// takes the focus then (body, deskFrame).
+	Fresh     bool
+	lastFrame int
 
 	// Groups: a window whose Members are drawn as its side tabs (one at a
 	// time); a member is not drawn on its own. Icon is the member's tab
@@ -149,7 +154,7 @@ func (w *Window) layout(gtx C, th *Theme, d *Desk, floating bool) D {
 			if w.Body == nil || w.Min {
 				return D{}
 			}
-			return w.Body(gtx)
+			return w.body(gtx)
 		})
 	}
 	natBody, natFoot := 0, 0
@@ -314,7 +319,7 @@ func (w *Window) layoutDropdown(gtx C, d *Desk, width int) D {
 			if w.Body == nil {
 				return D{}
 			}
-			return w.Body(gtx)
+			return w.body(gtx)
 		})
 	}
 	fm := op.Record(gtx.Ops)
@@ -342,4 +347,18 @@ func (w *Window) layoutDropdown(gtx C, d *Desk, width int) D {
 	pass.Pop()
 	area.Pop()
 	return D{Size: full.Max}
+}
+
+// deskFrame counts the desk's frames, for Window.Fresh.
+var deskFrame int
+
+// body draws the window's body, keeping Fresh: true on the first frame it
+// is drawn after one it was not (a body may be drawn twice in a frame, to
+// measure it).
+func (w *Window) body(gtx C) D {
+	if w.lastFrame != deskFrame {
+		w.Fresh = w.lastFrame != deskFrame-1
+		w.lastFrame = deskFrame
+	}
+	return w.Body(gtx)
 }

@@ -225,6 +225,7 @@ func (d *Desk) ResetLayout() {
 
 // Layout draws the backdrop and the windows, then popups and the tooltip.
 func (d *Desk) Layout(gtx C, th *Theme) D {
+	deskFrame++
 	size := gtx.Constraints.Max
 	backdrop(gtx, size)
 	// Track the mouse for tooltips.

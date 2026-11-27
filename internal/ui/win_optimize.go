@@ -672,6 +672,9 @@ func (a *App) itemsBody(gtx C) D {
 	}
 	kids := []layout.Widget{
 		func(gtx C) D {
+			if a.wItems.Fresh { // just opened: type straight away
+				focusAll(gtx, &s.q)
+			}
 			d, _ := SearchBox(gtx, th, &s.q, a.T("Nome ou ID…"), 0)
 			return d
 		},

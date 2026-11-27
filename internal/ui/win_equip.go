@@ -35,6 +35,9 @@ type slotState struct {
 	key  string  // the slot being edited ("" = none)
 	card int     // -1: picking the item itself; else the card/enchant position
 	cmp  bool    // editing the comparison's piece, not the build (compare.go)
+	// focus: the search takes the focus on the next frame (another slot,
+	// card or enchant position was chosen with the window open).
+	focus bool
 
 	toCompare widget.Clickable // "↔ Comparar": edit this slot's comparison instead
 
@@ -268,6 +271,7 @@ func (a *App) openSlot(key string) {
 	s.key, s.card, s.cmp = key, -1, false
 	s.bestOn = false
 	s.q.Ed.SetText("")
+	s.focus = true
 	if !a.wSlot.Open {
 		a.Desk.Toggle(a.wSlot)
 	}
@@ -353,6 +357,7 @@ func (a *App) slotBody(gtx C) D {
 		s.bestOn = false
 		s.card = -1
 		s.q.Ed.SetText("")
+		s.focus = true
 		a.search(0)
 		a.showPicker()
 	}
@@ -373,6 +378,7 @@ func (a *App) slotBody(gtx C) D {
 			s.bestOn = false
 			s.card = i
 			s.q.Ed.SetText("")
+			s.focus = true
 			a.search(0)
 			a.showPicker()
 		}
@@ -412,6 +418,10 @@ func (a *App) slotBody(gtx C) D {
 	kids = append(kids, Sep,
 		func(gtx C) D {
 			s.q.Hint = a.T("Buscar item…")
+			if s.focus || a.wSlot.Fresh { // type straight away
+				s.focus = false
+				focusAll(gtx, &s.q)
+			}
 			d, changed, _ := s.q.Layout(gtx, th, 0)
 			if changed && s.q.Text() != s.lastQ {
 				s.bestOn = false

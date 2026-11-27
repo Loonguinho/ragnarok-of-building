@@ -16,9 +16,38 @@ Read this first when picking the work up (person or Claude session). Last update
 1. **Merge `web` into `main`** if it has commits `main` lacks (README/doc links, `tools/webtest`).
 2. **Check the live site in a normal browser** — see "Not yet tested" below (Alt shortcuts, file picker Cancel, Safari, Firefox, copy-to-clipboard, private window).
 3. **Icons from the client's `data.grf`** — decided, needs the Windows PC with the LATAM client; checklist in "TODO: icons".
-4. Optional: `yield()` in `Compare`, `CompareSets`, `BestSetEnchants` if they feel stuck in the browser.
-5. Optional: root address `https://ragnarok-of-building.github.io/` by renaming the repo to `ragnarok-of-building.github.io` — before announcing, since saved builds live per address (localStorage is per origin). Same for a custom domain: `ragnarok-of-building.com` was free on 2026-11-26 but is not bought (buy → DNS records → Settings → Pages → Custom domain).
-6. Optional: remove the desktop code.
+4. **Faster start-up** (measured, not done yet — see "Start-up speed"): split item/skill descriptions out of the catalog and download the catalog in parallel with the program. ~12 s → ~7 s first visit, ~3.9 s → ~2 s repeat visit.
+5. Optional: `yield()` in `Compare`, `CompareSets`, `BestSetEnchants` if they feel stuck in the browser.
+6. Optional: root address `https://ragnarok-of-building.github.io/` by renaming the repo to `ragnarok-of-building.github.io` — before announcing, since saved builds live per address (localStorage is per origin). Same for a custom domain: `ragnarok-of-building.com` was free on 2026-11-26 but is not bought (buy → DNS records → Settings → Pages → Custom domain).
+7. Optional: remove the desktop code.
+
+## Start-up speed (measured 2026-11-26, not fixed yet)
+
+The page and the program print **`rob timing: <step> <ms>`** in the browser console (ms since the page started loading the program): program downloaded / compiled / started, game data downloaded / decoded, views ready, first simulator frame. Benchmark: `go run ./tools/webserve -maxage 600` (caches like Pages) and `tools/webtest/shot.mjs` with `{"nocache":true}` and `{"throttle":{"down":1500000,"latency":100}}`.
+
+GitHub Pages from Brazil: ~1.2–1.9 MB/s, served from the Curitiba cache (`x-cache: HIT`), `Cache-Control: max-age=600`, **no compression** of `.wasm`.
+
+Baseline (median of 3 runs, headless Chrome, this Linux PC):
+
+| Time to the step | CPU only | First visit, 1.5 MB/s | Repeat visit (cached), 1.5 MB/s |
+|---|---|---|---|
+| Program downloaded | 0.04 s | 4.85 s | 0.04 s |
+| Program compiled + started | 0.38 s | 5.15 s | 0.38 s |
+| Game data downloaded | 0.58 s | 8.80 s | 0.63 s |
+| Game data decoded | 2.86 s | 11.15 s | 3.02 s |
+| Views ready | 3.49 s | 11.86 s | 3.71 s |
+| **First simulator frame** | **3.62 s** | **11.99 s** | **3.85 s** |
+
+Findings:
+- **Item descriptions are 18 MB of the 31 MB catalog (58%)**, in pt+en+es; with skill descriptions, all display-only (tooltips, item database, compare text — never used in calculations; checked `internal/view`, `internal/ui`, `internal/calc`). Catalog without descriptions: **1.33 MB gz / 9.6 MB raw** (vs 4.4 MB / 31 MB); descriptions per language ≈ 1 MB gz / 7 MB raw.
+- The catalog download starts only after the program runs (sequential).
+- Rejected: `gob` instead of JSON (decodes 4× faster but 6.6 MB gz vs 4.4 MB — nets ~zero); changing host (bytes are the limit, Pages already serves from Curitiba); shrinking the 27 MB wasm (Gio + runtime; `wasm-opt` maybe −10–15%, low value).
+
+Plan:
+1. A build step (e.g. `tools/websplit`, run by `make web`) writes `catalog.json.gz` without `desc` for items and skills, plus `desc-pt.json.gz`, `desc-en.json.gz`, `desc-es.json.gz` (`{"items":{id:lines},"skills":{id:lines}}`).
+2. `cmd/web` loads the core catalog at start; after the first frame it fetches the current language's descriptions and fills `Desc[lang]` (safe on the single wasm thread if done in one non-yielding pass); a language change fetches that language. Tooltips show no description for the ~1 s until they arrive.
+3. `index.html` starts fetching the catalog at once (in parallel with `app.wasm.gz`) and hands the bytes to Go.
+4. Re-run the benchmark; expected ~7 s first visit, ~2 s repeat.
 
 ## Goal
 

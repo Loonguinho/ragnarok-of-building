@@ -384,7 +384,9 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 			at.States[k] = clamp(v, 0, max(10, top[k]))
 		}
 	}
-	keepMaxOverthrust(at.States)
+	if n := keepMaxOverthrust(at.States); n != "" {
+		notes = append(notes, n)
+	}
 	// One class buff per exclusive group (the three Mantras...): the first in order.
 	excl := map[string]bool{}
 	for _, cb := range ClassBuffsFor(c, b.Job) {

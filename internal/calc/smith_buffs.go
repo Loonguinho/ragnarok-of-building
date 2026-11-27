@@ -11,20 +11,16 @@ package calc
 // weapon's maximum damage (rAthena SC_MAXIMIZEPOWER: atkmin = atkmax).
 const maximizePower = "Maximize Power"
 
-// overthrustGroup: Força Violenta and Força Violentíssima are not on
-// together (rAthena: Maxoverthrust ends Overthrust, Overthrust fails
-// under Maxoverthrust).
-const overthrustGroup = "overthrust"
-
 // buffExcl puts buffs read from the client's level tables in an exclusive
 // group of their own.
-var buffExcl = map[string]string{"WS_OVERTHRUSTMAX": overthrustGroup}
+var buffExcl = map[string]string{}
 
 func init() {
 	on := [][2]string{{"0", "—"}, {"1", "Sim"}}
 	regClassBuffs("JT_BLACKSMITH", []ClassBuff{
 		// Força Violenta: the user's weapon ATK +5% per level.
-		{Name: "Power-Thrust", Skill: "BS_OVERTHRUST", Label: "Força Violenta", Excl: overthrustGroup,
+		// Not with Força Violentíssima: see keepMaxOverthrust.
+		{Name: "Power-Thrust", Skill: "BS_OVERTHRUST", Label: "Força Violenta",
 			Choices: levelChoices(5), Scripts: map[int]string{
 				1: "bonus bAtkRate,5;", 2: "bonus bAtkRate,10;", 3: "bonus bAtkRate,15;",
 				4: "bonus bAtkRate,20;", 5: "bonus bAtkRate,25;"}},
@@ -38,10 +34,15 @@ func init() {
 }
 
 // keepMaxOverthrust drops Força Violenta when Força Violentíssima is on
-// too: in the game the second ends the first (an older build or a replay
-// may have both).
-func keepMaxOverthrust(states map[string]int) {
-	if states[stateKey("Maximum Power-Thrust")] > 0 {
-		delete(states, stateKey("Power-Thrust"))
+// too, as the game does (rAthena: Maxoverthrust ends Overthrust, and
+// Overthrust fails under Maxoverthrust), and says so. They are not an
+// exclusive group of the Buffs tab: picking Força Violenta must not turn
+// the stronger one off.
+func keepMaxOverthrust(states map[string]int) (note string) {
+	pt := stateKey("Power-Thrust")
+	if states[stateKey("Maximum Power-Thrust")] > 0 && states[pt] > 0 {
+		delete(states, pt)
+		return "Força Violenta não funciona com a Força Violentíssima ativa: só a Violentíssima conta."
 	}
+	return ""
 }

@@ -73,7 +73,7 @@ Want to help? Issues and pull requests are welcome.
 - **[latam-ro-calc](https://github.com/adsonpleal/latam-ro-calc)** and **[rrfparser](https://github.com/adsonpleal/rrfparser)**, by Adson Leal (MIT): LATAM formulas and monsters, and the reference for the replay format.
 - **[bROWiki](https://browiki.org)**: skill tables, used to check the formulas.
 - **[rAthena](https://github.com/rathena/rathena)** (GPL-3.0): class, item and monster tables.
-- **[Divine Pride](https://www.divine-pride.net)**: icons and the stats of some monsters.
+- **[Divine Pride](https://www.divine-pride.net)**: the stats of some monsters.
 
 What comes from each source is detailed in [docs/DESENVOLVIMENTO.md](docs/DESENVOLVIMENTO.md#credits).
 

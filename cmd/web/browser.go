@@ -4,10 +4,12 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"ragnarok-of-building/internal/icons"
 	"ragnarok-of-building/internal/ui"
 	"strings"
 	"sync/atomic"
@@ -188,4 +190,27 @@ func saveFile(name string, data []byte) (string, error) {
 	})
 	js.Global().Call("setTimeout", revoke, 10000)
 	return name + " (downloads)", nil
+}
+
+// getIcon reads a file of the icons folder served next to the page (see
+// cmd/iconimport). The index changes with each import, so it carries the
+// version; the pictures are named by their contents and never change.
+func getIcon(ctx context.Context, name string) ([]byte, error) {
+	url := pageURL("icons/" + name)
+	if name == icons.IndexFile {
+		url += "?v=" + version
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%s: %s", name, res.Status)
+	}
+	return io.ReadAll(io.LimitReader(res.Body, 4<<20))
 }

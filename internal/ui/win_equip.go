@@ -126,10 +126,7 @@ func (a *App) equipBody(gtx C) D {
 				sz := image.Pt(gtx.Dp(midW), gtx.Dp(150))
 				Fill(gtx, image.Rectangle{Max: sz}, rgb(0xfafafa))
 				Border(gtx, image.Rectangle{Max: sz}, ColSep, 1, 0)
-				g := gtx
-				g.Constraints = layout.Exact(sz)
-				layout.Center.Layout(g, T(th, middle[s.tab]).Sz(SmallText).C(ColMuted).W())
-				return D{Size: sz}
+				return a.characterPicture(gtx, sz, T(th, middle[s.tab]).Sz(SmallText).C(ColMuted).W())
 			}
 			return layout.Flex{}.Layout(gtx,
 				layout.Flexed(1, col("L")),
@@ -142,7 +139,7 @@ func (a *App) equipBody(gtx C) D {
 					if a.sets.open.Clicked(gtx) {
 						a.showSets()
 					}
-					return Col(6, sprite, a.petBlock(v.Buffs.Pet, midW), func(gtx C) D {
+					return Col(6, sprite, a.characterControls, a.petBlock(v.Buffs.Pet, midW), func(gtx C) D {
 						return Button{Label: a.T("Comparar conjuntos")}.Layout(gtx, th, &a.sets.open)
 					})(gtx)
 				}),

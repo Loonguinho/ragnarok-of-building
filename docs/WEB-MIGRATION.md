@@ -145,6 +145,7 @@ make run          # the desktop program, unchanged
 - **Size**: `app.wasm` is 27 MB (6.8 MB gzipped) + 4.3 MB catalog ≈ 11 MB first visit if the host gzips. **Check GitHub Pages actually gzips `.wasm`**; if not, fall back to Cloudflare Pages or ship a pre-gzipped file decompressed with `DecompressionStream`.
 - **One thread**: Go in wasm has no preemption, so CPU work freezes drawing unless it calls `yield()`. Catalog decode takes ~1–2 s (a status line is drawn first). Searches yield (step 3); other one-off loops (`Compare`, `CompareSets`, `BestSetEnchants`) do not yet — add `yield()` there if they feel stuck.
 - **Searches use one core** in the browser (`runtime.NumCPU()` = 1), so they are slower than the desktop; the optimizer's 30 s timeout may cut more searches short.
+- **Character** (2026-11-27): the equipment window shows the character with its headgears/costume headgears from the client's sprites (`web/sprites`, `cmd/spriteimport`, `internal/sprite`); garments, weapons and hair colours not yet.
 - **Icons**: item and skill icons from the client (`web/icons`, ~3 MB, one request per picture the window shows, plus `index.json` ~425 KB the first time an icon is needed). Item art, monsters and class icons answer "not found": the item's art box shows its small icon instead, monsters and classes show nothing.
 - **Fonts**: no Tahoma in the browser; Go fonts are used (as on Linux).
 - **localStorage** is ~5 MB per site; builds are small, but a write error is shown if full.

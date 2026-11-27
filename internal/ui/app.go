@@ -14,6 +14,7 @@ import (
 	"gioui.org/op"
 
 	"ragnarok-of-building/internal/calc"
+	"ragnarok-of-building/internal/sprite"
 	"ragnarok-of-building/internal/store"
 	"ragnarok-of-building/internal/view"
 )
@@ -26,6 +27,9 @@ type App struct {
 	V     *view.Views
 	Icons *Icons
 	Lang  string
+	// Sprites draws the character in the equipment window (the web page:
+	// pictures from cmd/spriteimport); nil shows the job's name instead.
+	Sprites *sprite.Served
 
 	// OnTheme tells the host the theme changed (the system's title bar).
 	OnTheme func(dark bool)
@@ -72,6 +76,7 @@ type App struct {
 	basic  basicState
 	status statusState
 	equip  equipState
+	char   charState
 	slot   slotState
 	cmp    compareState
 	damage damageState
@@ -102,6 +107,10 @@ type uiState struct {
 	Build    string                 `json:"build"`           // share code of the last build
 	Saved    string                 `json:"saved,omitempty"` // its saved build's id
 	Windows  map[string]windowState `json:"windows"`
+	// The character's look in the equipment window.
+	Female     bool `json:"female,omitempty"`
+	Hair       int  `json:"hair,omitempty"`
+	NoCostumes bool `json:"noCostumes,omitempty"`
 }
 
 type windowState struct {
@@ -129,6 +138,7 @@ func NewApp(v *view.Views, th *Theme, st store.Store) *App {
 			}
 		}
 		a.savedID = st.Saved
+		a.char.Female, a.char.Hair, a.char.NoCostumes = st.Female, st.Hair, st.NoCostumes
 		for id, ws := range st.Windows {
 			if w := a.Desk.Find(id); w != nil {
 				w.Open, w.Pos, w.Placed, w.Min = ws.Open, image.Pt(ws.X, ws.Y), ws.Placed, ws.Min
@@ -461,7 +471,8 @@ var saveMu sync.Mutex
 
 // snapshot is the state to keep (taken on the UI goroutine).
 func (a *App) snapshot() uiState {
-	st := uiState{Lang: a.Lang, Light: !dark, Floating: a.Desk.Floating, Build: view.EncodeBuild(a.Build()), Saved: a.savedID, Windows: map[string]windowState{}}
+	st := uiState{Lang: a.Lang, Light: !dark, Floating: a.Desk.Floating, Build: view.EncodeBuild(a.Build()), Saved: a.savedID, Windows: map[string]windowState{},
+		Female: a.char.Female, Hair: a.char.Hair, NoCostumes: a.char.NoCostumes}
 	for _, w := range a.Desk.Windows {
 		st.Windows[w.ID] = windowState{Open: w.Open, X: w.Pos.X, Y: w.Pos.Y, Placed: w.Placed, Min: w.Min}
 	}

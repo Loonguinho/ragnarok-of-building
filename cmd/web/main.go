@@ -25,6 +25,7 @@ import (
 
 	"ragnarok-of-building/internal/gamedata"
 	"ragnarok-of-building/internal/icons"
+	"ragnarok-of-building/internal/sprite"
 	"ragnarok-of-building/internal/store"
 	"ragnarok-of-building/internal/ui"
 	"ragnarok-of-building/internal/view"
@@ -61,6 +62,7 @@ func main() {
 		a := ui.NewApp(v, th, files)
 		a.Invalidate = w.Invalidate
 		a.Icons = ui.NewIcons(icons.NewServed(getIcon).Get, w.Invalidate)
+		a.Sprites = sprite.NewServed(getSprite)
 		a.OpenFile = openFile
 		a.SaveFile = saveFile
 		a.ShareURL = shareURL

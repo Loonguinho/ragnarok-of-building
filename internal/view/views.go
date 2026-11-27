@@ -280,3 +280,33 @@ func (v *Views) PutItemDescs(lang string, d gamedata.ItemDescs) {
 	gamedata.PutItemDescs(c, lang, d)
 	completeSetTexts(c)
 }
+
+// HeadViews are the view IDs (the client's ClassNum) of what the
+// character shows on its head, top, middle and lower: the headgears, or
+// with costumes the costume headgear where there is one.
+func (v *Views) HeadViews(b calc.Build, costumes bool) [3]int {
+	c := v.s.opt.Catalog
+	var out [3]int
+	if c == nil {
+		return out
+	}
+	view := func(slot string) int {
+		if e, ok := b.Equip[slot]; ok {
+			if it := c.Items[e.Item]; it != nil {
+				return it.ClassNum
+			}
+		}
+		return 0
+	}
+	for i, slot := range [3]string{calc.HeadTop, calc.HeadMid, calc.HeadLow} {
+		out[i] = view(slot)
+	}
+	if costumes {
+		for i, slot := range [3]string{calc.CosTop, calc.CosMid, calc.CosLow} {
+			if n := view(slot); n > 0 {
+				out[i] = n
+			}
+		}
+	}
+	return out
+}

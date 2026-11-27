@@ -37,6 +37,7 @@ web:
 	cp cmd/app/icon.png dist/web/icon.png
 	go run ./tools/websplit -in data/gen/catalog.json.gz -out dist/web
 	cp -r web/icons dist/web/icons
+	cp -r web/sprites dist/web/sprites
 	touch dist/web/.nojekyll
 
 # Serve dist/web on http://localhost:8080.

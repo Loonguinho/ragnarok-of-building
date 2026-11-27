@@ -193,10 +193,19 @@ func saveFile(name string, data []byte) (string, error) {
 }
 
 // getIcon reads a file of the icons folder served next to the page (see
-// cmd/iconimport). The index changes with each import, so it carries the
-// version; the pictures are named by their contents and never change.
-func getIcon(ctx context.Context, name string) ([]byte, error) {
-	url := pageURL("icons/" + name)
+// cmd/iconimport).
+func getIcon(ctx context.Context, name string) ([]byte, error) { return getStatic(ctx, "icons/", name) }
+
+// getSprite reads a file of the sprites folder (see cmd/spriteimport).
+func getSprite(ctx context.Context, name string) ([]byte, error) {
+	return getStatic(ctx, "sprites/", name)
+}
+
+// getStatic reads a file of a folder of pictures served next to the page.
+// Its index changes with each import, so it carries the version; the
+// pictures are named by their contents and never change.
+func getStatic(ctx context.Context, dir, name string) ([]byte, error) {
+	url := pageURL(dir + name)
 	if name == icons.IndexFile {
 		url += "?v=" + version
 	}

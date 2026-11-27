@@ -1,5 +1,7 @@
 <div align="center">
 
+**Português** · [English](README.en.md)
+
 <img src="docs/img/icon.png" width="96" alt="">
 
 # Ragnarok of Building
@@ -11,7 +13,7 @@
 
 ## [▶️ Abrir o simulador](https://ragnarok-of-building.github.io/rob/)
 
-Roda no navegador, sem instalar nada · Português · English · Español
+Roda no navegador, sem instalar nada · em português, inglês e espanhol
 
 </div>
 
@@ -57,6 +59,12 @@ Achou um dano errado? [Abra uma issue](../../issues) com o **replay (`.rrf`)** e
 ## Para quem programa
 
 Feito em Go, com [Gio](https://gioui.org), compilado para WebAssembly e publicado no GitHub Pages. Como compilar, importar os dados, regenerar as fórmulas e publicar uma versão: [docs/DESENVOLVIMENTO.md](docs/DESENVOLVIMENTO.md) (em inglês).
+
+## Quem contribuiu
+
+- **[edudebortoli](https://github.com/edudebortoli)**: versão para Linux e o pacote AppImage ([PR #2](../../pull/2)).
+
+Quer ajudar? Issues e pull requests são bem-vindos.
 
 ## Créditos
 

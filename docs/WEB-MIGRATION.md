@@ -6,9 +6,9 @@ Read this first when picking the work up (person or Claude session). Last update
 
 - **Live:** https://ragnarok-of-building.github.io/rob/ — the same Gio program compiled to WebAssembly, on GitHub Pages.
 - **Repo:** `ragnarok-of-building/rob` (moved from `Loonguinho/ragnarok-of-building`, then renamed; GitHub redirects the old URLs). On another clone: `git remote set-url origin https://github.com/ragnarok-of-building/rob.git`.
-- **Desktop is discontinued** (decision 2026-11-26). Work and test only the web build. The `desktop` branch is a frozen snapshot; `cmd/app`, `tools/buildexe`, `release.yml` and `view.IconCache` still exist and can be removed when convenient.
+- **Desktop is discontinued** (decision 2026-11-26). Work and test only the web build. The `desktop` branch is a frozen snapshot; `cmd/app`, `tools/buildexe` and `view.IconCache` still exist and can be removed when convenient. Releases, tags and `release.yml` are gone (2026-11-27).
 - **Deploys:** every push to `main` runs `.github/workflows/web.yml` → Pages. `ci.yml` runs on every push (vet desktop + wasm, tests). Both green.
-- **Branches:** `main` = what's live. `web` = where this work was done (merged into `main` by PR #1; later commits on it still need merging). `desktop` = snapshot. `legacy-web` = the old HTMX server, unused.
+- **Branches:** `main` = what's live; work goes in short branches merged by PR. `desktop` = snapshot of the discontinued program. `legacy-web` = the old HTMX server, unused. (`web`, where this migration was done, is merged and deleted.)
 - **Run locally:** `make web-serve` → http://localhost:8080. `make vet`, `make test`.
 - **Test in a browser from a script:** `tools/webtest/shot.mjs` (headless Chrome over DevTools; usage in its header). The Claude in Chrome extension is the other option when connected.
 
@@ -16,12 +16,12 @@ Read this first when picking the work up (person or Claude session). Last update
 1. ~~Merge `web` into `main`~~ — done with the icons PR (`web-icons` branch merged `web`).
 2. **Check the live site in a normal browser** — see "Not yet tested" below (Alt shortcuts, file picker Cancel, Safari, Firefox, copy-to-clipboard, private window).
 3. **Icons from the client's `data.grf`** — items and skills ✅ (2026-11-27, `cmd/iconimport`, `web/icons`). Left: item art (75×100), monsters, class icons; see "TODO: icons".
-4. **Faster start-up** (measured, not done yet — see "Start-up speed"): split item/skill descriptions out of the catalog and download the catalog in parallel with the program. ~12 s → ~7 s first visit, ~3.9 s → ~2 s repeat visit.
+4. ~~Faster start-up~~ — done 2026-11-27 (PR #7): item descriptions apart, catalog downloaded along with the program. First visit ~13.8 s → ~10.4 s, repeat ~4.7 s → ~3.6 s; see "Start-up speed".
 5. Optional: `yield()` in `Compare`, `CompareSets`, `BestSetEnchants` if they feel stuck in the browser.
 6. Optional: root address `https://ragnarok-of-building.github.io/` by renaming the repo to `ragnarok-of-building.github.io` — before announcing, since saved builds live per address (localStorage is per origin). Same for a custom domain: `ragnarok-of-building.com` was free on 2026-11-26 but is not bought (buy → DNS records → Settings → Pages → Custom domain).
 7. Optional: remove the desktop code.
 
-## Start-up speed (measured 2026-11-26, not fixed yet)
+## Start-up speed (measured 2026-11-26; improved 2026-11-27)
 
 The page and the program print **`rob timing: <step> <ms>`** in the browser console (ms since the page started loading the program): program downloaded / compiled / started, game data downloaded / decoded, views ready, first simulator frame. Benchmark: `go run ./tools/webserve -maxage 600` (caches like Pages) and `tools/webtest/shot.mjs` with `{"nocache":true}` and `{"throttle":{"down":1500000,"latency":100}}`.
 
@@ -39,15 +39,25 @@ Baseline (median of 3 runs, headless Chrome, this Linux PC):
 | **First simulator frame** | **3.62 s** | **11.99 s** | **3.85 s** |
 
 Findings:
-- **Item descriptions are 18 MB of the 31 MB catalog (58%)**, in pt+en+es; with skill descriptions, all display-only (tooltips, item database, compare text — never used in calculations; checked `internal/view`, `internal/ui`, `internal/calc`). Catalog without descriptions: **1.33 MB gz / 9.6 MB raw** (vs 4.4 MB / 31 MB); descriptions per language ≈ 1 MB gz / 7 MB raw.
+- **Item descriptions are 18 MB of the 31 MB catalog (58%)**, in pt+en+es, display-only (tooltips, item database, compare text). *Correction 2026-11-27:* skill descriptions are **not** display-only — `Skill.RatioAt` reads the damage % per level from them (`view/damage.go`, `view/skilltable.go`) — so they stay in the catalog. Catalog without descriptions: **1.33 MB gz / 9.6 MB raw** (vs 4.4 MB / 31 MB); descriptions per language ≈ 1 MB gz / 7 MB raw.
 - The catalog download starts only after the program runs (sequential).
 - Rejected: `gob` instead of JSON (decodes 4× faster but 6.6 MB gz vs 4.4 MB — nets ~zero); changing host (bytes are the limit, Pages already serves from Curitiba); shrinking the 27 MB wasm (Gio + runtime; `wasm-opt` maybe −10–15%, low value).
 
-Plan:
-1. A build step (e.g. `tools/websplit`, run by `make web`) writes `catalog.json.gz` without `desc` for items and skills, plus `desc-pt.json.gz`, `desc-en.json.gz`, `desc-es.json.gz` (`{"items":{id:lines},"skills":{id:lines}}`).
-2. `cmd/web` loads the core catalog at start; after the first frame it fetches the current language's descriptions and fills `Desc[lang]` (safe on the single wasm thread if done in one non-yielding pass); a language change fetches that language. Tooltips show no description for the ~1 s until they arrive.
-3. `index.html` starts fetching the catalog at once (in parallel with `app.wasm.gz`) and hands the bytes to Go.
-4. Re-run the benchmark; expected ~7 s first visit, ~2 s repeat.
+Done (2026-11-27, PR #7):
+1. `tools/websplit` (run by `make web`) writes `catalog.json.gz` without the item descriptions (**1.73 MB gz / 11.7 MB raw**, was 4.2 / 28.9) and `desc-pt|en|es.json.gz` (~0.77 MB gz / ~5.8 MB raw each, `{id: lines}`, each language as `Lines.Get` resolved it, fallback included). `gamedata.TakeItemDescs` / `PutItemDescs` / `ReadItemDescs`.
+2. `web/index.html` starts `window.robCatalog = fetch(catalog…)` before the program's download; `cmd/web` awaits that promise (falls back to its own fetch with an older page).
+3. After the first simulator frame `cmd/web/descs.go` downloads the window's language, reads it item by item with `view.Yield` (the page keeps drawing), and the frame goroutine puts it in with `Views.PutItemDescs`, which re-runs `completeSetTexts`. A language change loads that language. Tooltips have no item text for the ~2 s until it arrives. `view/descs_test.go` checks every item in every language reads as with the whole catalog.
+
+Result (Windows PC, headless Chrome, 1.5 MB/s, 3 runs each, interleaved, base = main before PR #7):
+
+| First simulator frame | Before | After |
+|---|---|---|
+| First visit (no cache) | 13.6 / 13.8 / 14.7 s | 10.1 / 10.4 / 10.4 s |
+| Repeat visit (cached) | 4.7 / 4.7 / 4.7 s | 3.3 / 3.6 / 4.1 s |
+
+Where the time goes now (first visit, new): the catalog is ready ~0.2 s after the program (it downloads alongside), then decode ~2 s, views ~1.5 s, first frame +0.2 s; descriptions in place ~2 s after the first frame. Next candidates: `view.New` (~1.5 s: `completeSetTexts` + `NewItemIndex`) and the catalog decode (~2 s).
+
+**Benchmark gotchas:** `tools/webtest/shot.mjs` used to leave its tab open, each one still running the program, so later runs got slower and slower; it now closes the tab and brings it to the front. Stopping a background `chrome --headless` from a shell may leave the browser and its tabs running: close it with DevTools `Browser.close`. Interleave base and new runs, and check `/json/list` is empty between them.
 
 ## Goal
 
@@ -64,7 +74,8 @@ Run **the same Gio app**, compiled to WebAssembly, as a static site on **GitHub 
 | 4a. Share links (`#b=`), no paste on web | ✅ done | `d0d8cff` |
 | 4b. Icons from the client `.grf` | ✅ items + skills; art, monsters, classes still TODO | `web-icons` branch |
 | 5. GitHub Pages workflow, gzipped wasm, CI fix, docs | ✅ **live** (PR #1 merged as `f28ccc6`) | `10e7ddf` |
-| Links to the live address, `tools/webtest` | ✅ on `web` | `66c246f` + next |
+| Links to the live address, `tools/webtest` | ✅ merged | `66c246f` + next |
+| Faster start-up (descriptions apart, catalog in parallel) | ✅ | PR #7 |
 
 ## Testing in a browser without the Chrome extension
 
@@ -73,8 +84,7 @@ Headless Chrome's `--virtual-time-budget` does not wait for CPU work, so screens
 ## How to run it
 
 ```bash
-git switch web
-make web          # builds dist/web: app.wasm, wasm_exec.js, index.html, icon.png, catalog.json.gz
+make web          # builds dist/web: app.wasm(.gz), wasm_exec.js, index.html, icon.png, catalog.json.gz, desc-*.json.gz, icons/
 make web-serve    # builds, then serves dist/web on http://localhost:8080
 make vet          # vets desktop + GOOS=js GOARCH=wasm for internal/... and cmd/web
 make run          # the desktop program, unchanged
@@ -142,7 +152,7 @@ make run          # the desktop program, unchanged
 9. **Optimizer** on a slow machine/phone: the page should keep repainting (hover, scroll) while it runs; note the 30 s timeout may give partial results more often than on the desktop (one core instead of all).
 
 ## Known limits / decisions
-- **Size**: `app.wasm` is 27 MB (6.8 MB gzipped) + 4.3 MB catalog ≈ 11 MB first visit if the host gzips. **Check GitHub Pages actually gzips `.wasm`**; if not, fall back to Cloudflare Pages or ship a pre-gzipped file decompressed with `DecompressionStream`.
+- **Size**: `app.wasm` is 27 MB, shipped as `app.wasm.gz` (6.8 MB; Pages does not compress `.wasm`) + catalog 1.7 MB + one language's descriptions 0.8 MB ≈ 9.3 MB first visit, plus the icons shown.
 - **One thread**: Go in wasm has no preemption, so CPU work freezes drawing unless it calls `yield()`. Catalog decode takes ~1–2 s (a status line is drawn first). Searches yield (step 3); other one-off loops (`Compare`, `CompareSets`, `BestSetEnchants`) do not yet — add `yield()` there if they feel stuck.
 - **Searches use one core** in the browser (`runtime.NumCPU()` = 1), so they are slower than the desktop; the optimizer's 30 s timeout may cut more searches short.
 - **Character** (2026-11-27): the equipment window shows the character with its headgears/costume headgears from the client's sprites (`web/sprites`, `cmd/spriteimport`, `internal/sprite`); garments, weapons and hair colours not yet.

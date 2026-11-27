@@ -25,6 +25,7 @@ type GearSet struct {
 	Key    string
 	Name   string
 	Pieces []SetPiece
+	Cards  bool // the set needs cards: they go in free card positions
 }
 
 // SetPieceView is a piece as the column shows it.
@@ -160,8 +161,10 @@ func (v *Views) GearSets(b calc.Build, l string) []GearSet {
 	}
 	takes := func(id, ench int) bool { return slices.Contains(hosts[ench], id) }
 	found := map[string][]int{}
+	type cardSet struct{ gear, cards []int }
+	var withCards []cardSet
 	for _, cb := range c.Combos {
-		var gear []int
+		var gear, cards []int
 		ok := true
 		for _, id := range cb.Items {
 			it := c.Items[id]
@@ -169,15 +172,21 @@ func (v *Views) GearSets(b calc.Build, l string) []GearSet {
 			case wears(it):
 				gear = append(gear, id)
 			case it != nil && it.Type == "Card" && it.SubType == "Enchant":
+			case it != nil && it.Type == "Card" && it.Name.Get(l) != "":
+				cards = append(cards, id)
 			default:
-				ok = false // a card, or a piece the class does not wear
+				ok = false // a piece the class does not wear
 			}
 		}
-		if !ok || len(gear) < 2 {
-			continue
+		switch {
+		case !ok:
+		case len(cards) > 0 && len(gear) > 0: // a piece and the card(s) of its set
+			sort.Ints(gear)
+			withCards = append(withCards, cardSet{gear, cards})
+		case len(cards) == 0 && len(gear) >= 2:
+			sort.Ints(gear)
+			found[fmt.Sprint(gear)] = gear
 		}
-		sort.Ints(gear)
-		found[fmt.Sprint(gear)] = gear
 	}
 	// An enchant of a piece that forms a set with an enchant only one other
 	// item takes brings that item along (the Ambivalente boots).
@@ -229,6 +238,11 @@ func (v *Views) GearSets(b calc.Build, l string) []GearSet {
 		}
 		set.Name = strings.Join(names, " + ")
 		out = append(out, set)
+	}
+	for _, cs := range withCards {
+		if set, ok := s.cardSet(b, cs.gear, cs.cards, l); ok {
+			out = append(out, set)
+		}
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Name != out[j].Name {
@@ -426,4 +440,83 @@ func (v *Views) BestSetEnchants(ctx context.Context, b calc.Build, pieces []SetP
 		}
 	}
 	return best
+}
+
+// cardSet is a set of pieces and cards: the pieces in their slots, each
+// card in a free card position of a piece of the set that takes it, or
+// else of the item the build wears where it goes. ok false when a card
+// finds no free position.
+func (s *Server) cardSet(b calc.Build, gear, cards []int, l string) (GearSet, bool) {
+	c := s.opt.Catalog
+	slots, ok := s.placeGear(gear)
+	if !ok {
+		return GearSet{}, false
+	}
+	set := GearSet{Key: fmt.Sprint(gear, cards), Cards: true}
+	var names []string
+	for i, id := range gear {
+		set.Pieces = append(set.Pieces, s.newPiece(b, slots[i], id))
+		names = append(names, c.Items[id].Name.Get(l))
+	}
+	// free finds a card position the piece in slot has open.
+	free := func(p *SetPiece) int {
+		it := c.Items[p.Item]
+		if it == nil {
+			return -1
+		}
+		cur := [4]int{}
+		if p.Cards != nil {
+			cur = *p.Cards
+		}
+		for i := 0; i < it.Slots && i < 4; i++ {
+			if cur[i] == 0 {
+				return i
+			}
+		}
+		return -1
+	}
+	put := func(p *SetPiece, card int) bool {
+		i := free(p)
+		if i < 0 {
+			return false
+		}
+		cur := [4]int{}
+		if p.Cards != nil {
+			cur = *p.Cards
+		}
+		cur[i] = card
+		p.Cards = &cur
+		return true
+	}
+	for _, card := range cards {
+		cd := c.Items[card]
+		placed := false
+		for i := range set.Pieces {
+			if calc.CardFits(cd, set.Pieces[i].Slot) && put(&set.Pieces[i], card) {
+				placed = true
+				break
+			}
+		}
+		for _, slot := range calc.Slots {
+			if placed {
+				break
+			}
+			e, worn := b.Equip[slot]
+			if !worn || slices.ContainsFunc(set.Pieces, func(p SetPiece) bool { return p.Slot == slot }) || !calc.CardFits(cd, slot) {
+				continue
+			}
+			cards := e.Cards
+			p := SetPiece{Slot: slot, CompareCand: CompareCand{Item: e.Item, Refine: e.Refine, Grade: e.Grade, Cards: &cards}}
+			if put(&p, card) {
+				set.Pieces = append(set.Pieces, p)
+				placed = true
+			}
+		}
+		if !placed {
+			return GearSet{}, false
+		}
+		names = append(names, cd.Name.Get(l))
+	}
+	set.Name = strings.Join(names, " + ")
+	return set, true
 }

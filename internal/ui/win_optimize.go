@@ -47,6 +47,7 @@ type optimizeState struct {
 	busy   bool
 	res    *view.OptResult
 	apply  map[string]*widget.Clickable
+	cmpEq  map[string]*widget.Clickable // "compare in the equipment window", by optKey
 	rows   map[string]*widget.Clickable
 	expand map[string]*widget.Clickable
 	open   map[string]bool
@@ -108,6 +109,10 @@ func (a *App) optimizeBody(gtx C) D {
 				for _, x := range append([]view.OptOption{o}, o.Tiers...) {
 					if cl := s.apply[optKey(x)]; cl != nil && cl.Clicked(gtx) {
 						a.applyOpt(x)
+					}
+					if cl := s.cmpEq[optKey(x)]; cl != nil && cl.Clicked(gtx) {
+						nb, _ := a.optBuild(x)
+						a.compareFrom(nb)
 					}
 				}
 			}
@@ -211,24 +216,26 @@ func (a *App) optimizeBody(gtx C) D {
 	return Col(6, kids...)(gtx)
 }
 
-// applyOpt puts a suggestion in the build and optimizes again.
-func (a *App) applyOpt(o view.OptOption) {
+// optBuild is the build with a suggestion in it, and what the chat says.
+func (a *App) optBuild(o view.OptOption) (calc.Build, string) {
 	b := a.Build()
 	switch o.Kind {
 	case "item":
-		a.SetBuild(a.V.SwapAtOpts(b, o.Slot, o.Item.ID, o.Refine, o.Grade, o.Opts))
-		a.Say(a.T("Item equipado."), false)
+		return a.V.SwapAtOpts(b, o.Slot, o.Item.ID, o.Refine, o.Grade, o.Opts), a.T("Item equipado.")
 	case "opt":
-		a.SetBuild(a.V.SetOpt(b, o.Slot, o.Index, o.Opt))
-		a.Say(a.T("Bônus aplicado."), false)
+		return a.V.SetOpt(b, o.Slot, o.Index, o.Opt), a.T("Bônus aplicado.")
 	case "set":
-		a.SetBuild(a.V.ApplyParts(b, o.Parts))
-		a.Say(a.T("Conjunto aplicado."), false)
-	default:
-		idx, id := o.Index, o.Item.ID
-		a.SetBuild(edit.EditLinked(b, o.Slot, func(e *calc.Equip) { e.Cards[idx] = id }))
-		a.Say(a.T("Carta aplicada."), false)
+		return a.V.ApplyParts(b, o.Parts), a.T("Conjunto aplicado.")
 	}
+	idx, id := o.Index, o.Item.ID
+	return edit.EditLinked(b, o.Slot, func(e *calc.Equip) { e.Cards[idx] = id }), a.T("Carta aplicada.")
+}
+
+// applyOpt puts a suggestion in the build and optimizes again.
+func (a *App) applyOpt(o view.OptOption) {
+	nb, msg := a.optBuild(o)
+	a.SetBuild(nb)
+	a.Say(msg, false)
 	// Optimize again on the new build once it is computed.
 	go func() {
 		time.Sleep(300 * time.Millisecond)
@@ -434,12 +441,23 @@ func (a *App) optGroupRows(g view.OptGroup, gk string) layout.Widget {
 						return Button{Label: fmt.Sprintf(a.T("%d níveis"), len(o.Tiers)), Arrow: foldArrow(s.open["t/"+k])}.Layout(gtx, th, s.tiers[k])
 					})
 				}),
+				layout.Rigid(func(gtx C) D {
+					cl := clickable(&s.cmpEq, k)
+					d := Button{Label: "↔", MinWidth: 22, Disabled: o.Gain == "="}.Layout(gtx, th, cl)
+					if cl.Hovered() {
+						a.Desk.ShowTip(func(gtx C) D { return TipBox(gtx, T(th, a.T("Comparar no equipamento")).W()) })
+					}
+					return d
+				}),
+				layout.Rigid(Gap(3, 0)),
 				layout.Rigid(func(gtx C) D { return Button{Label: a.T("Aplicar"), Disabled: o.Gain == "="}.Layout(gtx, th, ap) }),
 				layout.Rigid(func(gtx C) D {
 					if !more {
 						return Gap(22, 0)(gtx)
 					}
-					return Inset(0, 0, 0, 3).Layout(gtx, func(gtx C) D { return Button{MinWidth: 24, Arrow: foldArrow(s.open[optOpenKey(s.tab, gk)] != (s.tab != 0))}.Layout(gtx, th, ex) })
+					return Inset(0, 0, 0, 3).Layout(gtx, func(gtx C) D {
+						return Button{MinWidth: 24, Arrow: foldArrow(s.open[optOpenKey(s.tab, gk)] != (s.tab != 0))}.Layout(gtx, th, ex)
+					})
 				}),
 			)
 		}

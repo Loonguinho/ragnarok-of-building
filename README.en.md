@@ -26,7 +26,7 @@ Runs in the browser, nothing to install · in Portuguese, English and Spanish
 - **Replay import (`.rrf`):** reads the recorded character and sums up the recording's damage.
 - **Optimizer:** tries items, cards and enchants and shows what each swap gains.
 - **Best card:** ranks the options for a slot by damage or defense, counting sets.
-- **Comparisons:** items side by side and trait distributions.
+- **Comparisons:** the ↔ button of every equipment slot compares another piece right there, several at once, with the damage now → new in the Summary; also items side by side, sets (cards included) and trait distributions.
 - **Share:** a link or a code to send to a friend.
 - **LATAM data:** items, texts and skills come from the LATAM client.
 

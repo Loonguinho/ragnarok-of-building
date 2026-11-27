@@ -2,6 +2,7 @@ package view
 
 import (
 	"maps"
+	"slices"
 	"math"
 	"sort"
 	"strings"
@@ -310,4 +311,21 @@ func (s *Server) compareRows(builds []calc.Build, l string) []CompareRow {
 		out = append(out, row)
 	}
 	return out
+}
+
+// Overlay is the build with other contents in some slots (the equipment
+// window's comparison): over[slot] is what goes there, nil empties it.
+func (v *Views) Overlay(b calc.Build, over map[string]*calc.Equip) calc.Build {
+	nb := cloneBuild(b)
+	for slot, e := range over {
+		if e == nil {
+			delete(nb.Equip, slot)
+			continue
+		}
+		c := *e
+		c.Opts = slices.Clone(e.Opts)
+		nb.Equip[slot] = c
+	}
+	calc.Normalize(&nb, v.s.opt.Catalog)
+	return nb
 }

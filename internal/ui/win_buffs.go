@@ -108,25 +108,7 @@ func (a *App) buffsBody(gtx C) D {
 		},
 	}
 
-	// Item effects (procs).
-	var fx []layout.Widget
-	for _, it := range bv.Items {
-		if !match(it.Label + " " + it.Gives) {
-			continue
-		}
-		it := it
-		fx = append(fx, a.fxRow(it.Key, it.Value > 0, view.ItemIcon(it.ItemID), it.Label, it.Gives, func(gtx C) D {
-			r := s.row(it.Key)
-			d, val, ok := r.yn.Layout(gtx, th, it.Value > 0, a.T("Sim"), a.T("Não"))
-			if ok {
-				a.SetBuild(edit.SetBuff(b, it.Key, val, nil))
-			}
-			return d
-		}))
-	}
-	if len(fx) > 0 {
-		kids = append(kids, head("Efeitos de itens", "(ativados ao atacar, ao ser atingido ou ao usar habilidades)"), Grid(1, 8, 2, fx))
-	}
+	// Item effects (procs) are in the Resumo (resumo_fx.go).
 
 	// Class buffs and formula states.
 	var act []layout.Widget

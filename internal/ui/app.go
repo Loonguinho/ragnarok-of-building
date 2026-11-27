@@ -11,6 +11,7 @@ import (
 
 	"gioui.org/io/key"
 	"gioui.org/layout"
+	"gioui.org/widget"
 	"gioui.org/op"
 
 	"ragnarok-of-building/internal/calc"
@@ -77,6 +78,8 @@ type App struct {
 	status statusState
 	equip  equipState
 	char   charState
+	ecmp   cmpState
+	fxBtns map[string]*widget.Clickable // the Resumo's item effects
 	slot   slotState
 	cmp    compareState
 	damage damageState
@@ -144,6 +147,9 @@ func NewApp(v *view.Views, th *Theme, st store.Store) *App {
 				w.Open, w.Pos, w.Placed, w.Min = ws.Open, image.Pt(ws.X, ws.Y), ws.Placed, ws.Min
 			}
 		}
+		// The slot editor drops down under a slot clicked: it never opens by
+		// itself, with no slot.
+		a.wSlot.Open = false
 	}
 	a.SetBuild(b)
 	return a
@@ -244,6 +250,7 @@ func (a *App) SetBuild(b calc.Build) {
 		a.mu.Lock()
 		if rev == a.rev {
 			a.view, a.b, a.ready = v, v.Build.Clone(), true
+			a.ecmp.dirty = true // the comparison sits on the build
 			for _, n := range v.Notes {
 				a.chat = append(a.chat, chatLine{S: n})
 			}
@@ -346,6 +353,9 @@ func (a *App) Frame(gtx C) D {
 	a.Desk.Hotkeys(gtx)
 	a.shortcuts(gtx)
 	a.updateTitles()
+	if ready {
+		a.refreshCompare()
+	}
 	if !ready {
 		backdrop(gtx, gtx.Constraints.Max)
 		return layout.Center.Layout(gtx, T(a.Th, a.T("Calculando…")).C(ColOnFill).W())

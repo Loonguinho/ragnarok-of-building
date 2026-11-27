@@ -275,12 +275,12 @@ func (a *App) shellMiddle(gtx C) D {
 				return D{}
 			}
 			if w == a.wEquip { // the gear and what it gives, together
-				return Col(8, w.Body, Sep, a.bonusBody)(gtx)
+				return Col(8, w.body, Sep, a.bonusBody)(gtx)
 			}
 			if underBody && w.Footer != nil {
-				return Col(8, w.Body, w.Footer)(gtx)
+				return Col(8, w.body, w.Footer)(gtx)
 			}
-			return w.Body(gtx)
+			return w.body(gtx)
 		})
 	}()
 	st := op.Offset(image.Pt(0, h-fd.Size.Y)).Push(gtx.Ops)
@@ -328,15 +328,17 @@ func (a *App) resumoBody(gtx C) D {
 	target := func(gtx C) D {
 		name := a.T("Nenhum alvo")
 		var icon layout.Widget = Gap(0, 0)
+		var tags layout.Widget = Gap(0, 0)
 		if d.Target != nil {
 			name = d.Target.NameIn(a.Lang)
 			id := d.Target.ID
 			icon = func(gtx C) D { return a.Icons.Icon(gtx, view.MonsterIcon(id), 28) }
+			tags = T(th, d.TargetTags).Sz(SmallText).C(ColLabel).Lines(1).W() // race · element · size
 		}
 		return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 			layout.Rigid(icon),
 			layout.Rigid(Gap(6, 0)),
-			layout.Flexed(1, B(th, name).Lines(2).W()),
+			layout.Flexed(1, Col(1, B(th, name).Lines(2).W(), tags)),
 			layout.Rigid(func(gtx C) D { return Button{Label: a.T("Trocar")}.Layout(gtx, th, &s.target) }),
 		)
 	}

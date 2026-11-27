@@ -6,6 +6,7 @@ import (
 	"math"
 
 	"gioui.org/f32"
+	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -365,4 +366,11 @@ func (f *IconFilter) Layout(gtx C, a *App, tabs []SideTab) (D, bool) {
 		})
 	}
 	return Row(2, ws...)(gtx), changed
+}
+
+// focusAll gives a field the keyboard with its text selected, so what is
+// typed replaces it.
+func focusAll(gtx C, in *Input) {
+	gtx.Execute(key.FocusCmd{Tag: &in.Ed})
+	in.Ed.SetCaret(in.Ed.Len(), 0)
 }

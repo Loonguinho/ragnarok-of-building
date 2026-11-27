@@ -11,8 +11,11 @@ import (
 
 // damageView is the Alvo / Dano window.
 type damageView struct {
-	Target      *gamedata.Monster
-	TargetInfo  []bonusLine
+	Target     *gamedata.Monster
+	TargetInfo []bonusLine
+	// TargetTags: the target's race, element and size (and Chefe/MVP), for
+	// the Resumo, under its name.
+	TargetTags  string
 	Dmg         calc.DamageResult
 	Skills      []atkSkill
 	Levels      []int
@@ -143,6 +146,10 @@ func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
 		{"Raça", tr(l, racePT(m.Race))}, {"Elemento", tr(l, elementPT[m.Element]) + " " + itoa(m.ElementLv)},
 		{"Tamanho", tr(l, sizePT[m.Size])}, {"Classe", tr(l, cls)},
 		{"DEF", itoa(m.DEF) + " + " + itoa(m.SoftDEF())}, {"DEFM", itoa(m.MDEF) + " + " + itoa(m.SoftMDEF())},
+	}
+	v.TargetTags = tr(l, racePT(m.Race)) + " · " + tr(l, elementPT[m.Element]) + " " + itoa(m.ElementLv) + " · " + tr(l, sizePT[m.Size])
+	if cls != "Normal" {
+		v.TargetTags += " · " + tr(l, cls)
 	}
 	if m.RES > 0 || m.MRES > 0 {
 		v.TargetInfo = append(v.TargetInfo, bonusLine{"RES / MRES", itoa(m.RES) + " / " + itoa(m.MRES)})

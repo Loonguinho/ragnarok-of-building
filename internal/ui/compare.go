@@ -406,3 +406,26 @@ func (a *App) compareBar(gtx C) D {
 		)
 	})
 }
+
+// compareFrom puts what nb changes in the equipment window's comparison
+// (a set of Comparar conjuntos, an optimizer suggestion), replacing the
+// comparison there was, and shows the equipment window. It reports
+// whether anything differs from the build.
+func (a *App) compareFrom(nb calc.Build) bool {
+	a.clearCompare()
+	a.setCompare(nb)
+	for _, slot := range calc.Slots {
+		if e, ok := a.ecmp.over[slot]; ok && e != nil {
+			a.ecmp.open = append(a.ecmp.open, slot)
+		}
+	}
+	if len(a.ecmp.open) == 0 {
+		a.ecmp.over = nil
+		a.Say(a.T("Isso já é o que a build usa."), false)
+		return false
+	}
+	a.markCompare()
+	a.shellSelect(a.wEquip)
+	a.Say(a.T("Comparando no equipamento: veja o Resumo."), false)
+	return true
+}

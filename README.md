@@ -26,7 +26,7 @@ Roda no navegador, sem instalar nada · em português, inglês e espanhol
 - **Importa replay (`.rrf`):** lê o personagem gravado e resume o dano da gravação.
 - **Otimizador:** testa itens, cartas e encantamentos e mostra o ganho de cada troca.
 - **Melhor carta:** ordena as opções de uma posição por dano ou defesa, contando conjuntos.
-- **Comparações:** itens lado a lado e distribuições de talentos.
+- **Comparações:** o botão ↔ de cada slot do equipamento compara outra peça ali mesmo, várias de uma vez, com o dano atual → novo no Resumo; também itens lado a lado, conjuntos (com cartas) e distribuições de talentos.
 - **Compartilhar:** link ou código para mandar a um amigo.
 - **Dados do LATAM:** itens, textos e habilidades vêm do cliente LATAM.
 

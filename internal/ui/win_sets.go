@@ -36,6 +36,7 @@ type setColumn struct {
 	item   Select
 	best   widget.Clickable
 	equip  widget.Clickable
+	cmpEq  widget.Clickable // compare in the equipment window
 	remove widget.Clickable
 }
 
@@ -217,6 +218,12 @@ func (a *App) setsBody(gtx C) D {
 		if c.best.Clicked(gtx) && !c.busy {
 			a.setsBest(c)
 		}
+		if c.cmpEq.Clicked(gtx) && len(c.pieces) > 0 {
+			if a.compareFrom(a.V.SetBuild(b, c.pieces)) {
+				a.wSets.Open = false
+				a.Desk.changed = true
+			}
+		}
 		if c.equip.Clicked(gtx) && len(c.pieces) > 0 {
 			a.SetBuild(a.V.SetBuild(b, c.pieces))
 			a.Say(a.T("Conjunto equipado."), false)
@@ -355,6 +362,9 @@ func (a *App) setsCol(gtx C, b calc.Build, c *setColumn, col view.SetCol, n int)
 	rows = append(rows,
 		func(gtx C) D {
 			return Button{Label: best, Disabled: c.busy || len(c.pieces) == 0}.Layout(gtx, th, &c.best)
+		},
+		func(gtx C) D {
+			return Button{Label: "↔ " + a.T("Comparar no equipamento"), Disabled: len(c.pieces) == 0 || c.busy}.Layout(gtx, th, &c.cmpEq)
 		},
 		Row(4,
 			func(gtx C) D {

@@ -36,6 +36,8 @@ type slotState struct {
 	card int     // -1: picking the item itself; else the card/enchant position
 	cmp  bool    // editing the comparison's piece, not the build (compare.go)
 
+	toCompare widget.Clickable // "↔ Comparar": edit this slot's comparison instead
+
 	q       Input
 	lastQ   string
 	results []view.ItemView
@@ -64,7 +66,7 @@ type slotState struct {
 	bestRef, bestGra      Select
 	bestRefine, bestGrade int
 	bestRolls             Checkbox
-	noBestRolls           bool // Melhor item without the best random options
+	noBestRolls           bool   // Melhor item without the best random options
 	bestFor               string // the slot bestRefine/bestGrade were set for
 	best                  *view.BestResult
 	bestRunning, bestOn   bool
@@ -354,6 +356,14 @@ func (a *App) slotBody(gtx C) D {
 		a.search(0)
 		a.showPicker()
 	}
+	if s.toCompare.Clicked(gtx) && !s.cmp {
+		pos := a.wSlot.Pos
+		if len(a.ecmp.open) == 0 {
+			pos.Y += gtx.Dp(compareBarH)
+		}
+		a.openCompare(s.key)
+		a.wSlot.Pos, a.wSlot.Placed = pos.Add(image.Pt(0, gtx.Dp(equipSlotH)+gtx.Dp(3))), true
+	}
 	if s.unequip.Clicked(gtx) {
 		setBuild(edit.Unequip(b, s.key))
 		a.Say(a.T("Item removido."), false)
@@ -515,6 +525,12 @@ func (a *App) slotEditor(sv view.SlotView, label string) layout.Widget {
 		kids = append(kids, Row(4,
 			func(gtx C) D { return Button{Label: a.T("Trocar item")}.Layout(gtx, th, &s.pickItem) },
 			func(gtx C) D { return Button{Label: a.T("Remover")}.Layout(gtx, th, &s.unequip) },
+			func(gtx C) D {
+				if s.cmp {
+					return D{}
+				}
+				return Button{Label: "↔ " + a.T("Comparar")}.Layout(gtx, th, &s.toCompare)
+			},
 		))
 		return Col(6, kids...)(gtx)
 	}
@@ -667,7 +683,7 @@ func (a *App) pickList(gtx C) D {
 	// under a key of their own (negative).
 	var combos map[int][]view.ComboPart
 	rollsOf := map[int]string{} // Melhor item: the random options counted
-	withTr := map[int][6]int{} // rows with the traits changed
+	withTr := map[int][6]int{}  // rows with the traits changed
 	keyOf := func(i int, it view.ItemView) int { return it.ID }
 	if s.bestOn {
 		results, gains, pending = nil, map[int]view.StatLine{}, s.bestRunning

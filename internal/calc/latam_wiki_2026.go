@@ -24,9 +24,8 @@ func init() {
 	}
 	hits := func(n int) func(FormulaInput) int { return func(FormulaInput) int { return n } }
 	crit := func(FormulaInput) bool { return true }
-	// A skill's critical counts half of the equipment's crit damage
-	// (bCritAtkRate), as latam-ro-calc has it for every skill that can crit
-	// (criDmgPercentage 0.5).
+	// The client's text for both skills that can crit: "A chance é a
+	// metade de CRIT do usuário" (half the crit chance; full crit damage).
 	const critHalf = 0.5
 	byState := func(state string, off, on func(FormulaInput) float64) func(FormulaInput) float64 {
 		return func(in FormulaInput) float64 {
@@ -63,7 +62,7 @@ func init() {
 		Melee: meleeNever, IgnoreDef: true, Hits: hits(2), Ratio: linear(250, 750, 7)})
 	// Laser Triplo: 300 + 600/Nv, 3 lasers, can crit.
 	wikiAdd(meister, &SkillFormula{Code: "MT_TRIPLE_LASER", Name: "Triple Laser",
-		Melee: meleeNever, Hits: hits(3), CanCrit: crit, CritDmg: critHalf, Ratio: linear(300, 600, 10)})
+		Melee: meleeNever, Hits: hits(3), CanCrit: crit, CritRate: critHalf, Ratio: linear(300, 600, 10)})
 	// Poder Esmagador: 100 + 300/Nv x 3; with Esmagador (Machado
 	// Esmagador's state) 150 + 300/Nv x 5.
 	wikiAdd(meister, &SkillFormula{Code: "MT_MIGHTY_SMASH", Name: "Mighty Smash",
@@ -78,7 +77,7 @@ func init() {
 	// Espinhos Furiosos: 200 + 250/Nv x 3; with Eureka 250 + 300/Nv x 5;
 	// can crit.
 	wikiAdd(biolo, &SkillFormula{Code: "BO_MAYHEMIC_THORNS", Name: "Mayhemic Thorns",
-		Melee: meleeNever, Hits: hitsByState("Research Report", 3, 5), CanCrit: crit, CritDmg: critHalf,
+		Melee: meleeNever, Hits: hitsByState("Research Report", 3, 5), CanCrit: crit, CritRate: critHalf,
 		Ratio: byState("Research Report", linear(200, 250, 7), linear(250, 300, 10))})
 	// Atirar Ácido (Sólido, Álgido, Gasoso, Inflamável): 7 hits of [400/Nv +
 	// POD × (1 + Manipular Poção)] × base level. Eureka × 1,5, and the POD

@@ -76,3 +76,23 @@ func TestAutoSupportBuff(t *testing.T) {
 		t.Fatalf("not learned, state %d", got)
 	}
 }
+
+// TestAdrenalineAspd: Adrenalina Pura gives the smith velocidade de ataque
+// (+10% and STD +7) besides its Precisão; a Meister's matched build with
+// it reads latam-tools' ASPD 189.
+func TestAdrenalineAspd(t *testing.T) {
+	c, err := gamedata.Load(filepath.Join("..", "..", "data", "gen", "catalog.json.gz"))
+	if err != nil {
+		t.Skip("catalog not generated")
+	}
+	b := Build{Job: 4253, BaseLv: 200, JobLv: 50, Stats: [6]int{50, 100, 100, 51, 125, 125},
+		Equip: map[string]Equip{Weapon: {Item: 1301, Refine: 7}}} // Machado
+	Normalize(&b, c)
+	off := Compute(b, c)
+	b.Atk.States = map[string]int{"s_adrenalinerush": 5}
+	Normalize(&b, c)
+	on := Compute(b, c)
+	if on.ASPD <= off.ASPD || on.HIT != off.HIT+20 {
+		t.Errorf("Adrenalina Pura 5: ASPD %d → %d, HIT %d → %d; want faster and +20 HIT", off.ASPD, on.ASPD, off.HIT, on.HIT)
+	}
+}

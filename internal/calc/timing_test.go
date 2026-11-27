@@ -10,8 +10,8 @@ import (
 
 // TestAttackTiming: a basic attack goes 50 ÷ (200 − ASPD) times a second;
 // a skill every cast + the longest of its delay, cooldown and the ASPD's
-// wait (Laser Triplo Nv 5: rAthena 1 s + 0,5 s fixed cast, 0,25 s delay,
-// 0,35 s cooldown).
+// wait (Laser Triplo Nv 5: rAthena 1 s + 0,5 s fixed cast, 0,25 s delay;
+// the LATAM cooldown 0,25 s, bROWiki, against rAthena's 0,35 s).
 func TestAttackTiming(t *testing.T) {
 	c, err := gamedata.Load(filepath.Join("..", "..", "data", "gen", "catalog.json.gz"))
 	if err != nil {
@@ -27,8 +27,8 @@ func TestAttackTiming(t *testing.T) {
 	}
 
 	tl := AttackTiming(r, c, 6003, 5)
-	if tl.CooldownMs != 350 || tl.AfterMs != 250 || tl.SP != 60 {
-		t.Errorf("Laser Triplo: cooldown %d, delay %d, SP %d; want 350, 250, 60", tl.CooldownMs, tl.AfterMs, tl.SP)
+	if tl.CooldownMs != 250 || tl.AfterMs != 250 || tl.SP != 60 {
+		t.Errorf("Laser Triplo: cooldown %d, delay %d, SP %d; want 250, 250, 60", tl.CooldownMs, tl.AfterMs, tl.SP)
 	}
 	wait := max(tl.AfterMs, tl.CooldownMs, tl.MotionMs)
 	if tl.CycleMs != tl.CastMs+tl.FixedMs+wait {

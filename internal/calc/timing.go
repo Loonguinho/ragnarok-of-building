@@ -22,6 +22,12 @@ type Timing struct {
 	SP     int     // SP per use (0 for a basic attack)
 }
 
+// latamCooldown are the LATAM cooldowns that differ from rAthena's (kRO):
+// bROWiki's skill pages, where the 2026 formulas come from.
+var latamCooldown = map[string]int{
+	"MT_TRIPLE_LASER": 250, // Laser Triplo: "Recarga: 0,25 segundos" (rAthena 350)
+}
+
 // motionMs is the time between basic attacks at an ASPD (renewal: 50 ÷
 // (200 − ASPD) hits a second); skills wait for it too.
 func motionMs(aspd int) int {
@@ -41,6 +47,9 @@ func AttackTiming(r Result, c *gamedata.Catalog, skillID, lv int) Timing {
 		return t
 	}
 	cast, fixed, after, cooldown := sk.Times.At(lv)
+	if cd, ok := latamCooldown[sk.Code]; ok {
+		cooldown = cd
+	}
 	perSkill := func(name string) int {
 		n := 0
 		for k, v := range r.Extra {

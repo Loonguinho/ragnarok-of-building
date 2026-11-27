@@ -78,6 +78,13 @@ func ClassBuffsFor(c *gamedata.Catalog, jobID int) []ClassBuff {
 		if g, ok := buffExcl[s.Code]; ok {
 			cb.Excl = g
 		}
+		if extra := buffExtra[s.Code]; extra != "" {
+			scripts := map[int]string{}
+			for lv, sc := range cb.Scripts {
+				scripts[lv] = sc + " " + extra
+			}
+			cb.Scripts = scripts
+		}
 		if autoBuffs[s.Code] {
 			cb.AutoSkill = s.ID
 			cb.Choices[0] = [2]string{strconv.Itoa(autoOff), "—"}

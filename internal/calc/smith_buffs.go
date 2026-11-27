@@ -15,6 +15,12 @@ const maximizePower = "Maximize Power"
 // group of their own.
 var buffExcl = map[string]string{}
 
+// buffExtra adds to a buff read from the client's level table what its
+// table leaves out. Adrenalina Pura: velocidade de ataque +10%, and STD +7
+// for the smith casting it (bROWiki; rAthena's renewal ASPD gives it the
+// same 7), which counts like a potion's (× AGI ÷ 200).
+var buffExtra = map[string]string{"BS_ADRENALINE": "bonus bAspdFixed,7; bonus bAspdRate,10;"}
+
 // autoBuffs are support buffs a character keeps on itself: they count at
 // the level learned in the skill tree, and the Buffs tab can turn them off
 // to see the damage without them (ClassBuff.AutoSkill).

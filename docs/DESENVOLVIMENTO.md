@@ -1,8 +1,8 @@
 # Development
 
-Stack: Go · native window drawn with [Gio](https://gioui.org) (no browser engine) · data from the LATAM client itself (+ Divine Pride for item icons) · PT-BR / ES / EN.
+Stack: Go · [Gio](https://gioui.org), compiled to WebAssembly and run in the browser · data from the LATAM client itself · PT-BR / ES / EN.
 
-The old web version (HTMX pages, the hosted server and its Docker image) was retired in November 2026; its last state is the `legacy-web` branch.
+The desktop program (`cmd/app`) was discontinued on 2026-11-26 and its releases were removed; its last state is the `desktop` branch, and the code still in `main` is due to be removed. The older HTMX web version lives on the `legacy-web` branch.
 
 ## Game data
 
@@ -12,15 +12,15 @@ The game data is read from, in order: a `data.grf` and `System` folder copied ne
 
 The same Gio program, compiled to WebAssembly (`cmd/web`), published on GitHub Pages at <https://ragnarok-of-building.github.io/rob/>.
 
-- `make web` builds the static site into `dist/web`: `index.html` (from `web/`, with the version stamped in), `wasm_exec.js`, `app.wasm` and `app.wasm.gz` (the page unzips it with `DecompressionStream`; browsers without it take the plain file), `catalog.json.gz` (the committed one) and `icon.png`. URLs carry `?v=<git describe>` so a release is never mixed with cached files.
+- `make web` builds the static site into `dist/web`: `index.html` (from `web/`, with the version stamped in), `wasm_exec.js`, `app.wasm` and `app.wasm.gz` (the page unzips it with `DecompressionStream`; browsers without it take the plain file), `catalog.json.gz` (the committed one), `icons/` (from `web/icons`, see below) and `icon.png`. URLs carry `?v=<git describe>` so a release is never mixed with cached files.
 - `make web-serve` serves it on <http://localhost:8080>.
 - The `web` workflow publishes it at every push to `main` (and by hand from the Actions tab). One-time setup: **Settings → Pages → Source: GitHub Actions**.
-- In the browser: one thread (searches call `view.yield` so the page keeps drawing), window state and saved builds in `localStorage` (this browser only), files through the browser's picker and downloads, share links as `#b=<code>`, no paste.rs (it refuses pages), no icons yet (Divine Pride refuses us; they will come from the client's `data.grf`).
+- In the browser: one thread (searches call `view.yield` so the page keeps drawing), window state and saved builds in `localStorage` (this browser only), files through the browser's picker and downloads, share links as `#b=<code>`, no paste.rs (it refuses pages). Item and skill icons come from the client (`web/icons`, below); item art, monsters and class icons are not there yet, so the window shows the small icon or nothing.
 - Progress, decisions and the to-do list: [WEB-MIGRATION.md](WEB-MIGRATION.md).
 
 ## Publishing a version
 
-To publish a version, push a tag: `git tag v0.1.0` then `git push origin v0.1.0`. The `release` workflow tests, builds `cmd/app` for Windows and attaches the zip to a new release. GitHub has no game client, so the catalog the zip ships is the committed `data/gen/catalog.json.gz`: after a game patch, run `go run ./cmd/import` and commit it before tagging. To build it locally: `go run ./tools/buildexe` (or `go build -ldflags -H=windowsgui -o RagnarokOfBuilding.exe ./cmd/app`).
+Merging into `main` publishes: the `web` workflow tests, builds the site and deploys it to GitHub Pages. There are no releases or downloads any more. GitHub has no game client, so the site ships the committed `data/gen/catalog.json.gz`: after a game patch, run `go run ./cmd/import` and commit it.
 
 ## Running from source
 
@@ -29,6 +29,7 @@ You need the RO LATAM client installed (default `C:\Gravity\Ragnarok`; set `RO_C
 ```powershell
 go run ./cmd/fetchrathena   # downloads rAthena's tables (GPL-3.0) to data/rathena (not committed)
 go run ./cmd/import         # client + rAthena -> data/gen/catalog.json.gz (~3 s)
+go run ./cmd/iconimport     # client icons for the catalog's items and skills -> web/icons (~10 s)
 ```
 
 and every time:
@@ -38,7 +39,9 @@ go run ./cmd/app            # the program's window
 go test ./...
 ```
 
-Re-run `go run ./cmd/import` after each game patch.
+Re-run `go run ./cmd/import` and then `go run ./cmd/iconimport` after each game patch, and commit `data/gen/catalog.json.gz` and `web/icons`. GitHub has no client, so the site ships what is committed.
+
+**Icons.** `cmd/iconimport` reads `data\texture\유저인터페이스\item\<resource>.bmp` from `data.grf` for every catalog item (its `resource`) and skill (its code, lowercase), turns the magenta key transparent and writes paletted PNGs named by their contents (the same picture is stored once: every card shares one), plus `index.json` from IDs to files. About 3 MB for ~17,700 items and ~1,300 skills. `internal/icons.Served` answers the window's icon paths from that index. About a third of the client's pictures are stored scrambled (the GRF format's "mixed DES"); `internal/grf` unscrambles them like every GRF reader does.
 
 **Linux (and macOS).** The same window runs there. The committed `data/gen/catalog.json.gz` is used, so no game client is needed: `go run ./cmd/app` from the repository. Gio needs cgo and the desktop libraries (Debian/Ubuntu: `gcc pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libvulkan-dev`). File and folder pickers use `zenity` or `kdialog` (osascript on macOS). Under `go run` the program works in the current folder instead of next to the temporary executable.
 

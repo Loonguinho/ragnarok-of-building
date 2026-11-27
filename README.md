@@ -1,19 +1,19 @@
 <div align="center">
 
+**Português** · [English](README.en.md)
+
 <img src="docs/img/icon.png" width="96" alt="">
 
 # Ragnarok of Building
 
 **Monte sua build de Ragnarok Online LATAM, veja o dano e descubra o que melhorar.**
 
-[![Versão](https://img.shields.io/github/v/release/ragnarok-of-building/rob?include_prereleases&label=vers%C3%A3o&color=3f6fb5)](../../releases)
-[![Downloads](https://img.shields.io/github/downloads/ragnarok-of-building/rob/total?label=downloads&color=3f6fb5)](../../releases)
 [![Testes](https://img.shields.io/github/actions/workflow/status/ragnarok-of-building/rob/ci.yml?branch=main&label=testes)](../../actions)
 [![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-lightgrey)](LICENSE)
 
-### [▶️ Abrir no navegador](https://ragnarok-of-building.github.io/rob/) · [⬇️ Baixar para Windows](../../releases)
+## [▶️ Abrir o simulador](https://ragnarok-of-building.github.io/rob/)
 
-Português · English · Español
+Roda no navegador, sem instalar nada · em português, inglês e espanhol
 
 </div>
 
@@ -27,7 +27,7 @@ Português · English · Español
 - **Otimizador:** testa itens, cartas e encantamentos e mostra o ganho de cada troca.
 - **Melhor carta:** ordena as opções de uma posição por dano ou defesa, contando conjuntos.
 - **Comparações:** itens lado a lado e distribuições de talentos.
-- **Compartilhar:** link, código ou paste para mandar a um amigo.
+- **Compartilhar:** link ou código para mandar a um amigo.
 - **Dados do LATAM:** itens, textos e habilidades vêm do cliente LATAM.
 
 | Cálculo de dano | Comparar talentos |
@@ -43,19 +43,12 @@ Português · English · Español
 
 ## Como usar
 
-**No navegador:** abra [ragnarok-of-building.github.io/rob/](https://ragnarok-of-building.github.io/rob/). Não precisa instalar nada; os builds ficam guardados neste navegador. Para mandar um build a alguém, use **Compartilhar → Link**.
+1. Abra **[ragnarok-of-building.github.io/rob/](https://ragnarok-of-building.github.io/rob/)** no Chrome, Edge ou Firefox, de preferência no computador.
+2. Escolha sua classe ou clique em **Importar replay**.
 
-**No Windows:**
+Não precisa instalar nada nem ter o jogo. Os builds ficam guardados neste navegador; para levá-los a outro, use **Builds salvos (Alt+C) → Exportar** e depois **Importar** no outro. Para mandar um build a alguém, use **Compartilhar → Link**. Aperte **Alt+H** para ver os atalhos.
 
-1. Baixe o `.zip` da [última versão](../../releases) e extraia em qualquer pasta.
-2. Abra o `RagnarokOfBuilding.exe`.
-3. Escolha sua classe ou clique em **Importar replay**.
-
-Não precisa instalar nada nem ter o jogo: os dados já vêm no zip. Os ícones são baixados uma vez, quando aparecem pela primeira vez.
-
-> O programa não é assinado, então o Windows pode mostrar um aviso: **Mais informações → Executar assim mesmo**. O código está todo aqui para quem quiser conferir.
-
-Mais detalhes no [LEIAME](docs/LEIAME.txt). Aperte **Alt+H** no programa para ver os atalhos.
+> **Usava o programa para Windows?** Ele foi descontinuado: as novidades agora saem só no site. Para trazer seus builds, abra **Builds salvos (Alt+C) → Importar** no site e escolha o `builds.json` que fica na pasta do programa.
 
 ## O dano confere com o jogo?
 
@@ -65,14 +58,20 @@ Achou um dano errado? [Abra uma issue](../../issues) com o **replay (`.rrf`)** e
 
 ## Para quem programa
 
-Feito em Go, com janela nativa em [Gio](https://gioui.org). Como compilar, importar os dados, regenerar as fórmulas e publicar uma versão: [docs/DESENVOLVIMENTO.md](docs/DESENVOLVIMENTO.md) (em inglês).
+Feito em Go, com [Gio](https://gioui.org), compilado para WebAssembly e publicado no GitHub Pages. Como compilar, importar os dados, regenerar as fórmulas e publicar uma versão: [docs/DESENVOLVIMENTO.md](docs/DESENVOLVIMENTO.md) (em inglês).
+
+## Quem contribuiu
+
+- **[edudebortoli](https://github.com/edudebortoli)**: versão para Linux e o pacote AppImage ([PR #2](../../pull/2)).
+
+Quer ajudar? Issues e pull requests são bem-vindos.
 
 ## Créditos
 
 - **[latam-ro-calc](https://github.com/adsonpleal/latam-ro-calc)** e **[rrfparser](https://github.com/adsonpleal/rrfparser)**, de Adson Leal (MIT): fórmulas e monstros do LATAM, e referência do formato de replay.
 - **[bROWiki](https://browiki.org)**: tabelas das habilidades, usadas para conferir as fórmulas.
 - **[rAthena](https://github.com/rathena/rathena)** (GPL-3.0): tabelas de classes, itens e monstros.
-- **[Divine Pride](https://www.divine-pride.net)**: ícones e atributos de alguns monstros.
+- **[Divine Pride](https://www.divine-pride.net)**: atributos de alguns monstros.
 
 O que vem de cada fonte está detalhado em [docs/DESENVOLVIMENTO.md](docs/DESENVOLVIMENTO.md#credits).
 

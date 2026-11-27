@@ -36,6 +36,7 @@ web:
 	sed 's/__VERSION__/$(VERSION)/g' web/index.html > dist/web/index.html
 	cp cmd/app/icon.png dist/web/icon.png
 	cp data/gen/catalog.json.gz dist/web/
+	cp -r web/icons dist/web/icons
 	touch dist/web/.nojekyll
 
 # Serve dist/web on http://localhost:8080.

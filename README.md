@@ -71,7 +71,7 @@ Quer ajudar? Issues e pull requests são bem-vindos.
 - **[latam-ro-calc](https://github.com/adsonpleal/latam-ro-calc)** e **[rrfparser](https://github.com/adsonpleal/rrfparser)**, de Adson Leal (MIT): fórmulas e monstros do LATAM, e referência do formato de replay.
 - **[bROWiki](https://browiki.org)**: tabelas das habilidades, usadas para conferir as fórmulas.
 - **[rAthena](https://github.com/rathena/rathena)** (GPL-3.0): tabelas de classes, itens e monstros.
-- **[Divine Pride](https://www.divine-pride.net)**: ícones e atributos de alguns monstros.
+- **[Divine Pride](https://www.divine-pride.net)**: atributos de alguns monstros.
 
 O que vem de cada fonte está detalhado em [docs/DESENVOLVIMENTO.md](docs/DESENVOLVIMENTO.md#credits).
 

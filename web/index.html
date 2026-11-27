@@ -41,6 +41,8 @@
 
   (async () => {
     const note = document.getElementById("note");
+    // Start-up timings, printed in the console ("rob timing").
+    const t0 = performance.now(), ms = () => Math.round(performance.now() - t0);
     const fill = document.getElementById("fill");
     try {
       if (!("WebAssembly" in window)) throw new Error("Este navegador não roda WebAssembly.");
@@ -66,6 +68,7 @@
       }
       fill.style.width = "100%";
       note.textContent = "Abrindo…";
+      console.log("rob timing: program downloaded", ms(), "ms", got, "bytes");
       let bytes = new Uint8Array(got);
       let at = 0;
       for (const p of parts) { bytes.set(p, at); at += p.length; }
@@ -74,8 +77,11 @@
         const out = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
         bytes = new Uint8Array(await new Response(out).arrayBuffer());
       }
+      console.log("rob timing: program unpacked", ms(), "ms");
       const go = new Go();
       const { instance } = await WebAssembly.instantiate(bytes, go.importObject);
+      console.log("rob timing: program compiled", ms(), "ms");
+      window.robT0 = t0;
       go.run(instance); // the program removes #loading when its window draws
     } catch (err) {
       document.getElementById("loading").classList.add("error");

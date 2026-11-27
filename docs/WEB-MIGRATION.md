@@ -1,6 +1,6 @@
 # Web migration: progress and handoff
 
-Read this first when picking the work up (person or Claude session). Last updated 2026-11-26.
+Read this first when picking the work up (person or Claude session). Last updated 2026-11-27.
 
 ## Start here
 
@@ -13,12 +13,41 @@ Read this first when picking the work up (person or Claude session). Last update
 - **Test in a browser from a script:** `tools/webtest/shot.mjs` (headless Chrome over DevTools; usage in its header). The Claude in Chrome extension is the other option when connected.
 
 ### What's left (in order)
-1. **Merge `web` into `main`** if it has commits `main` lacks (README/doc links, `tools/webtest`).
+1. ~~Merge `web` into `main`~~ — done with the icons PR (`web-icons` branch merged `web`).
 2. **Check the live site in a normal browser** — see "Not yet tested" below (Alt shortcuts, file picker Cancel, Safari, Firefox, copy-to-clipboard, private window).
-3. **Icons from the client's `data.grf`** — decided, needs the Windows PC with the LATAM client; checklist in "TODO: icons".
-4. Optional: `yield()` in `Compare`, `CompareSets`, `BestSetEnchants` if they feel stuck in the browser.
-5. Optional: root address `https://ragnarok-of-building.github.io/` by renaming the repo to `ragnarok-of-building.github.io` — before announcing, since saved builds live per address (localStorage is per origin). Same for a custom domain: `ragnarok-of-building.com` was free on 2026-11-26 but is not bought (buy → DNS records → Settings → Pages → Custom domain).
-6. Optional: remove the desktop code.
+3. **Icons from the client's `data.grf`** — items and skills ✅ (2026-11-27, `cmd/iconimport`, `web/icons`). Left: item art (75×100), monsters, class icons; see "TODO: icons".
+4. **Faster start-up** (measured, not done yet — see "Start-up speed"): split item/skill descriptions out of the catalog and download the catalog in parallel with the program. ~12 s → ~7 s first visit, ~3.9 s → ~2 s repeat visit.
+5. Optional: `yield()` in `Compare`, `CompareSets`, `BestSetEnchants` if they feel stuck in the browser.
+6. Optional: root address `https://ragnarok-of-building.github.io/` by renaming the repo to `ragnarok-of-building.github.io` — before announcing, since saved builds live per address (localStorage is per origin). Same for a custom domain: `ragnarok-of-building.com` was free on 2026-11-26 but is not bought (buy → DNS records → Settings → Pages → Custom domain).
+7. Optional: remove the desktop code.
+
+## Start-up speed (measured 2026-11-26, not fixed yet)
+
+The page and the program print **`rob timing: <step> <ms>`** in the browser console (ms since the page started loading the program): program downloaded / compiled / started, game data downloaded / decoded, views ready, first simulator frame. Benchmark: `go run ./tools/webserve -maxage 600` (caches like Pages) and `tools/webtest/shot.mjs` with `{"nocache":true}` and `{"throttle":{"down":1500000,"latency":100}}`.
+
+GitHub Pages from Brazil: ~1.2–1.9 MB/s, served from the Curitiba cache (`x-cache: HIT`), `Cache-Control: max-age=600`, **no compression** of `.wasm`.
+
+Baseline (median of 3 runs, headless Chrome, this Linux PC):
+
+| Time to the step | CPU only | First visit, 1.5 MB/s | Repeat visit (cached), 1.5 MB/s |
+|---|---|---|---|
+| Program downloaded | 0.04 s | 4.85 s | 0.04 s |
+| Program compiled + started | 0.38 s | 5.15 s | 0.38 s |
+| Game data downloaded | 0.58 s | 8.80 s | 0.63 s |
+| Game data decoded | 2.86 s | 11.15 s | 3.02 s |
+| Views ready | 3.49 s | 11.86 s | 3.71 s |
+| **First simulator frame** | **3.62 s** | **11.99 s** | **3.85 s** |
+
+Findings:
+- **Item descriptions are 18 MB of the 31 MB catalog (58%)**, in pt+en+es; with skill descriptions, all display-only (tooltips, item database, compare text — never used in calculations; checked `internal/view`, `internal/ui`, `internal/calc`). Catalog without descriptions: **1.33 MB gz / 9.6 MB raw** (vs 4.4 MB / 31 MB); descriptions per language ≈ 1 MB gz / 7 MB raw.
+- The catalog download starts only after the program runs (sequential).
+- Rejected: `gob` instead of JSON (decodes 4× faster but 6.6 MB gz vs 4.4 MB — nets ~zero); changing host (bytes are the limit, Pages already serves from Curitiba); shrinking the 27 MB wasm (Gio + runtime; `wasm-opt` maybe −10–15%, low value).
+
+Plan:
+1. A build step (e.g. `tools/websplit`, run by `make web`) writes `catalog.json.gz` without `desc` for items and skills, plus `desc-pt.json.gz`, `desc-en.json.gz`, `desc-es.json.gz` (`{"items":{id:lines},"skills":{id:lines}}`).
+2. `cmd/web` loads the core catalog at start; after the first frame it fetches the current language's descriptions and fills `Desc[lang]` (safe on the single wasm thread if done in one non-yielding pass); a language change fetches that language. Tooltips show no description for the ~1 s until they arrive.
+3. `index.html` starts fetching the catalog at once (in parallel with `app.wasm.gz`) and hands the bytes to Go.
+4. Re-run the benchmark; expected ~7 s first visit, ~2 s repeat.
 
 ## Goal
 
@@ -33,7 +62,7 @@ Run **the same Gio app**, compiled to WebAssembly, as a static site on **GitHub 
 | 3. `yield()` so searches don't freeze the page | ✅ done | `dfb4f05` |
 | Code review fixes (picker, save on tab close, errors, yield) | ✅ done | `bc36982` |
 | 4a. Share links (`#b=`), no paste on web | ✅ done | `d0d8cff` |
-| 4b. Icons from the client `.grf` | 📝 **TODO** — decided, waiting for the client (see "TODO: icons") | `91699a5` (plan) |
+| 4b. Icons from the client `.grf` | ✅ items + skills; art, monsters, classes still TODO | `web-icons` branch |
 | 5. GitHub Pages workflow, gzipped wasm, CI fix, docs | ✅ **live** (PR #1 merged as `f28ccc6`) | `10e7ddf` |
 | Links to the live address, `tools/webtest` | ✅ on `web` | `66c246f` + next |
 
@@ -116,28 +145,36 @@ make run          # the desktop program, unchanged
 - **Size**: `app.wasm` is 27 MB (6.8 MB gzipped) + 4.3 MB catalog ≈ 11 MB first visit if the host gzips. **Check GitHub Pages actually gzips `.wasm`**; if not, fall back to Cloudflare Pages or ship a pre-gzipped file decompressed with `DecompressionStream`.
 - **One thread**: Go in wasm has no preemption, so CPU work freezes drawing unless it calls `yield()`. Catalog decode takes ~1–2 s (a status line is drawn first). Searches yield (step 3); other one-off loops (`Compare`, `CompareSets`, `BestSetEnchants`) do not yet — add `yield()` there if they feel stuck.
 - **Searches use one core** in the browser (`runtime.NumCPU()` = 1), so they are slower than the desktop; the optimizer's 30 s timeout may cut more searches short.
-- **Icons off** on web until the Worker exists (`a.Icons` is nil; the UI handles nil).
+- **Icons**: item and skill icons from the client (`web/icons`, ~3 MB, one request per picture the window shows, plus `index.json` ~425 KB the first time an icon is needed). Item art, monsters and class icons answer "not found": the item's art box shows its small icon instead, monsters and classes show nothing.
 - **Fonts**: no Tahoma in the browser; Go fonts are used (as on Linux).
 - **localStorage** is ~5 MB per site; builds are small, but a write error is shown if full.
 - Memory: catalog ~64 MB live, ~115 MB peak while loading.
 
 ## Next steps (detail)
 
-### TODO: icons from the client `.grf` (decided 2026-11-26)
+### Icons from the client `.grf` (decided 2026-11-26; items and skills done 2026-11-27)
+
+**Done:** `cmd/iconimport` (run after `cmd/import`, ~10 s) reads `data\texture\유저인터페이스\item\<resource>.bmp` for every catalog item and `<skill code, lowercase>.bmp` for every skill, keys out magenta, writes paletted PNGs named by a hash of their contents to `web/icons` (8,126 pictures for 17,707 items and 1,285 skills, 3.0 MB; cards and other shared pictures stored once) and `index.json` (ID → file). `make web` copies the folder; `internal/icons.Served` maps the window's paths (`view.ItemIcon`, `view.SkillIcon`) through the index; `cmd/web` fetches with `?v=` only on the index (the pictures never change under their names). Items still without an icon (~430) are not in the LATAM client.
+
+**GRF scrambling:** about 30% of the item icons (3,039 of 9,967; 12,326 pictures under `data\texture` in all, including most classic items such as the Knife) are stored with the GRF format's "mixed DES" / "header DES" flags. `internal/grf` now unscrambles them (`des.go`: one keyless DES round per block plus the byte shuffle, as rAthena's grfio does); `TestClientScrambled` reads all of them when a client is set up. Before this, those entries failed with "encrypted entries are not supported". Note for the next `cmd/import`: any scrambled `.lub` it used to skip is now readable.
+
+**Decided 2026-11-27: no item art for now.** The 75×100 art is ~58 MB as PNG (most has more than 256 colours; cropping saves little); the user chose icons only. Options if it comes back: art reduced to 56 px (~15–20 MB), or full art (~63 MB).
+
+The original plan, with what is left at the end:
 
 **Decision:** take icons from the LATAM client's `data.grf`, not Divine Pride. Same pixels (Divine Pride's images come from the client), every LATAM-only item covered, and no dependency on a site that now refuses us (403). **Blocked on:** the client is only on the Windows PC — do this from there (or with `RO_CLIENT=<copy of the client>` in `.env`).
 
 Already in place: `internal/grf` reads `data.grf` (`grf.Open`, `Archive.Find`, `Archive.Read`); the importer keeps each item's resource name (`it.Resource`, from `identifiedResourceName` in `internal/clientimport/import.go`); `Icons.Get` takes PNG bytes, so any source plugs in.
 
-- [ ] **Find the paths.** `go run ./cmd/grftool <client>/data.grf find item` and `... find collection`: expect `data\texture\유저인터페이스\item\<resource>.bmp` (24×24 icon) and `...\collection\<resource>.bmp` (75×100 art). Check how `internal/grf` spells the Korean folder (EUC-KR/CP949 bytes in the GRF).
-- [ ] **Skill icons.** Find where the client keeps them (`grftool find` a known skill's resource name; likely the same `item` folder) and how a skill ID maps to its file (skillinfo lub tables the importer already reads).
-- [ ] **BMP → PNG.** Decode the BMP (`golang.org/x/image/bmp`), turn the magenta key (`#FF00FF`, and near-magenta) into transparency, encode PNG.
-- [ ] **Import step.** `cmd/import` (or a new `cmd/iconimport`) writes the PNGs. Keep them out of `data/gen/catalog.json.gz`; decide the shipped form:
+- [x] **Find the paths.** `go run ./cmd/grftool <client>/data.grf find item` and `... find collection`: expect `data\texture\유저인터페이스\item\<resource>.bmp` (24×24 icon) and `...\collection\<resource>.bmp` (75×100 art). Check how `internal/grf` spells the Korean folder (EUC-KR/CP949 bytes in the GRF).
+- [x] **Skill icons.** Find where the client keeps them (`grftool find` a known skill's resource name; likely the same `item` folder) and how a skill ID maps to its file (skillinfo lub tables the importer already reads).
+- [x] **BMP → PNG.** Decode the BMP (`golang.org/x/image/bmp`), turn the magenta key (`#FF00FF`, and near-magenta) into transparency, encode PNG.
+- [x] **Import step.** `cmd/import` (or a new `cmd/iconimport`) writes the PNGs. Keep them out of `data/gen/catalog.json.gz`; decide the shipped form:
   - a folder `web/icons/<kind>/<id>.png` copied by `make web` (simple; thousands of small requests, fine over HTTP/2), or
   - one archive per kind (e.g. a zip or a packed file with an index) fetched once (fewer requests, more code).
   Check the total size before choosing.
-- [ ] **Serve on web.** `view.NewWebIcons(base)`: GET `pageURL(base + rel)` via net/http (fetch), map today's Divine Pride–style paths (`ItemIcon`, `ItemArt`, `SkillIcon`, `JobIcon` in `view/imgcache.go`) to the new files. Wire `a.Icons = ui.NewIcons(...)` in `cmd/web/main.go`.
-- [ ] **Licence note.** README/DESENVOLVIMENTO: the icons are game data © Gravity, like the catalog the repo already ships.
+- [x] **Serve on web.** `view.NewWebIcons(base)`: GET `pageURL(base + rel)` via net/http (fetch), map today's Divine Pride–style paths (`ItemIcon`, `ItemArt`, `SkillIcon`, `JobIcon` in `view/imgcache.go`) to the new files. Wire `a.Icons = ui.NewIcons(...)` in `cmd/web/main.go`.
+- [x] **Licence note.** (README already says the game's data and images are © Gravity.) README/DESENVOLVIMENTO: the icons are game data © Gravity, like the catalog the repo already ships.
 - [ ] **Later: monsters.** Their pictures are sprites (`data\sprite\몬스터\*.spr` + `.act`); draw the first frame of the idle action to PNG. More work, so after items and skills; the UI works without them meanwhile.
 - [ ] **Later: job icons** (`JobIcon`): find their files in the client the same way.
 - [ ] Desktop is discontinued, so its `view.IconCache` (Divine Pride) can be removed once the web uses the client icons.

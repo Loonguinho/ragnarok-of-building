@@ -187,14 +187,18 @@ func (a *Archive) Read(path string) ([]byte, error) {
 
 // ReadEntry returns the decompressed contents of an entry.
 func (a *Archive) ReadEntry(e Entry) ([]byte, error) {
-	if e.Encrypted() {
-		return nil, fmt.Errorf("grf: %s: encrypted entries are not supported", e.Name)
-	}
 	if e.Size > 256<<20 || e.Aligned > 256<<20 {
 		return nil, fmt.Errorf("grf: %s: implausible size", e.Name)
 	}
-	r := io.NewSectionReader(a.f, headerSize+int64(e.Offset), int64(e.Aligned))
-	if e.CompSize == e.Size && e.Size > 0 {
+	var r io.Reader = io.NewSectionReader(a.f, headerSize+int64(e.Offset), int64(e.Aligned))
+	if e.Encrypted() {
+		raw := make([]byte, e.Aligned)
+		if _, err := io.ReadFull(r, raw); err != nil {
+			return nil, fmt.Errorf("grf: %s: %w", e.Name, err)
+		}
+		unscramble(raw, e.Flags, e.CompSize)
+		r = bytes.NewReader(raw)
+	} else if e.CompSize == e.Size && e.Size > 0 {
 		// Some tools store files uncompressed.
 		b := make([]byte, e.Size)
 		if _, err := io.ReadFull(r, b); err == nil && !bytes.HasPrefix(b, []byte{0x78}) {

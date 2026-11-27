@@ -24,6 +24,7 @@ import (
 	"gioui.org/unit"
 
 	"ragnarok-of-building/internal/gamedata"
+	"ragnarok-of-building/internal/icons"
 	"ragnarok-of-building/internal/store"
 	"ragnarok-of-building/internal/ui"
 	"ragnarok-of-building/internal/view"
@@ -57,6 +58,7 @@ func main() {
 		}
 		a := ui.NewApp(v, th, files)
 		a.Invalidate = w.Invalidate
+		a.Icons = ui.NewIcons(icons.NewServed(getIcon).Get, w.Invalidate)
 		a.OpenFile = openFile
 		a.SaveFile = saveFile
 		a.ShareURL = shareURL
@@ -69,7 +71,7 @@ func main() {
 
 	go func() {
 		var ops op.Ops
-		shown := false
+		shown, drawn := false, false
 		for {
 			switch e := w.Event().(type) {
 			case app.DestroyEvent:
@@ -89,6 +91,10 @@ func main() {
 				gtx := app.NewContext(&ops, e)
 				if simulator != nil {
 					simulator.Frame(gtx)
+					if !drawn {
+						drawn = true
+						timing("first simulator frame")
+					}
 				} else {
 					start.Frame(gtx)
 				}
@@ -99,9 +105,21 @@ func main() {
 	app.Main()
 }
 
+// timing prints a start-up step in the console, in ms since the page
+// began loading the program (index.html's robT0).
+func timing(step string) {
+	t0 := js.Global().Get("robT0")
+	if t0.Type() != js.TypeNumber {
+		return
+	}
+	now := js.Global().Get("performance").Call("now").Float()
+	js.Global().Get("console").Call("log", "rob timing:", step, int(now-t0.Float()), "ms")
+}
+
 // load downloads the catalog served next to the page and prepares the
 // views.
 func load(st *status, log *slog.Logger) (*view.Views, error) {
+	timing("program started")
 	st.say("Baixando os dados do jogo…")
 	b, err := fetch(pageURL("catalog.json.gz?v="+version), func(n int64) {
 		st.replaceLast(fmt.Sprintf("Baixando os dados do jogo… %.1f MB", float64(n)/(1<<20)))
@@ -109,6 +127,7 @@ func load(st *status, log *slog.Logger) (*view.Views, error) {
 	if err != nil {
 		return nil, fmt.Errorf("não deu para baixar os dados do jogo: %w", err)
 	}
+	timing("game data downloaded")
 	st.say("Preparando os dados do jogo…")
 	// One thread: let the browser draw that line before decoding takes it.
 	time.Sleep(100 * time.Millisecond)
@@ -116,7 +135,10 @@ func load(st *status, log *slog.Logger) (*view.Views, error) {
 	if err != nil {
 		return nil, fmt.Errorf("catálogo do jogo: %w", err)
 	}
-	return view.New(view.Options{Log: log, Catalog: cat})
+	timing("game data decoded")
+	v, err := view.New(view.Options{Log: log, Catalog: cat})
+	timing("views ready")
+	return v, err
 }
 
 // status is what the startup screen shows.

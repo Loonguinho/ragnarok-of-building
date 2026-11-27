@@ -12,7 +12,7 @@ The game data is read from, in order: a `data.grf` and `System` folder copied ne
 
 The same Gio program, compiled to WebAssembly (`cmd/web`), published on GitHub Pages at <https://ragnarok-of-building.github.io/rob/>.
 
-- `make web` builds the static site into `dist/web`: `index.html` (from `web/`, with the version stamped in), `wasm_exec.js`, `app.wasm` and `app.wasm.gz` (the page unzips it with `DecompressionStream`; browsers without it take the plain file), the committed catalog split by `tools/websplit` into `catalog.json.gz` without the item descriptions and `desc-<lang>.json.gz` (the page opens with the first and loads the window's language of the second once it is up), `icons/` (from `web/icons`, see below) and `icon.png`. URLs carry `?v=<git describe>` so a release is never mixed with cached files.
+- `make web` builds the static site into `dist/web`: `index.html` (from `web/`, with the version stamped in), `wasm_exec.js`, `app.wasm` and `app.wasm.gz` (the page unzips it with `DecompressionStream`; browsers without it take the plain file), the committed catalog split by `tools/websplit` into `catalog.json.gz` without the item descriptions and `desc-<lang>.json.gz` (the page opens with the first and loads the window's language of the second once it is up), `icons/` and `sprites/` (from `web/icons` and `web/sprites`, see below) and `icon.png`. URLs carry `?v=<git describe>` so a release is never mixed with cached files.
 - `make web-serve` serves it on <http://localhost:8080>.
 - The `web` workflow publishes it at every push to `main` (and by hand from the Actions tab). One-time setup: **Settings → Pages → Source: GitHub Actions**.
 - In the browser: one thread (searches call `view.yield` so the page keeps drawing), window state and saved builds in `localStorage` (this browser only), files through the browser's picker and downloads, share links as `#b=<code>`, no paste.rs (it refuses pages). Item and skill icons come from the client (`web/icons`, below); item art, monsters and class icons are not there yet, so the window shows the small icon or nothing.
@@ -30,6 +30,7 @@ You need the RO LATAM client installed (default `C:\Gravity\Ragnarok`; set `RO_C
 go run ./cmd/fetchrathena   # downloads rAthena's tables (GPL-3.0) to data/rathena (not committed)
 go run ./cmd/import         # client + rAthena -> data/gen/catalog.json.gz (~3 s)
 go run ./cmd/iconimport     # client icons for the catalog's items and skills -> web/icons (~10 s)
+go run ./cmd/spriteimport   # character bodies, hair and headgears -> web/sprites (~15 s)
 ```
 
 and every time:
@@ -39,9 +40,11 @@ go run ./cmd/app            # the program's window
 go test ./...
 ```
 
-Re-run `go run ./cmd/import` and then `go run ./cmd/iconimport` after each game patch, and commit `data/gen/catalog.json.gz` and `web/icons`. GitHub has no client, so the site ships what is committed.
+Re-run `go run ./cmd/import`, then `go run ./cmd/iconimport` and `go run ./cmd/spriteimport`, after each game patch, and commit `data/gen/catalog.json.gz`, `web/icons` and `web/sprites`. GitHub has no client, so the site ships what is committed.
 
 **Icons.** `cmd/iconimport` reads `data\texture\유저인터페이스\item\<resource>.bmp` from `data.grf` for every catalog item (its `resource`) and skill (its code, lowercase), turns the magenta key transparent and writes paletted PNGs named by their contents (the same picture is stored once: every card shares one), plus `index.json` from IDs to files. About 3 MB for ~17,700 items and ~1,300 skills. `internal/icons.Served` answers the window's icon paths from that index. About a third of the client's pictures are stored scrambled (the GRF format's "mixed DES"); `internal/grf` unscrambles them like every GRF reader does.
+
+**Character.** The equipment window draws the character standing and facing the viewer, with its headgears (`internal/sprite`). `cmd/spriteimport` reads the client's `.spr` (pictures) and `.act` (animations) from `data.grf` and draws frame 0 of action 0 of: every job's body, male and female (`data\sprite\인간족\몸통\<sex>\<name>_<sex>`, Doram under `도람족`; the job → name table is in `cmd/spriteimport/jobs.go`, since the client keeps it in its executable), every hair style (`머리통`), and every head and costume-head item of the catalog (its `ClassNum` → `AccNameTable` in `accname.lub` → `data\sprite\악세사리\<sex>\<sex><name>`). It writes PNGs named by their contents plus `index.json` with each picture's origin and anchor (~2.8 MB, ~2,200 pictures). `sprite.Served.Character` puts them together: each head and headgear's anchor on the body's, headgears drawn lower, top, middle, one worn in several positions once; a job with one sex only (Odalisca, Bardo...) falls back to the other. Sex, hair style and "Mostrar visuais" (costume headgear over the headgear of its position) are the window's own choices, kept with the window state, not in the build. Not drawn yet: garments, weapons, hair colours, other directions.
 
 **Linux (and macOS).** The same window runs there. The committed `data/gen/catalog.json.gz` is used, so no game client is needed: `go run ./cmd/app` from the repository. Gio needs cgo and the desktop libraries (Debian/Ubuntu: `gcc pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libvulkan-dev`). File and folder pickers use `zenity` or `kdialog` (osascript on macOS). Under `go run` the program works in the current folder instead of next to the temporary executable.
 

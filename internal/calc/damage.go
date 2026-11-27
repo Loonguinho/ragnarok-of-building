@@ -227,6 +227,7 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 
 	bn := r.Bonuses
 	scar := shadowScarPctOn(b, isMelee, false)
+	quake := quakePctOn(b, false)
 	mastery := int64(bn["bMasteryAtk"] + sum("bMasteryAtkRace", "RC_"+m.Race, "RC_All") + sum("bMasteryAtkEle", "Ele_"+m.Element, "Ele_All"))
 	mastery += int64(ammoMastery)
 	one := func(weapon int64, crit, rec bool) int64 {
@@ -383,6 +384,10 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		if scar != 0 {
 			dmg += dmg * int64(scar) / 100
 			step("Profanação no alvo", "%+d%% = %d", scar, dmg)
+		}
+		if quake != 0 {
+			dmg += dmg * int64(quake) / 100
+			step("Sismo no alvo", "%+d%% = %d", quake, dmg)
 		}
 		if m.DamageTaken != 100 {
 			dmg = max(1, dmg*int64(m.DamageTaken)/100)

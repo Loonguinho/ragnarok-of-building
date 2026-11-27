@@ -56,6 +56,7 @@ var efstStates = map[int]struct {
 	607:  {"Pyroclastic", 250, ""},                     // Piroclástico; the homunculus level is not recorded
 	1176: {"Dragonic Aura", 10, ""},
 	1235: {"Axe Stomp", 5, ""},                        // Esmagador
+	1403: {"_Meister_Rush", 10, "MT_RUSH_QUAKE"},      // Avanço (EFST_RUSH_QUAKE2), at the Avanço Sísmico learned
 	1248: {"Research Report", 1, ""},                  // Eureka
 	1039: {"Universe Stance", 3, "SJ_UNIVERSESTANCE"}, // Postura do Universo
 	// Shura and Inquisidor.

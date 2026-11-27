@@ -85,3 +85,23 @@ func TestWikiCoefficientFixes(t *testing.T) {
 		}
 	}
 }
+
+// TestWiki2026CritHalf: the 2026 skills that can crit count half of the
+// equipment's crit damage, as every latam-ro-calc skill that can crit does
+// (a Meister's Laser Triplo matched latam-tools within 0,7% with it, and
+// came out ×1,6 above it without).
+func TestWiki2026CritHalf(t *testing.T) {
+	for _, tc := range []struct{ job, code string }{
+		{"JT_MEISTER", "MT_TRIPLE_LASER"},
+		{"JT_BIOLO", "BO_MAYHEMIC_THORNS"},
+	} {
+		f := latamByJob[tc.job][tc.code]
+		if f == nil {
+			t.Errorf("%s: no formula", tc.code)
+			continue
+		}
+		if f.CanCrit == nil || f.CritDmg != 0.5 {
+			t.Errorf("%s: can crit %v, crit damage part %v; want 0.5", tc.code, f.CanCrit != nil, f.CritDmg)
+		}
+	}
+}

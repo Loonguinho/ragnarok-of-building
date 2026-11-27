@@ -21,19 +21,34 @@ import (
 // by the expected damage against the damage window's target with its attack.
 
 const (
-	optTop     = 5               // suggestions per position
+	optTop     = 20              // suggestions per position
 	optTimeout = 8 * time.Second // the rest of the positions are skipped after this
 )
 
 // OptOptions say what the optimizer tries and what it raises.
 type OptOptions struct {
-	Goal                   string // GoalDamage (default), GoalPhysDef, GoalMagDef
+	Goal                   string // GoalDamage (default), GoalPhysDef, GoalMagDef, GoalMaxHP, GoalCRate
 	Items, Cards, Enchants bool
 	NoMVP                  bool // leave MVP cards out
+	AnyLevel               bool // items above the base level too
+	Preview                bool // what is still to come to LATAM too
 	Refine, Grade          int // of the items it suggests (those that take them)
+	SameRefine, SameGrade  bool // suggest items at the refine and grade of the one worn in the slot
 	Opts                   bool // random options of the worn items; best rolls on the items it suggests
 	Costumes               bool // enchant stones of the worn costumes, and their sets
 	Traits                 bool // also search trait distributions (4th classes)
+}
+
+// at is the refine and grade items are suggested at in a slot.
+func (o OptOptions) at(b calc.Build, slot string) (refine, grade int) {
+	refine, grade = o.Refine, o.Grade
+	if o.SameRefine {
+		refine = b.Equip[slot].Refine
+	}
+	if o.SameGrade {
+		grade = b.Equip[slot].Grade
+	}
+	return refine, grade
 }
 
 type optOption struct {
@@ -53,6 +68,7 @@ type optOption struct {
 	Tag      string      // "carta de <skill>": listed for the attack chosen
 	Later    bool        // it only pays off at one of the Steps
 	Opt      [2]int      // Kind "opt": the random option and value
+	OptMin   string      // Kind "opt": the lowest roll and what it gives ("(1): +0,6%")
 	Opts     [][2]int    // items: the random options it was measured with
 	OptsText string
 	Parts    []ComboPart // Kind "set": the stones and where they go
@@ -168,17 +184,19 @@ func (s *Server) optimizeWith(ctx context.Context, b calc.Build, o OptOptions, l
 	calc.Normalize(&b, c)
 	res := optResult{Goal: o.Goal}
 	m := c.Monster(b.Target)
-	if m == nil {
+	if m == nil && !statGoal(o.Goal) {
 		res.NoTarget = true
 		return res
 	}
-	res.Target = m.NameIn(l)
+	if m != nil {
+		res.Target = m.NameIn(l)
+	}
 	res.Attack = tr(l, "Ataque básico")
 	if sk := c.Skills[b.Atk.Skill]; sk != nil {
 		res.Attack = sk.Name.Get(l) + " " + tr(l, "Nv.") + " " + strconv.Itoa(b.Atk.Level)
 	}
 	base := s.optScore(b, o.Goal)
-	res.Base = fmtInt(int64(base + 0.5))
+	res.Base = fmtInt(int64(goalValue(o.Goal, base) + 0.5))
 
 	code := ""
 	if o.Goal == GoalDamage {
@@ -198,7 +216,8 @@ func (s *Server) optimizeWith(ctx context.Context, b calc.Build, o OptOptions, l
 			}
 			var pool []*gamedata.Item
 			for _, it := range c.Items {
-				if it.Type != "" && it.Type != "Card" && calc.Fits(it, info.Key) && job.CanEquip(it) && it.Name.Get(l) != "" {
+				if it.Type != "" && it.Type != "Card" && calc.Fits(it, info.Key) && job.CanEquip(it) && it.Name.Get(l) != "" &&
+					(o.AnyLevel || it.EquipLvMin <= b.BaseLv) && (o.Preview || !it.Preview) {
 					pool = append(pool, it)
 				}
 			}
@@ -229,7 +248,7 @@ func (s *Server) optimizeWith(ctx context.Context, b calc.Build, o OptOptions, l
 		}
 		var pool []*gamedata.Item
 		for _, cd := range cards {
-			if calc.CardFits(cd, info.Key) && !(o.NoMVP && cd.MVPCard) {
+			if calc.CardFits(cd, info.Key) && !(o.NoMVP && cd.MVPCard) && (o.Preview || !cd.Preview) {
 				pool = append(pool, cd)
 			}
 		}
@@ -246,7 +265,7 @@ func (s *Server) optimizeWith(ctx context.Context, b calc.Build, o OptOptions, l
 			case enchants && len(ench[i]) > 0:
 				p.enchant = true
 				for _, id := range ench[i] {
-					if ei := c.Items[id]; ei != nil && !calc.EnchantBlocked(it.ID, i, e.Cards, id) {
+					if ei := c.Items[id]; ei != nil && !calc.EnchantBlocked(it.ID, i, e.Cards, id) && (o.Preview || !ei.Preview) {
 						p.pool = append(p.pool, ei)
 					}
 				}
@@ -324,7 +343,8 @@ func (s *Server) optimizeWith(ctx context.Context, b calc.Build, o OptOptions, l
 					if p.pool[j.k].ID == p.current {
 						continue // the item itself (at another refine) is not a swap
 					}
-					vals[j.p][j.k] = s.optScore(s.swapAt(b, p.slots[0], p.pool[j.k].ID, o.Refine, o.Grade), o.Goal)
+					refine, grade := o.at(b, p.slots[0])
+					vals[j.p][j.k] = s.optScore(s.swapAt(b, p.slots[0], p.pool[j.k].ID, refine, grade), o.Goal)
 					continue
 				}
 				nb := p.build(b, j.k)
@@ -358,20 +378,7 @@ feed:
 	close(ch)
 	wg.Wait()
 
-	pct := func(v float64) string {
-		if base <= 0 {
-			return ""
-		}
-		g := (v/base - 1) * 100
-		txt := strconv.FormatFloat(g, 'f', 1, 64)
-		if l != "en" {
-			txt = strings.Replace(txt, ".", ",", 1)
-		}
-		if g >= 0 {
-			txt = "+" + txt
-		}
-		return txt + "%"
-	}
+	pct := func(v float64) string { return goalGain(o.Goal, base, v, l) }
 	for pi, p := range pos {
 		label := tr(l, p.label) + " · " + tr(l, "Carta") + " " + strconv.Itoa(p.index+1)
 		kind := "card"
@@ -420,11 +427,12 @@ feed:
 				Gain: pct(vals[pi][k]), Slot: g.Slot, Index: p.index, Positive: true}
 			if p.item {
 				// What it was measured at: Normalize drops what the item can't take.
+				refine, grade := o.at(b, g.Slot)
 				if p.pool[k].Refineable {
-					opt.Refine = min(o.Refine, calc.MaxRefine(g.Slot))
+					opt.Refine = min(refine, calc.MaxRefine(g.Slot))
 				}
 				if p.pool[k].Gradable {
-					opt.Grade = o.Grade
+					opt.Grade = grade
 				}
 			}
 			g.Options = append(g.Options, opt)
@@ -442,7 +450,7 @@ feed:
 		// Enchants that only pay off at a higher refine or grade.
 		var lk []int
 		for k, r := range later[pi] {
-			if r > 1.003 && p.pool[k].ID != p.current && !seen[optFamily(p.pool[k].Name.Get(l))] {
+			if r > 1.003 && !statGoal(o.Goal) && p.pool[k].ID != p.current && !seen[optFamily(p.pool[k].Name.Get(l))] {
 				lk = append(lk, k)
 			}
 		}
@@ -623,6 +631,5 @@ func gainOf(g optGroup) float64 {
 	if len(g.Options) == 0 || g.Options[0].Later {
 		return 0
 	}
-	f, _ := strconv.ParseFloat(strings.NewReplacer("+", "", "%", "", ",", ".").Replace(g.Options[0].Gain), 64)
-	return f
+	return gainPct(g.Options[0].Gain)
 }

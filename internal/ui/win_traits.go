@@ -96,7 +96,7 @@ func (a *App) traitsBody(gtx C) D {
 	a.mu.Lock()
 	res, busy, key := s.res, s.busy, s.key
 	a.mu.Unlock()
-	goals := []Option{{view.GoalDamage, a.T("Dano")}, {view.GoalPhysDef, a.T("Defesa física")}, {view.GoalMagDef, a.T("Defesa mágica")}}
+	goals := a.goalOptions()
 	note := func(t string) layout.Widget { return T(th, t).Sz(SmallText).C(ColMuted).Wrapping().W() }
 	kids := []layout.Widget{
 		note(a.T("Compara distribuições de talentos contra o alvo. Cada coluna já vem com os melhores encantamentos que dependem de talento (Constelação, Varmunt...) nas peças que você usa.")),

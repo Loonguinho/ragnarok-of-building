@@ -1080,8 +1080,22 @@ func (a *App) bestControls(gtx C) D {
 		refs = append(refs, Option{strconv.Itoa(r), "+" + strconv.Itoa(r)})
 	}
 	grades := []Option{{"0", a.T("nenhum")}, {"1", "D"}, {"2", "C"}, {"3", "B"}, {"4", "A"}}
-	return Row(4,
+	if s.bestCardGoal == "" {
+		s.bestCardGoal = view.GoalDamage
+	}
+	first := Row(4,
 		func(gtx C) D { return Button{Label: a.T("Melhor item")}.Layout(gtx, th, &s.bestBtn) },
+		func(gtx C) D {
+			d, val, ok := s.bestCardSel.Layout(gtx, th, a.Desk, a.bestGoalOptions(), s.bestCardGoal, 170)
+			if ok {
+				s.bestCardGoal = val
+				if s.bestOn {
+					a.runBest()
+				}
+			}
+			return d
+		})
+	return Col(4, first, Row(4,
 		T(th, a.T("Refino")).W(),
 		func(gtx C) D {
 			d, val, ok := s.bestRef.Layout(gtx, th, a.Desk, refs, strconv.Itoa(s.bestRefine), 56)
@@ -1114,7 +1128,7 @@ func (a *App) bestControls(gtx C) D {
 			}
 			return d
 		},
-	)(gtx)
+	))(gtx)
 }
 
 // runBest ranks the items for the slot in the background.
@@ -1123,11 +1137,14 @@ func (a *App) runBest() {
 	a.mu.Lock()
 	s.bestSeq++
 	seq, slot, b, lang := s.bestSeq, s.key, a.b.Clone(), a.Lang
-	refine, grade, rolls := s.bestRefine, s.bestGrade, !s.noBestRolls
+	if s.bestCardGoal == "" {
+		s.bestCardGoal = view.GoalDamage
+	}
+	refine, grade, rolls, goal := s.bestRefine, s.bestGrade, !s.noBestRolls, s.bestCardGoal
 	s.bestOn, s.bestRunning, s.best = true, true, nil
 	a.mu.Unlock()
 	go func() {
-		res := a.V.BestItemsOpts(context.Background(), b, slot, refine, grade, rolls, lang)
+		res := a.V.BestItemsOpts(context.Background(), b, slot, goal, refine, grade, rolls, lang)
 		a.mu.Lock()
 		if seq == s.bestSeq {
 			s.best, s.bestRunning = &res, false
@@ -1162,7 +1179,7 @@ func (a *App) bestStatus() string {
 	if s.bestGrade > 0 {
 		g = " " + a.T("grau") + " " + string("DCBA"[s.bestGrade-1])
 	}
-	msg := fmt.Sprintf(a.T("Melhores de %d itens a +%d%s, pelo dano esperado."), res.Tested, s.bestRefine, g)
+	msg := fmt.Sprintf(a.T("Melhores de %d itens a +%d%s, %s."), res.Tested, s.bestRefine, g, a.T(bestGoalLabel(s.bestCardGoal)))
 	if res.Partial {
 		msg += " " + a.T("(parou no limite de tempo)")
 	}
@@ -1242,6 +1259,20 @@ var bestGoals = [][2]string{
 	{view.GoalDamage, "pelo dano esperado"},
 	{view.GoalPhysDef, "pela defesa física (HP efetivo)"},
 	{view.GoalMagDef, "pela defesa mágica (HP efetivo)"},
+	{view.GoalMaxHP, "pelo HP máximo"},
+	{view.GoalCRate, "pelo C.Rate"},
+}
+
+// goalOptions are the goals of the optimizer and of Comparar talentos.
+func (a *App) goalOptions() []Option {
+	return []Option{{view.GoalDamage, a.T("Dano")}, {view.GoalPhysDef, a.T("Defesa física")}, {view.GoalMagDef, a.T("Defesa mágica")},
+		{view.GoalMaxHP, a.T("HP máx.")}, {view.GoalCRate, a.T("C.Rate")}}
+}
+
+// bestGoalOptions are the goals of Melhor item and Melhor carta.
+func (a *App) bestGoalOptions() []Option {
+	return []Option{{view.GoalDamage, a.T("Melhor dano")}, {view.GoalPhysDef, a.T("Melhor defesa física")}, {view.GoalMagDef, a.T("Melhor defesa mágica")},
+		{view.GoalMaxHP, a.T("Melhor HP máx.")}, {view.GoalCRate, a.T("Melhor C.Rate")}}
 }
 
 func bestGoalLabel(goal string) string {
@@ -1260,7 +1291,7 @@ func (a *App) bestCardControls(gtx C) D {
 	if s.bestCardGoal == "" {
 		s.bestCardGoal = view.GoalDamage
 	}
-	opts := []Option{{view.GoalDamage, a.T("Melhor dano")}, {view.GoalPhysDef, a.T("Melhor defesa física")}, {view.GoalMagDef, a.T("Melhor defesa mágica")}}
+	opts := a.bestGoalOptions()
 	return Row(4,
 		func(gtx C) D { return Button{Label: a.T("Melhor carta")}.Layout(gtx, th, &s.bestCardBtn) },
 		func(gtx C) D {

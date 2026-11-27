@@ -109,3 +109,19 @@ func Inset(t, r, b, l unit.Dp) layout.Inset {
 func Gap(w, h unit.Dp) layout.Widget {
 	return func(gtx C) D { return D{Size: image.Pt(gtx.Dp(w), gtx.Dp(h))} }
 }
+
+// DashedBorder draws a dashed rectangle of line width w, dashes and gaps
+// dash long (the equipment window's comparison slots).
+func DashedBorder(gtx C, r image.Rectangle, c color.NRGBA, w, dash int) {
+	w, dash = max(w, 1), max(dash, 2)
+	for x := r.Min.X; x < r.Max.X; x += 2 * dash {
+		x1 := min(x+dash, r.Max.X)
+		Fill(gtx, image.Rect(x, r.Min.Y, x1, r.Min.Y+w), c)
+		Fill(gtx, image.Rect(x, r.Max.Y-w, x1, r.Max.Y), c)
+	}
+	for y := r.Min.Y; y < r.Max.Y; y += 2 * dash {
+		y1 := min(y+dash, r.Max.Y)
+		Fill(gtx, image.Rect(r.Min.X, y, r.Min.X+w, y1), c)
+		Fill(gtx, image.Rect(r.Max.X-w, y, r.Max.X, y1), c)
+	}
+}

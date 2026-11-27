@@ -3,8 +3,10 @@ package ui
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"math"
 	"strconv"
+	"strings"
 
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -318,6 +320,7 @@ func (a *App) resumoBody(gtx C) D {
 	th, s := a.Th, &a.shell
 	v := a.View()
 	d, r, b := v.D, v.R, v.Build
+	cv, comparing := a.compareView()
 	num := func(n int64) string { return view.FmtInt(n) }
 	label := func(t string) layout.Widget { return T(th, a.T(t)).C(ColLabel).W() }
 
@@ -344,71 +347,114 @@ func (a *App) resumoBody(gtx C) D {
 				return T(th, a.T("Escolha um alvo para ver o dano.")).C(ColMuted).Wrapping().W()(gtx)
 			}
 			dm := d.Dmg
-			// The big number is the expected damage per use (crits and
-			// misses counted): a skill that always crits shows its crit,
-			// as a replay records it.
-			expected := int64(math.Round(dm.Expected))
-			if expected <= 0 {
-				expected = dm.Avg
+			expected, kills := expectedDamage(d)
+			// With the equipment window's comparison: "now -> compared".
+			cmp := comparing && cv.D.Target != nil
+			cdm := cv.D.Dmg
+			cexp, ckills := expectedDamage(cv.D)
+			arrow := T(th, "→").C(ColMuted).W()
+			title := T(th, a.T("Dano esperado por uso")).C(ColMuted).W()
+			big := B(th, num(expected)).Sz(22).C(ColTitleText).W()
+			normal := T(th, a.T("Normal")+": "+num(dm.Min)+" ~ "+num(dm.Max)).C(ColLabel).W()
+			if cmp {
+				title = func(gtx C) D {
+					return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+						layout.Flexed(1, T(th, a.T("Dano esperado por uso")).C(ColMuted).W()),
+						layout.Rigid(T(th, a.compareSummary()).Sz(SmallText).C(ColCompare).W()),
+					)
+				}
+				c := betterColor(float64(expected), float64(cexp), false)
+				big = Row(8, big, T(th, "→").Sz(16).C(ColMuted).W(), B(th, num(cexp)).Sz(22).C(c).W(),
+					B(th, gainText(float64(expected), float64(cexp), a.Lang)).Sz(13).C(c).W())
+				nc := betterColor(float64(dm.Min+dm.Max), float64(cdm.Min+cdm.Max), false)
+				normal = Row(4, normal, arrow, T(th, num(cdm.Min)+" ~ "+num(cdm.Max)).C(nc).W())
 			}
-			kills := dm.HitsToKill
-			if expected > 0 && d.Target.HP > 0 {
-				kills = int((int64(d.Target.HP) + expected - 1) / expected)
-			}
-			ws := []layout.Widget{
-				T(th, a.T("Dano esperado por uso")).C(ColMuted).W(),
-				B(th, num(expected)).Sz(22).C(ColTitleText).W(),
-				T(th, a.T("Normal")+": "+num(dm.Min)+" ~ "+num(dm.Max)).C(ColLabel).W(),
-			}
+			ws := []layout.Widget{title, big, normal}
 			var extra []layout.Widget
-			if dm.Crit > 0 {
-				extra = append(extra, Row(4, label("Crítico"), B(th, num(dm.Crit)).W(),
-					T(th, "("+strconv.FormatFloat(dm.CritChance, 'f', 0, 64)+"%)").C(ColMuted).W()))
+			if dm.Crit > 0 || cmp && cdm.Crit > 0 {
+				parts := []layout.Widget{label("Crítico"), B(th, num(dm.Crit)).W()}
+				if cmp && cdm.Crit != dm.Crit {
+					parts = append(parts, arrow, B(th, num(cdm.Crit)).C(betterColor(float64(dm.Crit), float64(cdm.Crit), false)).W())
+				}
+				parts = append(parts, T(th, "("+strconv.FormatFloat(dm.CritChance, 'f', 0, 64)+"%)").C(ColMuted).W())
+				extra = append(extra, Row(4, parts...))
 			}
-			extra = append(extra,
-				Row(4, label("Usos p/ matar"), B(th, strconv.Itoa(kills)).W()),
-				Row(4, label("Acerto"), B(th, strconv.FormatFloat(dm.HitChance, 'f', 0, 64)+"%").W()),
-			)
-			ws = append(ws, Row(14, extra...))
+			killParts := []layout.Widget{label("Usos p/ matar"), B(th, strconv.Itoa(kills)).W()}
+			if cmp && ckills != kills {
+				killParts = append(killParts, arrow, B(th, strconv.Itoa(ckills)).C(betterColor(float64(kills), float64(ckills), true)).W())
+			}
+			hit := Row(4, label("Acerto"), B(th, strconv.FormatFloat(dm.HitChance, 'f', 0, 64)+"%").W())
+			if cmp { // the arrows make the line too long for one row
+				ws = append(ws, Row(14, extra...), Row(14, Row(4, killParts...), hit))
+			} else {
+				extra = append(extra, Row(4, killParts...), hit)
+				ws = append(ws, Row(14, extra...))
+			}
 			if w := a.elementWarning(d); w != nil {
 				ws = append(ws, w)
 			}
 			return Col(2, ws...)(gtx)
 		})
 	}
-	kv := func(rows [][2]string) layout.Widget {
+	// kv lists the stats; with the comparison, a stat it changes shows
+	// "now -> compared", green when better and red when worse.
+	kv := func(rows, other []statRow) layout.Widget {
 		return func(gtx C) D {
 			var ws []layout.Widget
-			for _, rw := range rows {
-				rw := rw
+			for i, rw := range rows {
+				value := T(th, rw.text).W()
+				if i < len(other) && other[i].text != rw.text {
+					o := other[i]
+					value = Row(4, value, T(th, "→").C(ColMuted).W(),
+						T(th, o.text).C(betterColor(rw.val, o.val, rw.lowerBetter)).W())
+				}
+				name := rw.label
 				ws = append(ws, func(gtx C) D {
 					return layout.Flex{}.Layout(gtx,
-						layout.Flexed(1, T(th, a.T(rw[0])).C(ColLabel).W()),
-						layout.Rigid(T(th, rw[1]).W()),
+						layout.Flexed(1, T(th, a.T(name)).C(ColLabel).W()),
+						layout.Rigid(value),
 					)
 				})
 			}
 			return Col(2, ws...)(gtx)
 		}
 	}
-	ci := r.Cast()
-	cast := a.T("instantânea")
-	if ci.VarLeft > 0.05 {
-		cast = fmt.Sprintf("−%.0f%%", 100-ci.VarLeft)
+	offOf := func(r calc.Result) []statRow {
+		ci := r.Cast()
+		cast := a.T("instantânea")
+		if ci.VarLeft > 0.05 {
+			cast = fmt.Sprintf("−%.0f%%", 100-ci.VarLeft)
+		}
+		return []statRow{
+			{"ATQ", fmt.Sprintf("%d + %d", r.StatusATK, r.EquipATK), float64(r.StatusATK + r.EquipATK), false},
+			{"ATQM", fmt.Sprintf("%d + %d", r.MATKMin, r.EquipMATK), float64(r.MATKMin + r.EquipMATK), false},
+			{"P.ATQ", fmt.Sprint(r.PATK), float64(r.PATK), false},
+			{"S.ATQM", fmt.Sprint(r.SMATK), float64(r.SMATK), false},
+			{"C.RATE", fmt.Sprint(r.CRATE), float64(r.CRATE), false},
+			{"Crítico", fmt.Sprintf("%.1f", r.CRIT), r.CRIT, false},
+			{"Precisão", fmt.Sprint(r.HIT), float64(r.HIT), false},
+			{"ASPD", fmt.Sprint(r.ASPD), float64(r.ASPD), false},
+			{"Conj. var.", cast, ci.VarLeft, true},
+		}
 	}
-	off := kv([][2]string{
-		{"ATQ", fmt.Sprintf("%d + %d", r.StatusATK, r.EquipATK)},
-		{"ATQM", fmt.Sprintf("%d + %d", r.MATKMin, r.EquipMATK)},
-		{"P.ATQ", fmt.Sprint(r.PATK)}, {"S.ATQM", fmt.Sprint(r.SMATK)}, {"C.RATE", fmt.Sprint(r.CRATE)},
-		{"Crítico", fmt.Sprintf("%.1f", r.CRIT)}, {"Precisão", fmt.Sprint(r.HIT)}, {"ASPD", fmt.Sprint(r.ASPD)},
-		{"Conj. var.", cast},
-	})
-	def := kv([][2]string{
-		{"HP", num(int64(r.HP))}, {"SP", num(int64(r.SP))},
-		{"DEF", fmt.Sprintf("%d + %d", r.HardDEF, r.SoftDEF)}, {"DEFM", fmt.Sprintf("%d + %d", r.HardMDEF, r.SoftMDEF)},
-		{"RES", fmt.Sprint(r.RES)}, {"MRES", fmt.Sprint(r.MRES)},
-		{"Esquiva", fmt.Sprintf("%d + %d", r.FLEE, r.FLEE2)}, {"H.PLUS", fmt.Sprint(r.HPLUS)},
-	})
+	defOf := func(r calc.Result) []statRow {
+		return []statRow{
+			{"HP", num(int64(r.HP)), float64(r.HP), false},
+			{"SP", num(int64(r.SP)), float64(r.SP), false},
+			{"DEF", fmt.Sprintf("%d + %d", r.HardDEF, r.SoftDEF), float64(r.HardDEF + r.SoftDEF), false},
+			{"DEFM", fmt.Sprintf("%d + %d", r.HardMDEF, r.SoftMDEF), float64(r.HardMDEF + r.SoftMDEF), false},
+			{"RES", fmt.Sprint(r.RES), float64(r.RES), false},
+			{"MRES", fmt.Sprint(r.MRES), float64(r.MRES), false},
+			{"Esquiva", fmt.Sprintf("%d + %d", r.FLEE, r.FLEE2), float64(r.FLEE + r.FLEE2), false},
+			{"H.PLUS", fmt.Sprint(r.HPLUS), float64(r.HPLUS), false},
+		}
+	}
+	var cOff, cDef []statRow
+	if comparing {
+		cOff, cDef = offOf(cv.R), defOf(cv.R)
+	}
+	off := kv(offOf(r), cOff)
+	def := kv(defOf(r), cDef)
 	sec := func(t string) layout.Widget { return Col(2, B(th, a.T(t)).C(ColTitleText).W(), Sep) }
 	twoCols := func(gtx C) D {
 		return layout.Flex{}.Layout(gtx,
@@ -438,12 +484,16 @@ func (a *App) resumoBody(gtx C) D {
 		func(gtx C) D {
 			return Box{Bg: ColPanel, Line: rgb(0x7d9bd1), Radius: 3, Pad: Inset(8, 10, 10, 10)}.Layout(gtx, func(gtx C) D {
 				gtx.Constraints.Min.X = gtx.Constraints.Max.X
-				return Col(5,
+				ws := []layout.Widget{
 					B(th, a.T("Resumo")).Sz(13).C(ColTitleText).W(),
 					label("Habilidade principal"), skillSel,
 					label("Alvo"), target,
 					hero,
-				)(gtx)
+				}
+				if fx := a.itemEffects(v); fx != nil {
+					ws = append(ws, fx)
+				}
+				return Col(5, ws...)(gtx)
 			})
 		},
 		func(gtx C) D { return card(gtx, twoCols) },
@@ -473,4 +523,56 @@ func (a *App) elementWarning(d view.DamageView) layout.Widget {
 			},
 		)(gtx)
 	}
+}
+
+// statRow is a line of the Resumo's Ofensivo/Defensivo: its text and the
+// value the comparison is judged by.
+type statRow struct {
+	label, text string
+	val         float64
+	lowerBetter bool
+}
+
+// expectedDamage is the Resumo's big number, the expected damage per use
+// (crits and misses counted: a skill that always crits shows its crit, as
+// a replay records it), and the uses to kill the target with it.
+func expectedDamage(d view.DamageView) (int64, int) {
+	dm := d.Dmg
+	expected := int64(math.Round(dm.Expected))
+	if expected <= 0 {
+		expected = dm.Avg
+	}
+	kills := dm.HitsToKill
+	if expected > 0 && d.Target != nil && d.Target.HP > 0 {
+		kills = int((int64(d.Target.HP) + expected - 1) / expected)
+	}
+	return expected, kills
+}
+
+// betterColor is green when other beats now, red when it loses, the text
+// colour when they are equal.
+func betterColor(now, other float64, lowerBetter bool) color.NRGBA {
+	switch {
+	case other == now:
+		return ColText
+	case (other > now) != lowerBetter:
+		return ColUp
+	}
+	return ColDown
+}
+
+// gainText is "▲ +6,9%" or "▼ −3,8%" from now to other ("=" when equal).
+func gainText(now, other float64, lang string) string {
+	if now <= 0 || other == now {
+		return "="
+	}
+	g := (other/now - 1) * 100
+	txt := strconv.FormatFloat(math.Abs(g), 'f', 1, 64)
+	if lang != "en" {
+		txt = strings.Replace(txt, ".", ",", 1)
+	}
+	if g > 0 {
+		return "▲ +" + txt + "%"
+	}
+	return "▼ −" + txt + "%"
 }

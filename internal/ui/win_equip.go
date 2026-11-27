@@ -34,6 +34,7 @@ type slotState struct {
 	desc Details // the item's description in the editor (starts closed)
 	key  string  // the slot being edited ("" = none)
 	card int     // -1: picking the item itself; else the card/enchant position
+	cmp  bool    // editing the comparison's piece, not the build (compare.go)
 
 	q       Input
 	lastQ   string
@@ -104,6 +105,12 @@ func (a *App) equipBody(gtx C) D {
 		},
 		Gap(0, 6),
 		func(gtx C) D {
+			if len(a.ecmp.open) == 0 {
+				return D{}
+			}
+			return Inset(0, 0, 6, 0).Layout(gtx, a.compareBar)
+		},
+		func(gtx C) D {
 			slots := panels[s.tab]
 			col := func(side string) layout.Widget {
 				return func(gtx C) D {
@@ -111,7 +118,15 @@ func (a *App) equipBody(gtx C) D {
 					for _, sv := range slots {
 						if sv.Side == side {
 							sv := sv
-							ws = append(ws, func(gtx C) D { return a.equipSlot(gtx, sv) })
+							ws = append(ws, func(gtx C) D {
+								if !a.comparing(sv.Key) {
+									return a.equipSlot(gtx, sv)
+								}
+								return Col(3,
+									func(gtx C) D { return a.equipSlot(gtx, sv) },
+									func(gtx C) D { return a.compareSlot(gtx, sv.Key) },
+								)(gtx)
+							})
 						}
 					}
 					return Col(4, ws...)(gtx)
@@ -203,7 +218,7 @@ func (a *App) equipSlot(gtx C, sv view.SlotView) D {
 		Fill(gtx, r, bg)
 		Border(gtx, r, ColListBorder, 1, 2)
 		g := gtx
-		g.Constraints = layout.Exact(image.Pt(w-gtx.Dp(8), h))
+		g.Constraints = layout.Exact(image.Pt(w-gtx.Dp(34), h))
 		st := op.Offset(image.Pt(gtx.Dp(4), 0)).Push(gtx.Ops)
 		layout.Flex{Alignment: layout.Middle}.Layout(g,
 			layout.Rigid(func(gtx C) D {
@@ -232,6 +247,12 @@ func (a *App) equipSlot(gtx C, sv view.SlotView) D {
 		}
 		return D{Size: r.Max}
 	})
+	if !sv.Blocked {
+		h := gtx.Dp(equipSlotH)
+		st := op.Offset(image.Pt(d.Size.X-gtx.Dp(26), (h-gtx.Dp(18))/2)).Push(gtx.Ops)
+		a.compareToggle(gtx, sv.Key, func() image.Point { return at.Origin.Add(image.Pt(0, 2*h+gtx.Dp(3))) })
+		st.Pop()
+	}
 	if sv.Item != nil && cl.Hovered() {
 		id := sv.Item.ID
 		a.Desk.ShowTip(func(gtx C) D { return a.itemTip(gtx, id, nil) })
@@ -242,7 +263,7 @@ func (a *App) equipSlot(gtx C, sv view.SlotView) D {
 // openSlot shows the slot editor for a slot (picking the item itself).
 func (a *App) openSlot(key string) {
 	s := &a.slot
-	s.key, s.card = key, -1
+	s.key, s.card, s.cmp = key, -1, false
 	s.bestOn = false
 	s.q.Ed.SetText("")
 	if !a.wSlot.Open {
@@ -267,9 +288,10 @@ func (a *App) slotView(v view.BuildView, key string) (view.SlotView, string) {
 // search runs the picker query in the background after delay.
 func (a *App) search(delay time.Duration) {
 	s := &a.slot
+	eb := a.editBuild()
 	a.mu.Lock()
 	s.seq++
-	seq, slot, card, q, b, lang := s.seq, s.key, s.card, s.q.Text(), a.b.Clone(), a.Lang
+	seq, slot, card, q, b, lang := s.seq, s.key, s.card, s.q.Text(), eb, a.Lang
 	s.pending = true
 	a.mu.Unlock()
 	if s.timer != nil {
@@ -294,13 +316,16 @@ func (a *App) search(delay time.Duration) {
 }
 
 func (a *App) slotTitle() string {
-	_, label := a.slotView(a.View(), a.slot.key)
+	_, label := a.slotView(a.editView(), a.slot.key)
+	if a.slot.cmp {
+		return a.T(label) + " · " + a.T("comparação")
+	}
 	return a.T(label)
 }
 
 func (a *App) slotBody(gtx C) D {
 	th, s := a.Th, &a.slot
-	v := a.View()
+	v := a.editView()
 	if s.key == "" {
 		return T(th, a.T("Escolha um item")).Layout(gtx)
 	}
@@ -309,7 +334,7 @@ func (a *App) slotBody(gtx C) D {
 		return T(th, a.T("Bloqueado: arma de duas mãos")).C(ColMuted).Layout(gtx)
 	}
 	b := v.Build
-	setBuild := func(nb calc.Build) { a.SetBuild(nb); a.search(0) }
+	setBuild := func(nb calc.Build) { a.editSet(nb); a.search(0) }
 
 	// Editor actions.
 	if s.bestFor != s.key {
@@ -361,6 +386,14 @@ func (a *App) slotBody(gtx C) D {
 	}
 
 	var kids []layout.Widget
+	if s.cmp {
+		kids = append(kids, func(gtx C) D {
+			return Box{Bg: ColCompareBg, Line: ColCompare, Radius: 3, Pad: Inset(4, 6, 4, 6)}.Layout(gtx, func(gtx C) D {
+				gtx.Constraints.Min.X = gtx.Constraints.Max.X
+				return T(th, a.T("Você está montando a peça de comparação: a sua build só muda quando você clicar em Aplicar.")).C(ColCompare).Wrapping().Layout(gtx)
+			})
+		})
+	}
 	if sv.Item != nil {
 		kids = append(kids, a.slotEditor(sv, label))
 	} else {
@@ -407,7 +440,7 @@ func (a *App) slotBody(gtx C) D {
 func (a *App) slotEditor(sv view.SlotView, label string) layout.Widget {
 	th, s := a.Th, &a.slot
 	return func(gtx C) D {
-		b := a.View().Build
+		b := a.editView().Build
 		var kids []layout.Widget
 		head := func(gtx C) D {
 			return RowTop(8,
@@ -429,7 +462,7 @@ func (a *App) slotEditor(sv view.SlotView, label string) layout.Widget {
 							d, val, ok := s.refine.Layout(gtx, th, a.Desk, opts, strconv.Itoa(sv.Refine), 56)
 							if ok {
 								r, _ := strconv.Atoi(val)
-								a.SetBuild(edit.EditLinked(b, s.key, func(e *calc.Equip) { e.Refine = r }))
+								a.editSet(edit.EditLinked(b, s.key, func(e *calc.Equip) { e.Refine = r }))
 							}
 							return d
 						})
@@ -440,7 +473,7 @@ func (a *App) slotEditor(sv view.SlotView, label string) layout.Widget {
 							d, val, ok := s.grade.Layout(gtx, th, a.Desk, opts, strconv.Itoa(sv.Grade), 70)
 							if ok {
 								g, _ := strconv.Atoi(val)
-								a.SetBuild(edit.EditLinked(b, s.key, func(e *calc.Equip) { e.Grade = g }))
+								a.editSet(edit.EditLinked(b, s.key, func(e *calc.Equip) { e.Grade = g }))
 							}
 							return d
 						})
@@ -542,7 +575,7 @@ func (a *App) cardRow(gtx C, sv view.SlotView, i int, c *view.ItemView) D {
 func (a *App) randomOpts(sv view.SlotView) layout.Widget {
 	th, s := a.Th, &a.slot
 	return func(gtx C) D {
-		b := a.View().Build
+		b := a.editView().Build
 		if len(s.optVals) < len(sv.Opts) {
 			s.optVals = append(s.optVals, make([]NumInput, len(sv.Opts)-len(s.optVals))...)
 			s.optDel = append(s.optDel, make([]widget.Clickable, len(sv.Opts)-len(s.optDel))...)
@@ -564,7 +597,7 @@ func (a *App) randomOpts(sv view.SlotView) layout.Widget {
 					layout.Rigid(func(gtx C) D {
 						d, x, ok := s.optVals[i].Layout(gtx, th, o.Value, 60)
 						if ok {
-							a.SetBuild(edit.EditLinked(b, s.key, func(e *calc.Equip) {
+							a.editSet(edit.EditLinked(b, s.key, func(e *calc.Equip) {
 								if i < len(e.Opts) {
 									e.Opts[i][1] = x
 								}
@@ -828,10 +861,10 @@ func (a *App) pickList(gtx C) D {
 // pick puts a picker result in the slot (or in the card position).
 func (a *App) pick(id int) {
 	s := &a.slot
-	b := a.Build()
+	b := a.editBuild()
 	if s.card >= 0 {
 		k := s.card
-		a.SetBuild(edit.EditLinked(b, s.key, func(e *calc.Equip) { e.Cards[k] = id }))
+		a.editSet(edit.EditLinked(b, s.key, func(e *calc.Equip) { e.Cards[k] = id }))
 		a.Say(a.T("Carta aplicada."), false)
 		s.card, s.bestOn = -1, false
 	} else if s.bestOn && id == b.Equip[s.key].Item {
@@ -847,13 +880,13 @@ func (a *App) pick(id int) {
 				}
 			}
 		}
-		a.SetBuild(a.V.SwapAtOpts(b, s.key, id, s.bestRefine, s.bestGrade, rolls))
-		a.Say(a.T("Item equipado."), false)
+		a.editSet(a.V.SwapAtOpts(b, s.key, id, s.bestRefine, s.bestGrade, rolls))
+		a.Say(a.equippedMsg(), false)
 		s.bestOn = false
 		a.equipDone()
 	} else {
-		a.SetBuild(a.V.Swap(b, s.key, id, -1))
-		a.Say(a.T("Item equipado."), false)
+		a.editSet(a.V.Swap(b, s.key, id, -1))
+		a.Say(a.equippedMsg(), false)
 		a.equipDone()
 	}
 	s.q.Ed.SetText("")
@@ -868,7 +901,7 @@ func (a *App) pickCombo(id int, parts []view.ComboPart) {
 	if s.card < 0 {
 		return
 	}
-	a.SetBuild(a.V.ApplyCombo(a.Build(), s.key, s.card, id, parts))
+	a.editSet(a.V.ApplyCombo(a.editBuild(), s.key, s.card, id, parts))
 	a.Say(a.T("Cartas do combo aplicadas."), false)
 	s.card, s.bestOn = -1, false
 	s.q.Ed.SetText("")
@@ -891,7 +924,7 @@ func (a *App) equipDone() {
 // background once per build, slot and item.
 func (a *App) swapTip(id int) *view.SwapView {
 	s := &a.slot
-	b := a.Build()
+	b := a.editBuild()
 	refine, grade := -1, -1
 	if s.bestOn && s.card < 0 {
 		refine, grade = s.bestRefine, s.bestGrade
@@ -933,7 +966,7 @@ func (a *App) itemTip(gtx C, id int, sw *view.SwapView) D { return a.itemTipCap(
 // card in the position being picked (0 when empty).
 func (a *App) slotCurrent() int {
 	s := &a.slot
-	e := a.Build().Equip[s.key]
+	e := a.editBuild().Equip[s.key]
 	if s.card >= 0 && s.card < 4 {
 		return e.Cards[s.card]
 	}
@@ -1131,9 +1164,10 @@ func (a *App) bestControls(gtx C) D {
 // runBest ranks the items for the slot in the background.
 func (a *App) runBest() {
 	s := &a.slot
+	eb := a.editBuild()
 	a.mu.Lock()
 	s.bestSeq++
-	seq, slot, b, lang := s.bestSeq, s.key, a.b.Clone(), a.Lang
+	seq, slot, b, lang := s.bestSeq, s.key, eb, a.Lang
 	if s.bestCardGoal == "" {
 		s.bestCardGoal = view.GoalDamage
 	}
@@ -1302,7 +1336,7 @@ func (a *App) bestCardControls(gtx C) D {
 			return d
 		},
 		func(gtx C) D {
-			if v := a.View(); v.Job == nil || !v.Job.Fourth {
+			if v := a.editView(); v.Job == nil || !v.Job.Fourth {
 				return D{}
 			}
 			d, toggled := s.bestTraits.Layout(gtx, th, s.withTraits, a.T("Mudar talentos"))
@@ -1324,9 +1358,10 @@ func (a *App) runBestCard() {
 	if s.bestCardGoal == "" {
 		s.bestCardGoal = view.GoalDamage
 	}
+	eb := a.editBuild()
 	a.mu.Lock()
 	s.bestSeq++
-	seq, slot, idx, goal, b, lang, withTraits := s.bestSeq, s.key, s.card, s.bestCardGoal, a.b.Clone(), a.Lang, s.withTraits
+	seq, slot, idx, goal, b, lang, withTraits := s.bestSeq, s.key, s.card, s.bestCardGoal, eb, a.Lang, s.withTraits
 	s.bestOn, s.bestRunning, s.best = true, true, nil
 	a.mu.Unlock()
 	go func() {

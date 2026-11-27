@@ -26,6 +26,7 @@ var named = []struct {
 	{&ColBtnA, 0x3d4452}, {&ColBtnB, 0x2d333f},
 	{&ColSelect, 0x2f4f86}, {&ColHover, 0x2b3547},
 	{&ColUp, 0x6fd07f}, {&ColDown, 0xff8a80}, {&ColGrade, 0xf08be0},
+	{&ColCompare, 0xe0b54e}, {&ColCompareBg, 0x2d2a1f},
 	{&ColOn, 0x44763a}, {&ColLink, 0x86b4ff},
 	{&ColMuted, 0x9aa2b0}, {&ColLabel, 0xaab2d0},
 	{&ColListBorder, 0x3d4554}, {&ColSep, 0x3a414e},

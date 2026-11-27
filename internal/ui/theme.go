@@ -37,6 +37,8 @@ var (
 	ColUp         = rgb(0x1d7a2a)
 	ColDown       = rgb(0xb42318)
 	ColGrade      = rgb(0xb5179e)
+	ColCompare    = rgb(0xa86f00) // the equipment window's comparison (amber)
+	ColCompareBg  = rgb(0xfff4d6)
 	ColOn         = rgb(0x6aa84f)
 	ColLink       = rgb(0x1d4fa8)
 	ColMuted      = rgb(0x6b6b6b)

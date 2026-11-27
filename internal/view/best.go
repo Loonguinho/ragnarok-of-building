@@ -68,16 +68,16 @@ func (s *Server) swapAt(b calc.Build, slot string, id, refine, grade int) calc.B
 
 // BestItems ranks the items for slot (see above).
 func (v *Views) BestItems(ctx context.Context, b calc.Build, slot string, refine, grade int, l string) BestResult {
-	return v.BestItemsOpts(ctx, b, slot, refine, grade, false, l)
+	return v.BestItemsOpts(ctx, b, slot, GoalDamage, refine, grade, false, l)
 }
 
-// BestItemsOpts is BestItems; with opts, each item gets its best random
+// BestItemsOpts is BestItems by any goal (OptOptions.Goal); with opts, each item gets its best random
 // options (the items that rank highest without them go first).
-func (v *Views) BestItemsOpts(ctx context.Context, b calc.Build, slot string, refine, grade int, opts bool, l string) BestResult {
+func (v *Views) BestItemsOpts(ctx context.Context, b calc.Build, slot, goal string, refine, grade int, opts bool, l string) BestResult {
 	s := v.s
 	c := s.opt.Catalog
 	var res BestResult
-	if c.Monster(b.Target) == nil {
+	if c.Monster(b.Target) == nil && !statGoal(goal) {
 		res.NoTarget = true
 		return res
 	}
@@ -91,7 +91,7 @@ func (v *Views) BestItemsOpts(ctx context.Context, b calc.Build, slot string, re
 	if slot == calc.Shield && calc.ShieldBlocked(b, c) {
 		return res
 	}
-	base := s.optExpected(b)
+	base := s.optScore(b, goal)
 	if base <= 0 {
 		res.NoTarget = true
 		return res
@@ -126,7 +126,7 @@ func (v *Views) BestItemsOpts(ctx context.Context, b calc.Build, slot string, re
 				if id != b.Equip[slot].Item {
 					nb = s.swapAt(b, slot, id, refine, grade)
 				}
-				e := s.optExpected(nb)
+				e := s.optScore(nb, goal)
 				mu.Lock()
 				out = append(out, scored{id, e / base})
 				mu.Unlock()
@@ -162,8 +162,8 @@ feed:
 				return
 			}
 			nb := s.swapAt(b, slot, id, refine, grade)
-			if o := s.bestOpts(nb, slot, GoalDamage); len(o) > 0 {
-				e := s.optExpected(withOpts(nb, slot, o))
+			if o := s.bestOpts(nb, slot, goal); len(o) > 0 {
+				e := s.optScore(withOpts(nb, slot, o), goal)
 				mu.Lock()
 				out[i].ratio, rolls[id] = e/base, o
 				mu.Unlock()
@@ -174,7 +174,7 @@ feed:
 		rank()
 	}
 	for _, sc := range out[:min(len(out), bestTop)] {
-		ln := StatLine{Diff: pctChange(sc.ratio, l), Better: sc.ratio > 1.0005, Same: sc.ratio > 0.9995 && sc.ratio < 1.0005}
+		ln := StatLine{Diff: goalGain(goal, base, sc.ratio*base, l), Better: sc.ratio > 1.0005, Same: sc.ratio > 0.9995 && sc.ratio < 1.0005}
 		if ln.Same {
 			ln.Diff = "="
 		}

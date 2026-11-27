@@ -122,9 +122,20 @@ func (s *Server) stepsOf(ctx context.Context, b calc.Build, slots []string, chan
 		if base <= 0 {
 			return 0
 		}
+		if statGoal(goal) {
+			return s.optScore(with, goal) - base
+		}
 		return (s.optScore(with, goal)/base - 1) * 100
 	}
 	txt := func(g float64) string { return pctOf(1+g/100, l) }
+	least := optStepMin
+	if statGoal(goal) {
+		txt = func(g float64) string { return goalGain(goal, 0, g, l) }
+		least = max(1, optStepMin/100*s.optScore(b, goal))
+		if goal == GoalCRate {
+			least = 1
+		}
+	}
 	now := gain(e.Refine, e.Grade)
 	var out []OptStep
 	last, top := now, e.Refine
@@ -133,7 +144,7 @@ func (s *Server) stepsOf(ctx context.Context, b calc.Build, slots []string, chan
 			if r <= e.Refine || r > calc.MaxRefine(slots[0]) || ctx.Err() != nil {
 				continue
 			}
-			if g := gain(r, e.Grade); g-last >= optStepMin {
+			if g := gain(r, e.Grade); g-last >= least {
 				out = append(out, OptStep{Refine: r, Grade: e.Grade, Gain: txt(g)})
 				last, top = g, r
 			}
@@ -142,7 +153,7 @@ func (s *Server) stepsOf(ctx context.Context, b calc.Build, slots []string, chan
 	if host.Gradable {
 		byRefine, last := last, now
 		for gr := e.Grade + 1; gr <= 4 && ctx.Err() == nil; gr++ {
-			if g := gain(e.Refine, gr); g-last >= optStepMin {
+			if g := gain(e.Refine, gr); g-last >= least {
 				out = append(out, OptStep{Refine: e.Refine, Grade: gr, Gain: txt(g)})
 				last = g
 			}
@@ -150,7 +161,7 @@ func (s *Server) stepsOf(ctx context.Context, b calc.Build, slots []string, chan
 		// Both together: some grade bonuses also ask for a refine.
 		r := max(top, min(11, calc.MaxRefine(slots[0])))
 		if host.Refineable && e.Grade < 4 && r > e.Refine && ctx.Err() == nil {
-			if g := gain(r, 4); g-max(last, byRefine) >= optStepMin {
+			if g := gain(r, 4); g-max(last, byRefine) >= least {
 				out = append(out, OptStep{Refine: r, Grade: 4, Gain: txt(g)})
 			}
 		}
@@ -223,6 +234,24 @@ func (s *Server) optDetails(ctx context.Context, b calc.Build, res *optResult, o
 				op.Opts, op.OptsText = rolls, s.optsText(rolls, l)
 				op.Value, op.Gain = fmtInt(int64(v+0.5)), pct(v)
 			}
+		case "opt": // what its lowest roll gives
+			spec := s.opt.Catalog.ItemOpts[op.Item.ID]
+			if spec == nil || op.Index >= len(spec.Positions) {
+				return
+			}
+			for _, r := range spec.Positions[op.Index] {
+				if r.ID == op.Opt[0] && r.Min > 0 && r.Min < op.Opt[1] {
+					v := s.optScore(editSlots(b, linkedSlots(b, op.Slot), func(e *calc.Equip) {
+						if op.Index < len(e.Opts) {
+							e.Opts[op.Index] = [2]int{r.ID, r.Min}
+						} else {
+							e.Opts = append(e.Opts, [2]int{r.ID, r.Min})
+						}
+					}), o.Goal)
+					op.OptMin = "(" + strconv.Itoa(r.Min) + "): " + pct(v)
+					return
+				}
+			}
 		case "card", "enchant":
 			sb := b
 			if op.Skill != "" { // measured on that skill, not on the attack
@@ -245,7 +274,11 @@ func (s *Server) optDetails(ctx context.Context, b calc.Build, res *optResult, o
 	}
 }
 
+// gainPct reads a gain back ("+12,5%", or "+3.200" for the status goals).
 func gainPct(t string) float64 {
+	if !strings.Contains(t, "%") {
+		t = strings.ReplaceAll(t, ".", "")
+	}
 	f, _ := strconv.ParseFloat(strings.NewReplacer("+", "", "%", "", ",", ".").Replace(t), 64)
 	return f
 }
@@ -494,7 +527,7 @@ func (s *Server) stoneSets(ctx context.Context, b calc.Build, goal, l string) (o
 		}
 		seen[key] = true
 		opts = append(opts, optOption{Item: viewItem(c.Items[parts[0].Card], l), Kind: "set", Name: key,
-			Value: fmtInt(int64(st.score + 0.5)), Gain: pctOf(st.score/base, l), Slot: "set", Index: len(opts), Parts: parts, Positive: true})
+			Value: fmtInt(int64(st.score + 0.5)), Gain: goalGain(goal, base, st.score, l), Slot: "set", Index: len(opts), Parts: parts, Positive: true})
 	}
 	return opts, tested
 }

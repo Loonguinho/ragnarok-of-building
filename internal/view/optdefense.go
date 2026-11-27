@@ -25,7 +25,41 @@ const (
 	GoalDamage  = "dmg"
 	GoalPhysDef = "pdef"
 	GoalMagDef  = "mdef"
+	GoalMaxHP   = "hp"    // Max HP
+	GoalCRate   = "crate" // T.CRÍT (C.RATE)
 )
+
+// crateBase is added to C.RATE when it is scored: it is small, and 0 in many
+// builds, and the rankings compare scores by their ratio.
+const crateBase = 1000
+
+// statGoal reports a goal that is a number of the status window: it needs no
+// target, and gains read as that number.
+func statGoal(goal string) bool { return goal == GoalMaxHP || goal == GoalCRate }
+
+// goalValue is the number to show for a score.
+func goalValue(goal string, score float64) float64 {
+	if goal == GoalCRate {
+		return score - crateBase
+	}
+	return score
+}
+
+// goalGain is a change in the score as text: "+12,5%", or the number itself
+// for the status window's ("+3.200", "+4").
+func goalGain(goal string, base, score float64, l string) string {
+	if !statGoal(goal) {
+		if base <= 0 {
+			return ""
+		}
+		return pctChange(score/base, l)
+	}
+	d := int64(math.Round(score - base))
+	if d < 0 {
+		return fmtInt(d)
+	}
+	return "+" + fmtInt(d)
+}
 
 // effectiveHP is the build's effective HP against its target (physical or
 // magic); 0 without a target.
@@ -63,13 +97,18 @@ func (s *Server) effectiveHP(b calc.Build, physical bool) float64 {
 	return float64(r.HP) / pass
 }
 
-// optScore is what the optimizer raises: expected damage or effective HP.
+// optScore is what the optimizer raises: expected damage, effective HP, Max
+// HP or C.RATE.
 func (s *Server) optScore(b calc.Build, goal string) float64 {
 	switch goal {
 	case GoalPhysDef:
 		return s.effectiveHP(b, true)
 	case GoalMagDef:
 		return s.effectiveHP(b, false)
+	case GoalMaxHP:
+		return float64(calc.Compute(b, s.opt.Catalog).HP)
+	case GoalCRate:
+		return float64(crateBase + calc.Compute(b, s.opt.Catalog).CRATE)
 	}
 	return s.optExpected(b)
 }

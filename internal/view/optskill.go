@@ -18,7 +18,7 @@ import (
 
 const (
 	optSkillMax = 3 // skill cards listed per position, besides the best ones
-	optSetMax   = 5 // card sets listed, besides the attack's own
+	optSetMax   = 15 // card sets listed, besides the attack's own
 )
 
 // boostsSkill reports a card or enchant with a bonus for the skill code.
@@ -84,7 +84,10 @@ func (s *Server) cardSets(ctx context.Context, b calc.Build, o OptOptions, tag, 
 	if base <= 0 {
 		return nil, 0, nil
 	}
-	code := s.attackCode(b)
+	code := ""
+	if o.Goal == GoalDamage {
+		code = s.attackCode(b)
+	}
 	// The card positions there are.
 	type place struct {
 		slot string
@@ -124,7 +127,7 @@ next:
 		slices.Sort(ids)
 		for _, id := range ids {
 			it := c.Items[id]
-			if it == nil || it.Type != "Card" || it.SubType == "Enchant" || it.Name.Get("pt") == "" || o.NoMVP && it.MVPCard {
+			if it == nil || it.Type != "Card" || it.SubType == "Enchant" || it.Name.Get("pt") == "" || o.NoMVP && it.MVPCard || it.Preview && !o.Preview {
 				continue next
 			}
 			names = append(names, it.Name.Get(l))
@@ -193,7 +196,7 @@ next:
 			continue
 		}
 		op := optOption{Item: viewItem(c.Items[st.parts[0].Card], l), Kind: "set", Value: fmtInt(int64(st.score + 0.5)),
-			Gain: pctOf(st.score/base, l), Slot: "cards", Index: i, Parts: st.parts, Positive: true}
+			Gain: goalGain(o.Goal, base, st.score, l), Slot: "cards", Index: i, Parts: st.parts, Positive: true}
 		if st.skill {
 			op.Tag = tag
 			sk++
@@ -315,7 +318,7 @@ func (s *Server) multiCards(ctx context.Context, b calc.Build, pos []optPosition
 				names = append(names, cn)
 			}
 			op := optOption{Item: viewItem(c.Items[cb.cards[0]], l), Kind: "set", Name: strings.Join(names, " + "),
-				Value: fmtInt(int64(cb.score + 0.5)), Gain: strings.Replace(pctOf(cb.score/base, l), "+-", "-", 1),
+				Value: fmtInt(int64(cb.score + 0.5)), Gain: goalGain(o.Goal, base, cb.score, l),
 				Slot: p.slots[0], Index: len(g.Options), Parts: parts, Positive: gains, Later: !gains}
 			if slices.ContainsFunc(cb.cards, func(id int) bool { return scalesWithItem(c.Items[id]) }) {
 				op.Steps = s.stepsOf(ctx, b, p.slots, fill(cb.cards), o.Goal, l)

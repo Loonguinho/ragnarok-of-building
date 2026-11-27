@@ -26,7 +26,7 @@ func (v *Views) BestCardsTraits(ctx context.Context, b calc.Build, slot string, 
 	s := v.s
 	c := s.opt.Catalog
 	var res BestResult
-	if c.Monster(b.Target) == nil {
+	if c.Monster(b.Target) == nil && !statGoal(goal) {
 		res.NoTarget = true
 		return res
 	}
@@ -128,7 +128,7 @@ feed:
 		return out[i].id < out[j].id
 	})
 	for _, sc := range out[:min(len(out), bestTop)] {
-		ln := StatLine{Diff: pctChange(sc.ratio, l), Better: sc.ratio > 1.0005, Same: sc.ratio > 0.9995 && sc.ratio < 1.0005}
+		ln := StatLine{Diff: goalGain(goal, base, sc.ratio*base, l), Better: sc.ratio > 1.0005, Same: sc.ratio > 0.9995 && sc.ratio < 1.0005}
 		if ln.Same {
 			ln.Diff = "="
 		}
@@ -146,7 +146,7 @@ feed:
 			parts[i].SlotLabel = tr(l, slotLabel(parts[i].Slot))
 		}
 		bi := BestItem{Item: viewItem(c.Items[cs.id], l), Ratio: cs.ratio, Combo: parts,
-			Gain: StatLine{Diff: pctChange(cs.ratio, l), Better: true}}
+			Gain: StatLine{Diff: goalGain(goal, base, cs.ratio*base, l), Better: true}}
 		insertBest(&res, bi)
 	}
 	if traits {

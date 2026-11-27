@@ -105,7 +105,7 @@ func TestOptimizerRandomOptions(t *testing.T) {
 	c.Items[1202] = &gamedata.Item{ID: 1202, Name: gamedata.Text{"pt": "Faca Boa"}, Type: "Weapon", SubType: "Dagger", Locations: []string{"Right_Hand"}, Attack: 17, WeaponLv: 1}
 	c.ItemOpts[1202] = c.ItemOpts[1201]
 	gain := func(opts bool) (float64, string) {
-		r := v.BestItemsOpts(context.Background(), b, calc.Weapon, 7, 0, opts, "pt")
+		r := v.BestItemsOpts(context.Background(), b, calc.Weapon, GoalDamage, 7, 0, opts, "pt")
 		for _, it := range r.Items {
 			if it.Item.ID == 1202 {
 				return it.Ratio, it.OptsText
@@ -256,5 +256,102 @@ func TestOptimizerMultiCards(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("three of the card that grows at +9, with its step: %+v", g.Options)
+	}
+}
+
+// TestOptimizerFilters: items above the level and those still to come are
+// left out unless asked for; a random option says what its lowest roll gives.
+func TestOptimizerFilters(t *testing.T) {
+	s, c, b := extraCatalog(t)
+	knife := func(id int, name string) *gamedata.Item {
+		it := &gamedata.Item{ID: id, Name: gamedata.Text{"pt": name}, Type: "Weapon", SubType: "Dagger", Locations: []string{"Right_Hand"}, Attack: 500, WeaponLv: 1}
+		c.Items[id] = it
+		return it
+	}
+	knife(1301, "Faca Alta").EquipLvMin = 90
+	knife(1302, "Faca Futura").Preview = true
+	has := func(o OptOptions) (high, soon bool) {
+		o.Items = true
+		for _, g := range s.optimizeWith(context.Background(), b, o, "pt").Groups {
+			for _, x := range g.Options {
+				high = high || x.Item.ID == 1301
+				soon = soon || x.Item.ID == 1302
+			}
+		}
+		return
+	}
+	if h, p := has(OptOptions{}); h || p {
+		t.Errorf("by default: above the level %v, to come %v", h, p)
+	}
+	if h, p := has(OptOptions{AnyLevel: true}); !h || p {
+		t.Errorf("AnyLevel: %v %v", h, p)
+	}
+	if h, p := has(OptOptions{Preview: true}); h || !p {
+		t.Errorf("Preview: %v %v", h, p)
+	}
+	for _, g := range s.optimizeWith(context.Background(), b, OptOptions{Opts: true}, "pt").Groups {
+		if g.Kind == "opt" && !strings.HasPrefix(g.Options[0].OptMin, "(5): +") {
+			t.Errorf("lowest roll: %q", g.Options[0].OptMin)
+		}
+	}
+}
+
+// TestOptimizerSameRefine: items are suggested at the refine of the one worn.
+func TestOptimizerSameRefine(t *testing.T) {
+	s, c, b := extraCatalog(t)
+	c.Items[1303] = &gamedata.Item{ID: 1303, Name: gamedata.Text{"pt": "Faca Boa"}, Type: "Weapon", SubType: "Dagger",
+		Locations: []string{"Right_Hand"}, Attack: 60, WeaponLv: 1, Refineable: true}
+	at := func(o OptOptions) int {
+		o.Items = true
+		for _, g := range s.optimizeWith(context.Background(), b, o, "pt").Groups {
+			for _, x := range g.Options {
+				if x.Item.ID == 1303 {
+					return x.Refine
+				}
+			}
+		}
+		return -1
+	}
+	if got := at(OptOptions{SameRefine: true}); got != 7 {
+		t.Errorf("as worn: +%d, want +7", got)
+	}
+	if got := at(OptOptions{Refine: 4}); got != 4 {
+		t.Errorf("at +4: +%d", got)
+	}
+}
+
+// TestOptimizerStatGoals: Max HP and C.RATE, without a target, in the number
+// itself.
+func TestOptimizerStatGoals(t *testing.T) {
+	s, c, b := extraCatalog(t)
+	c.Items[4700] = &gamedata.Item{ID: 4700, Name: gamedata.Text{"pt": "Carta de HP"}, Type: "Card", Locations: []string{"Right_Hand"},
+		Script: "bonus bMaxHP,1500; if (getrefine()>=9) bonus bMaxHP,500;"}
+	c.Items[4701] = &gamedata.Item{ID: 4701, Name: gamedata.Text{"pt": "Carta de Crítico"}, Type: "Card", Locations: []string{"Right_Hand"}, Script: "bonus bCRate,4;"}
+	b.Target = 0
+	first := func(goal string) (string, optOption) {
+		r := s.optimizeWith(context.Background(), b, OptOptions{Goal: goal, Cards: true}, "pt")
+		if r.NoTarget {
+			t.Fatalf("%s asks for a target", goal)
+		}
+		for _, g := range r.Groups {
+			if g.Kind == "card" && len(g.Options) > 0 {
+				return r.Base, g.Options[0]
+			}
+		}
+		t.Fatalf("%s suggests nothing", goal)
+		return "", optOption{}
+	}
+	if _, o := first(GoalMaxHP); o.Item.ID != 4700 || o.Gain != "+1.500" || len(o.Steps) == 0 || o.Steps[0].Gain != "+2.000" {
+		t.Errorf("Max HP: %+v", o)
+	}
+	if base, o := first(GoalCRate); base != "0" || o.Item.ID != 4701 || o.Gain != "+4" {
+		t.Errorf("C.RATE: base %s, %+v", base, o)
+	}
+	v := &Views{s: s}
+	if r := v.BestCards(context.Background(), b, calc.Weapon, 0, GoalCRate, "pt"); r.NoTarget || r.Items[0].Item.ID != 4701 || r.Items[0].Gain.Diff != "+4" {
+		t.Errorf("Melhor carta by C.RATE: %+v", r)
+	}
+	if gainPct("+12.500") != 12500 || gainPct("+12,5%") != 12.5 || gainPct("-3") != -3 {
+		t.Error("gainPct")
 	}
 }

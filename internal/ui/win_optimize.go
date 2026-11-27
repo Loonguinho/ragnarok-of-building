@@ -27,6 +27,12 @@ type optimizeState struct {
 	items, cards, enc Checkbox
 	mvp, rolls, cos   Checkbox
 	noOpts, noCos     bool
+	lvl, soon         Checkbox
+	anyLevel, preview bool
+	tabs              Tabs
+	tab               int // what the results show: an index of optTabs
+	moreBtns          map[string]*widget.Clickable
+	more              map[string]int // options shown besides the first optShown, by group
 	tiers             map[string]*widget.Clickable
 	tra               Checkbox
 	traits            bool // also search trait distributions
@@ -34,6 +40,7 @@ type optimizeState struct {
 	noItems, noCards, noEnch bool
 	noMVP                    bool
 	refine, grade            int
+	fixRef, fixGra           bool // a refine or grade was chosen: not the worn item's
 	goalVal                  string
 
 	run    widget.Clickable
@@ -45,6 +52,10 @@ type optimizeState struct {
 	open   map[string]bool
 }
 
+// sameRefine, sameGrade: items are suggested at the worn item's.
+func (s *optimizeState) sameRefine() bool { return !s.fixRef && s.refine == 0 }
+func (s *optimizeState) sameGrade() bool  { return !s.fixGra && s.grade == 0 }
+
 func (a *App) runOptimizer() {
 	s := &a.opt
 	a.mu.Lock()
@@ -54,7 +65,7 @@ func (a *App) runOptimizer() {
 	}
 	s.busy = true
 	b, lang := a.b.Clone(), a.Lang
-	o := view.OptOptions{Goal: s.goalVal, Items: !s.noItems, Cards: !s.noCards, Enchants: !s.noEnch, NoMVP: s.noMVP, Opts: !s.noOpts, Costumes: !s.noCos, Refine: s.refine, Grade: s.grade, Traits: s.traits}
+	o := view.OptOptions{Goal: s.goalVal, Items: !s.noItems, Cards: !s.noCards, Enchants: !s.noEnch, NoMVP: s.noMVP, SameRefine: s.sameRefine(), SameGrade: s.sameGrade(), AnyLevel: s.anyLevel, Preview: s.preview, Opts: !s.noOpts, Costumes: !s.noCos, Refine: s.refine, Grade: s.grade, Traits: s.traits}
 	a.mu.Unlock()
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -88,6 +99,8 @@ func (a *App) optimizeBody(gtx C) D {
 		s.expand = map[string]*widget.Clickable{}
 		s.open = map[string]bool{}
 		s.tiers = map[string]*widget.Clickable{}
+		s.moreBtns = map[string]*widget.Clickable{}
+		s.more = map[string]int{}
 	}
 	if res != nil {
 		for _, g := range res.Groups {
@@ -100,17 +113,26 @@ func (a *App) optimizeBody(gtx C) D {
 			}
 		}
 	}
-	goals := []Option{{view.GoalDamage, a.T("Dano")}, {view.GoalPhysDef, a.T("Defesa física")}, {view.GoalMagDef, a.T("Defesa mágica")}}
-	var refs []Option
+	goals := a.goalOptions()
+	refs := []Option{{"cur", a.T("igual ao atual")}}
 	for r := 0; r <= 20; r++ {
 		refs = append(refs, Option{strconv.Itoa(r), "+" + strconv.Itoa(r)})
 	}
-	grades := []Option{{"0", "—"}, {"1", "D"}, {"2", "C"}, {"3", "B"}, {"4", "A"}}
+	grades := []Option{{"cur", a.T("igual ao atual")}, {"0", "—"}, {"1", "D"}, {"2", "C"}, {"3", "B"}, {"4", "A"}}
 	check := func(c *Checkbox, off *bool, label string) layout.Widget {
 		return func(gtx C) D {
 			d, toggled := c.Layout(gtx, th, !*off, label)
 			if toggled {
 				*off = !*off
+			}
+			return d
+		}
+	}
+	on := func(c *Checkbox, v *bool, label string) layout.Widget {
+		return func(gtx C) D {
+			d, toggled := c.Layout(gtx, th, *v, label)
+			if toggled {
+				*v = !*v
 			}
 			return d
 		}
@@ -131,16 +153,26 @@ func (a *App) optimizeBody(gtx C) D {
 			check(&s.items, &s.noItems, a.T("Itens")),
 			T(th, a.T("Refino")).W(),
 			func(gtx C) D {
-				d, v, ok := s.ref.Layout(gtx, th, a.Desk, refs, strconv.Itoa(s.refine), 56)
+				cur := strconv.Itoa(s.refine)
+				if s.sameRefine() {
+					cur = "cur"
+				}
+				d, v, ok := s.ref.Layout(gtx, th, a.Desk, refs, cur, 108)
 				if ok {
+					s.fixRef = v != "cur"
 					s.refine, _ = strconv.Atoi(v)
 				}
 				return d
 			},
 			T(th, a.T("Grau")).W(),
 			func(gtx C) D {
-				d, v, ok := s.gra.Layout(gtx, th, a.Desk, grades, strconv.Itoa(s.grade), 56)
+				cur := strconv.Itoa(s.grade)
+				if s.sameGrade() {
+					cur = "cur"
+				}
+				d, v, ok := s.gra.Layout(gtx, th, a.Desk, grades, cur, 108)
 				if ok {
+					s.fixGra = v != "cur"
 					s.grade, _ = strconv.Atoi(v)
 				}
 				return d
@@ -154,6 +186,7 @@ func (a *App) optimizeBody(gtx C) D {
 		}),
 		check(&s.enc, &s.noEnch, a.T("Encantamentos (os que o cliente lista para cada item)")),
 		Row(10, check(&s.rolls, &s.noOpts, a.T("Bônus aleatórios (valor máximo)")), check(&s.cos, &s.noCos, a.T("Visuais e conjuntos"))),
+		Row(10, on(&s.lvl, &s.anyLevel, a.T("Itens acima do meu nível")), on(&s.soon, &s.preview, a.T("Itens em breve"))),
 		func(gtx C) D {
 			d, toggled := s.tra.Layout(gtx, th, s.traits, a.T("Considerar mudar os talentos"))
 			if toggled {
@@ -230,19 +263,51 @@ func (a *App) optResult(r view.OptResult) layout.Widget {
 		measure = a.T("HP efetivo atual vs golpes físicos do alvo")
 	case view.GoalMagDef:
 		measure = a.T("HP efetivo atual vs magias do alvo")
+	case view.GoalMaxHP:
+		measure = a.T("HP máx. atual")
+	case view.GoalCRate:
+		measure = a.T("C.Rate atual")
 	}
 	head := []layout.Widget{Row(4, T(th, a.T("Alvo")+":").W(), B(th, r.Target).W())}
 	if r.Goal == view.GoalDamage || r.Goal == "" {
 		head[0] = Row(4, T(th, a.T("Alvo")+":").W(), B(th, r.Target).W(), T(th, "· "+r.Attack).W())
+	}
+	if r.Goal == view.GoalMaxHP || r.Goal == view.GoalCRate { // no target in these
+		head = nil
 	}
 	head = append(head, Row(4, T(th, measure+":").W(), B(th, r.Base).W()))
 	kids := []layout.Widget{Col(1, head...)}
 	if r.Partial {
 		kids = append(kids, note(a.T("Tempo esgotado: alguns slots não foram testados.")))
 	}
+	// The results by kind.
+	count := make([]int, len(optTabs))
+	for _, g := range r.Groups {
+		if len(g.Options) > 0 {
+			count[0]++
+			count[optTabOf(g)]++
+		}
+	}
+	labels := make([]string, len(optTabs))
+	for i, t := range optTabs {
+		labels[i] = fmt.Sprintf("%s (%d)", a.T(t), count[i])
+	}
+	kids = append(kids, func(gtx C) D {
+		d, picked, ok := s.tabs.Layout(gtx, th, labels, s.tab)
+		if ok {
+			s.tab = picked
+		}
+		return d
+	})
+	if count[s.tab] == 0 {
+		kids = append(kids, note(a.T("Nada melhor do que o atual aqui.")))
+	}
 	var none []string
 	for _, g := range r.Groups {
 		g := g
+		if s.tab != 0 && optTabOf(g) != s.tab {
+			continue
+		}
 		if len(g.Options) == 0 {
 			none = append(none, g.Label)
 			continue
@@ -256,13 +321,17 @@ func (a *App) optResult(r view.OptResult) layout.Widget {
 	if len(none) > 0 {
 		kids = append(kids, note(a.T("Sem melhora")+": "+strings.Join(none, ", ")))
 	}
+	in := func(tab int) bool { return s.tab == 0 || s.tab == tab }
 	for _, t := range r.NoSlot {
+		if !in(2) {
+			break
+		}
 		kids = append(kids, note(a.T("Conjunto da habilidade que não cabe")+": "+t))
 	}
-	if len(r.NoCostume) > 0 {
+	if len(r.NoCostume) > 0 && in(5) {
 		kids = append(kids, note(a.T("Sem visual equipado (equipe um para testar as pedras)")+": "+strings.Join(r.NoCostume, ", ")))
 	}
-	if len(r.NoEnch) > 0 {
+	if len(r.NoEnch) > 0 && in(3) {
 		kids = append(kids, note(a.T("Sem lista de encantamentos no cliente (encantados por NPC), não testados")+": "+strings.Join(r.NoEnch, ", ")))
 	}
 	kids = append(kids, note(fmt.Sprintf(a.T("%d combinações testadas. Bônus condicionais entram pela média, como na janela de dano."), r.Tested)))
@@ -318,6 +387,9 @@ func (a *App) optGroupRows(g view.OptGroup, gk string) layout.Widget {
 								}
 								if o.Name != "" && o.Kind == "opt" {
 									ws = append(ws, T(th, o.Item.Name).Sz(SmallText).C(ColMuted).W())
+									if o.OptMin != "" {
+										ws = append(ws, T(th, a.T("no mínimo")+" "+o.OptMin).Sz(SmallText).C(ColLink).W())
+									}
 								}
 								if o.Tag != "" {
 									ws = append(ws, T(th, o.Tag).Sz(SmallText).C(ColLink).W())
@@ -334,7 +406,7 @@ func (a *App) optGroupRows(g view.OptGroup, gk string) layout.Widget {
 							layout.Rigid(func(gtx C) D {
 								c := ColUp
 								switch {
-								case o.Gain == "=" || o.Later || o.Gain == "+0,0%" || o.Gain == "+0.0%":
+								case o.Gain == "=" || o.Later || o.Gain == "+0,0%" || o.Gain == "+0.0%" || o.Gain == "+0":
 									c = ColMuted
 								case strings.HasPrefix(o.Gain, "-"):
 									c = ColDown
@@ -367,7 +439,7 @@ func (a *App) optGroupRows(g view.OptGroup, gk string) layout.Widget {
 					if !more {
 						return Gap(22, 0)(gtx)
 					}
-					return Inset(0, 0, 0, 3).Layout(gtx, func(gtx C) D { return Button{MinWidth: 24, Arrow: foldArrow(s.open[gk])}.Layout(gtx, th, ex) })
+					return Inset(0, 0, 0, 3).Layout(gtx, func(gtx C) D { return Button{MinWidth: 24, Arrow: foldArrow(s.open[optOpenKey(s.tab, gk)] != (s.tab != 0))}.Layout(gtx, th, ex) })
 				}),
 			)
 		}
@@ -392,16 +464,39 @@ func (a *App) optGroupRows(g view.OptGroup, gk string) layout.Widget {
 		}
 		return rows
 	}
+	// In its own tab a group starts open; with everything, closed.
+	ok := optOpenKey(s.tab, gk)
+	isOpen := func() bool { return s.open[ok] != (s.tab != 0) }
 	return func(gtx C) D {
 		gtx0 = gtx
 		if ex.Clicked(gtx) {
-			s.open[gk] = !s.open[gk]
+			s.open[ok] = !s.open[ok]
+		}
+		mb := s.moreBtns[gk]
+		if mb == nil {
+			mb = &widget.Clickable{}
+			s.moreBtns[gk] = mb
+		}
+		if mb.Clicked(gtx) {
+			s.more[gk] += optMore
 		}
 		rows := withTiers(g.Options[0], B(th, g.Label).Sz(SmallText).C(ColTitleText).Wrapping().W(), true)
-		if s.open[gk] {
-			rows = append(rows, Pad(Inset(0, labelW, 0, 0), T(th, a.T("atual")+": "+curName).Sz(SmallText).C(ColMuted).W()))
-			for _, o := range g.Options[1:] {
+		if isOpen() {
+			if g.Kind != "set" {
+				rows = append(rows, Pad(Inset(0, labelW, 0, 0), T(th, a.T("atual")+": "+curName).Sz(SmallText).C(ColMuted).W()))
+			}
+			left := 0
+			for i, o := range g.Options[1:] {
+				if i+1 >= optShown+s.more[gk] && o.Tag == "" && !o.Later {
+					left++
+					continue
+				}
 				rows = append(rows, withTiers(o, func(gtx C) D { return D{} }, false)...)
+			}
+			if left > 0 {
+				rows = append(rows, Pad(Inset(2, 0, 2, labelW), func(gtx C) D {
+					return Button{Label: fmt.Sprintf(a.T("Mostrar mais (%d)"), left), Arrow: ArrowDown}.Layout(gtx, th, mb)
+				}))
 			}
 		} else { // the attack's own cards show without opening
 			for _, o := range g.Options[1:] {
@@ -718,4 +813,37 @@ func (a *App) stepsText(o view.OptOption) (refine, grade string) {
 		grade = a.T("Ganho com grau maior:") + " " + strings.Join(g, " · ")
 	}
 	return refine, grade
+}
+
+// The result tabs, and how many options a group shows before "Mostrar mais".
+var optTabs = []string{"Tudo", "Equip.", "Cartas", "Encant.", "BAs", "Visuais"}
+
+const (
+	optShown = 6
+	optMore  = 10
+)
+
+// optTabOf is the tab a group of results is in.
+func optTabOf(g view.OptGroup) int {
+	costume := strings.HasPrefix(g.Slot, "Costume_")
+	switch {
+	case costume || g.Kind == "set" && g.Slot == "set":
+		return 5
+	case g.Kind == "item":
+		return 1
+	case g.Kind == "enchant":
+		return 3
+	case g.Kind == "opt":
+		return 4
+	}
+	return 2 // cards, their sets, and one item's cards together
+}
+
+// optOpenKey is where a group's folding is kept: "everything" and the tabs
+// have their own.
+func optOpenKey(tab int, gk string) string {
+	if tab != 0 {
+		return "closed/" + gk
+	}
+	return gk
 }

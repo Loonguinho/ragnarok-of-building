@@ -28,7 +28,7 @@ const (
 
 // TraitOptions are the comparison's choices.
 type TraitOptions struct {
-	Goal     string // GoalDamage, GoalPhysDef, GoalMagDef
+	Goal     string // like OptOptions.Goal
 	AnyLevel bool   // also other levels of the enchants (and positions without one)
 }
 
@@ -356,11 +356,13 @@ func (v *Views) CompareTraits(ctx context.Context, b calc.Build, o TraitOptions,
 		return out
 	}
 	m := c.Monster(b.Target)
-	if m == nil {
+	if m == nil && !statGoal(o.Goal) {
 		out.NoTarget = true
 		return out
 	}
-	out.Target = m.NameIn(l)
+	if m != nil {
+		out.Target = m.NameIn(l)
+	}
 	if o.Goal == "" {
 		o.Goal = GoalDamage
 	}
@@ -388,7 +390,7 @@ func (v *Views) CompareTraits(ctx context.Context, b calc.Build, o TraitOptions,
 	}
 	col := func(title string, tr [6]int, sc traitScore) TraitCol {
 		cl := TraitCol{Title: title, Traits: tr, Ratio: sc.score / base, Build: t.with(tr, sc.cards)}
-		cl.Gain = StatLine{Diff: pctChange(cl.Ratio, l), Better: cl.Ratio > 1.0005, Same: cl.Ratio > 0.9995 && cl.Ratio < 1.0005}
+		cl.Gain = StatLine{Diff: goalGain(o.Goal, base, sc.score, l), Better: cl.Ratio > 1.0005, Same: cl.Ratio > 0.9995 && cl.Ratio < 1.0005}
 		if cl.Gain.Same {
 			cl.Gain.Diff = "="
 		}
@@ -469,6 +471,10 @@ func (s *Server) traitRows(cols []TraitCol, goal, l string) []CompareRow {
 		label = "HP efetivo (físico)"
 	case GoalMagDef:
 		label = "HP efetivo (mágico)"
+	case GoalMaxHP:
+		label = "HP máx."
+	case GoalCRate:
+		label = "C.Rate"
 	}
 	row := func(lb string, main bool, get func(i int) float64) CompareRow {
 		out := CompareRow{Label: tr(l, lb), Main: main}
@@ -494,7 +500,7 @@ func (s *Server) traitRows(cols []TraitCol, goal, l string) []CompareRow {
 		}
 		return out
 	}
-	out := []CompareRow{row(label, true, func(i int) float64 { return s.optScore(cols[i].Build, goal) })}
+	out := []CompareRow{row(label, !statGoal(goal), func(i int) float64 { return goalValue(goal, s.optScore(cols[i].Build, goal)) })}
 	for _, st := range stats {
 		differs := false
 		for _, r := range rs[1:] {
@@ -549,7 +555,7 @@ func (s *Server) traitAlternatives(ctx context.Context, b calc.Build, slot strin
 		}
 		best := ranked[0]
 		out = append(out, BestItem{Item: viewItem(c.Items[id], l), Ratio: ratio, Traits: &best,
-			Gain: StatLine{Diff: pctChange(ratio, l), Better: true}})
+			Gain: StatLine{Diff: goalGain(goal, base, ratio*base, l), Better: true}})
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Ratio > out[j].Ratio })
 	return out[:min(len(out), 5)]

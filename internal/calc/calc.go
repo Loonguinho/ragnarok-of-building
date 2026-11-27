@@ -177,19 +177,21 @@ type Result struct {
 	HP, SP, AP          int
 	StatusATK, EquipATK int // ATK shown as "StatusATK + EquipATK"
 	// Parts of EquipATK the damage formula treats differently.
-	WeaponATK        int // weapon's own ATK (after bWeaponAtkRate)
-	Ammo             *gamedata.Item // equipped ammunition; nil = none
-	AmmoATK          int            // its ATK (for the attacks that fire or throw it)
-	AmmoEle          string         // its element ("" = neutral)
-	AmmoFires        bool           // the weapon shoots it
-	WeaponRefineATK  int // refine bonus ATK
-	OtherEquipATK    int // armor ATK, bAtk, shadow weapon
-	WeaponLv         int
-	WeaponRefine     int
-	WeaponWeight     int           // tenths
-	ShieldWeight     int           // tenths; 0 without a shield
-	Combos           [][]int       // item sets whose combo bonus is active
-	ComboEffects     []ComboEffect // what each active combo adds (same order)
+	WeaponATK       int            // weapon's own ATK (after bWeaponAtkRate)
+	Ammo            *gamedata.Item // equipped ammunition; nil = none
+	AmmoATK         int            // its ATK (for the attacks that fire or throw it)
+	AmmoEle         string         // its element ("" = neutral)
+	AmmoFires       bool           // the weapon shoots it
+	WeaponRefineATK int            // refine bonus ATK
+	OtherEquipATK   int            // armor ATK, bAtk, shadow weapon
+	WeaponLv        int
+	WeaponRefine    int
+	WeaponWeight    int           // tenths
+	ShieldWeight    int           // tenths; 0 without a shield
+	Combos          [][]int       // item sets whose combo bonus is active
+	ComboEffects    []ComboEffect // what each active combo adds (same order)
+	// Sources: where the cast and delay reductions come from (sources.go).
+	Sources          []Source
 	ShieldRefine     int
 	Ranged           bool
 	CritTenths       int    // CRIT in 1/10 % (rAthena cri), for crit chance
@@ -374,15 +376,29 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 	for _, cb := range ClassBuffsFor(c, b.Job) {
 		own[cb.Key] = &cb
 		allowed[cb.Key] = true
+		// A support buff counts by itself at the level learned, unless the
+		// player turned it off.
+		if cb.AutoSkill != 0 && at.States[cb.Key] == 0 {
+			if lv := b.Skills[cb.AutoSkill]; lv > 0 {
+				if at.States == nil {
+					at.States = map[string]int{}
+				}
+				at.States[cb.Key] = lv
+			}
+		}
 	}
 	for k, v := range at.States {
 		switch {
 		case !allowed[k] || v == 0:
 			delete(at.States, k)
+		case v == autoOff && own[k] != nil && own[k].AutoSkill != 0:
 		case own[k] != nil && own[k].validValue(v):
 		default:
 			at.States[k] = clamp(v, 0, max(10, top[k]))
 		}
+	}
+	if n := keepMaxOverthrust(at.States); n != "" {
+		notes = append(notes, n)
 	}
 	// One class buff per exclusive group (the three Mantras...): the first in order.
 	excl := map[string]bool{}
@@ -717,6 +733,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		res := script.Eval(itemScript(it, &r.SkippedScriptEffects), ctx)
 		lenv.overLatam(it, e.Item, slot, true, e.Refine, &res)
 		effects.add(e.Item, it, ctx, res.Autobonus, slot, true, e.Refine)
+		r.noteSources("item", res.Bonus, e.Item)
 		addAll(bonus, res.Bonus)
 		addAll(extra, res.Extra)
 		r.SkippedScriptEffects += res.Skipped
@@ -725,6 +742,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 				octx := ctx
 				octx.OptValue = o[1]
 				or := script.Eval(ro.Script, octx)
+				r.noteSources("opt", or.Bonus, e.Item)
 				addAll(bonus, or.Bonus)
 				addAll(extra, or.Extra)
 				r.SkippedScriptEffects += or.Skipped
@@ -739,6 +757,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 				cr := script.Eval(itemScript(ci, &r.SkippedScriptEffects), cctx)
 				lenv.overLatam(ci, cd, slot, false, e.Refine, &cr)
 				effects.add(cd, ci, cctx, cr.Autobonus, slot, false, e.Refine)
+				r.noteSources("card", cr.Bonus, cd)
 				addAll(bonus, cr.Bonus)
 				addAll(extra, cr.Extra)
 				r.SkippedScriptEffects += cr.Skipped
@@ -773,9 +792,13 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	}
 	applyAmmo(&r, sbase, bonus, extra)
 	r.Combos, r.ComboEffects = applyCombos(c, &b, sbase, bonus, extra, &r.SkippedScriptEffects)
+	for _, ce := range r.ComboEffects {
+		r.noteSources("combo", ce.Bonus, ce.Items...)
+	}
 	r.ItemEffects = effects.list
 	for _, ef := range effects.list {
 		if ef.On {
+			r.noteSources("effect", ef.Bonus, ef.Item)
 			addAll(bonus, ef.Bonus)
 			addAll(extra, ef.Extra)
 		}
@@ -785,6 +808,7 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 		ctx.PetIntimacy = b.PetIntimacy
 		res := script.Eval(p.Script, ctx)
 		r.PetBonus, r.PetExtra = res.Bonus, res.Extra
+		r.noteSources("pet", res.Bonus, b.Pet)
 		addAll(bonus, res.Bonus)
 		addAll(extra, res.Extra)
 	}
@@ -792,11 +816,19 @@ func Compute(b Build, c *gamedata.Catalog) Result {
 	for i := range baseJob {
 		baseJob[i] = b.Stats[i] + jb[i]
 	}
+	before := keptBefore(bonus)
 	applyBuffs(&b, baseJob, bonus, extra)
-	applyClassBuffs(&b, c, bonus, extra)                  // the class's own buffs (Buffs window, Próprios)
-	applyConsumables(&b, c, lenv, bonus, extra)           // consumables (Buffs window, Consumíveis)
+	r.noteAdded("buffs", before, bonus)
+	before = keptBefore(bonus)
+	applyClassBuffs(&b, c, bonus, extra) // the class's own buffs (Buffs window, Próprios)
+	r.noteAdded("classbuffs", before, bonus)
+	before = keptBefore(bonus)
+	applyConsumables(&b, c, lenv, bonus, extra) // consumables (Buffs window, Consumíveis)
+	r.noteAdded("consumables", before, bonus)
+	before = keptBefore(bonus)
 	LatamPassives(b, c, r.WeaponType, bonus, extra)       // hand-written class rules (latam_class.go)
 	applyClassPassives(&b, c, r.WeaponType, bonus, extra) // the class passives generated from latam-ro-calc
+	r.noteAdded("passives", before, bonus)
 	r.Bonuses = bonus
 	r.Extra = extra
 	r.HardDEF += refineDef / 100

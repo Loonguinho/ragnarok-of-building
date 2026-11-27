@@ -115,7 +115,7 @@ func TestBuffSkillsExist(t *testing.T) {
 
 // Every generated class buff gives bonuses the calculator reads.
 func TestClassBuffScripts(t *testing.T) {
-	names := map[string]bool{"bAddSize": true, "bIgnoreDefClassRate": true, "bMagicAddRace": true, "bSkillAtk": true}
+	names := map[string]bool{"bAddSize": true, "bIgnoreDefClassRate": true, "bMagicAddRace": true, "bSkillAtk": true, "bNoSizeFix": true}
 	for k := range buffBonusNames {
 		names[k] = true
 	}
@@ -124,6 +124,9 @@ func TestClassBuffScripts(t *testing.T) {
 		for _, b := range bs {
 			for v, src := range b.Scripts {
 				n++
+				if b.Name == maximizePower && src == "" { // works on the damage itself
+					continue
+				}
 				res := script.Eval(src, script.Context{BaseLv: 200, JobLv: 50})
 				if res.Skipped > 0 || len(res.Bonus)+len(res.Extra) == 0 {
 					t.Errorf("%s %s=%d: %q gives %v %v (skipped %d)", job, b.Name, v, src, res.Bonus, res.Extra, res.Skipped)

@@ -2,6 +2,8 @@ package view
 
 import (
 	"fmt"
+	"slices"
+	"sort"
 	"strings"
 
 	"ragnarok-of-building/internal/calc"
@@ -157,4 +159,104 @@ func ToleranceLines(r calc.Result, l string) []AttrLine {
 	}
 	out = append(out, AttrLine{tr(l, "Críticos"), fmt.Sprintf("%d%%", r.CritShield())})
 	return out
+}
+
+// CastSources lists where the cast and delay reductions come from, item
+// by item (as latam-ro-calc's and latam-tools' breakdowns do): a title
+// line per kind (variable cast, fixed cast, after-cast delay), then its
+// sources, largest first.
+func (v *Views) CastSources(r calc.Result, l string) []AttrLine {
+	c := v.s.opt.Catalog
+	name := func(id int) string {
+		if it := c.Items[id]; it != nil {
+			return it.Name.Get(l)
+		}
+		return fmt.Sprint("#", id)
+	}
+	label := func(s calc.Source) string {
+		switch s.Kind {
+		case "item", "card", "pet", "effect":
+			if len(s.Items) > 0 {
+				return name(s.Items[0])
+			}
+		case "opt":
+			if len(s.Items) > 0 {
+				return tr(l, "Bônus aleatório de") + " " + name(s.Items[0])
+			}
+		case "combo":
+			var ns []string
+			for _, id := range s.Items {
+				ns = append(ns, name(id))
+			}
+			return tr(l, "Conjunto") + ": " + strings.Join(ns, " + ")
+		case "buffs":
+			return tr(l, "Buffs de grupo")
+		case "classbuffs":
+			return tr(l, "Buffs da classe")
+		case "consumables":
+			return tr(l, "Consumíveis")
+		case "passives":
+			return tr(l, "Habilidades passivas")
+		}
+		return s.Kind
+	}
+	type part struct {
+		title string
+		keys  []string
+		show  func(int) string
+	}
+	minus := func(s string) string { return strings.Replace(s, "-", "−", 1) }
+	pct := func(n int) string { return minus(fmt.Sprintf("%+d%%", n)) }
+	secs := func(n int) string {
+		return minus(strings.Replace(fmt.Sprintf("%+.1f s", float64(n)/1000), ".", decimalSep(l), 1))
+	}
+	var out []AttrLine
+	for _, p := range []part{
+		{tr(l, "Conjuração variável"), []string{"bVariableCastrate", "bCastrate"}, pct},
+		{tr(l, "Conjuração fixa"), []string{"bFixedCastrate"}, pct},
+		{tr(l, "Conjuração fixa"), []string{"bFixedCast"}, secs},
+		{tr(l, "Pós-conjuração"), []string{"bDelayrate"}, pct},
+	} {
+		sum := map[string]int{}
+		var order []string
+		for _, s := range r.Sources {
+			if !slices.Contains(p.keys, s.Key) {
+				continue
+			}
+			k := label(s)
+			if _, ok := sum[k]; !ok {
+				order = append(order, k)
+			}
+			sum[k] += s.Value
+		}
+		var lines []AttrLine
+		total := 0
+		for _, k := range order {
+			if sum[k] != 0 {
+				lines = append(lines, AttrLine{k, p.show(sum[k])})
+				total += sum[k]
+			}
+		}
+		if len(lines) == 0 {
+			continue
+		}
+		sort.SliceStable(lines, func(i, j int) bool { return abs(sum[lines[i].Label]) > abs(sum[lines[j].Label]) })
+		out = append(out, AttrLine{"— " + p.title, p.show(total)})
+		out = append(out, lines...)
+	}
+	return out
+}
+
+func decimalSep(l string) string {
+	if l == "en" {
+		return "."
+	}
+	return ","
+}
+
+func abs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
 }

@@ -22,7 +22,14 @@ type ClassBuff struct {
 	Excl    string // buffs that cannot be on together share it
 	Choices [][2]string
 	Scripts map[int]string // value -> rAthena script
+	// AutoSkill: a support buff the character casts on itself, on by
+	// itself at the level learned in the skill tree (this skill's ID); the
+	// value autoOff turns it off ("—").
+	AutoSkill int
 }
+
+// autoOff is an automatic buff turned off by the player.
+const autoOff = -1
 
 var latamClassBuffs = map[string][]ClassBuff{}
 
@@ -68,6 +75,20 @@ func ClassBuffsFor(c *gamedata.Catalog, jobID int) []ClassBuff {
 		}
 		cb := ClassBuff{Name: s.Name.Get("en"), Skill: s.Code, Label: s.Name.Get("pt"), Excl: e.Group,
 			Choices: [][2]string{{"0", "—"}}, Scripts: e.Levels}
+		if g, ok := buffExcl[s.Code]; ok {
+			cb.Excl = g
+		}
+		if extra := buffExtra[s.Code]; extra != "" {
+			scripts := map[int]string{}
+			for lv, sc := range cb.Scripts {
+				scripts[lv] = sc + " " + extra
+			}
+			cb.Scripts = scripts
+		}
+		if autoBuffs[s.Code] {
+			cb.AutoSkill = s.ID
+			cb.Choices[0] = [2]string{strconv.Itoa(autoOff), "—"}
+		}
 		lvs := make([]int, 0, len(e.Levels))
 		for lv := range e.Levels {
 			lvs = append(lvs, lv)

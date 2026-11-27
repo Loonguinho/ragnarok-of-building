@@ -14,6 +14,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"ragnarok-of-building/internal/gamedata"
 )
 
 // Job holds every per-job table, keyed by the job's numeric ID.
@@ -123,6 +125,8 @@ type DB struct {
 	SkillPassive map[string]bool
 	// SkillQuest: skills learned by quest, which cost no points.
 	SkillQuest map[string]bool
+	// SkillTimes: cast, delay and cooldown per level (skill_db.yml).
+	SkillTimes map[string]*gamedata.SkillTimes
 
 	optDrops [][2]string // (item AegisName, RandomOptionGroup) from monster drops
 }
@@ -287,6 +291,11 @@ func Load(dir string) (*DB, error) {
 		return nil, err
 	}
 	if err := db.loadSkillWeapons(filepath.Join(re, "skill_db.yml")); err != nil {
+		return nil, fmt.Errorf("rathena: skill_db.yml: %w", err)
+	}
+	if st, err := LoadSkillTimes(filepath.Join(re, "skill_db.yml")); err == nil {
+		db.SkillTimes = st
+	} else if !os.IsNotExist(err) {
 		return nil, fmt.Errorf("rathena: skill_db.yml: %w", err)
 	}
 	if err := db.loadPets(filepath.Join(re, "pet_db.yml"), aegis); err != nil {

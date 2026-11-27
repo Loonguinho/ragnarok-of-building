@@ -29,6 +29,8 @@ type damageView struct {
 	// Table: every learned damaging skill against the target (build view
 	// only; the optimizer leaves it empty).
 	Table []skillRow
+	// Timing: how often the attack goes, for the damage per second.
+	Timing calc.Timing
 }
 
 type atkSkill struct {
@@ -150,6 +152,7 @@ func (s *Server) damageView(b calc.Build, r calc.Result, l string) damageView {
 	}
 	v.Dmg = calc.Damage(b, r, c, m, atk)
 	v.ElementName = tr(l, elementPT[v.Dmg.Element])
+	v.Timing = calc.AttackTiming(r, c, b.Atk.Skill, b.Atk.Level)
 	return v
 }
 

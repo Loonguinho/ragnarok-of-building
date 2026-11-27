@@ -62,6 +62,7 @@ func MergeRathena(c *gamedata.Catalog, db *rathena.DB) (jobs, items int) {
 			sk.Type = "Quest"
 		}
 		sk.Passive = db.SkillPassive[sk.Code] || descPassive(sk.Desc["pt"])
+		sk.Times = db.SkillTimes[sk.Code]
 	}
 	// Pets whose egg the client has.
 	c.Pets = map[int]*gamedata.Pet{}

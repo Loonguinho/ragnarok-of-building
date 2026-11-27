@@ -174,26 +174,26 @@ type StateOption struct {
 
 // SkillFormula is a LATAM damage formula for one skill.
 type SkillFormula struct {
-	Code          string
-	Name          string                     // latam-ro-calc's name
-	Ratio         func(FormulaInput) float64 // % of ATK/MATK, total for one use
-	Magic         bool                       // MATK-based (magic pipeline)
-	Element       string                     // fixed element ("" = weapon/endow)
-	ElementFn     func(FormulaInput) string  // element by level or state; wins over Element
-	Hits          func(FormulaInput) int     // real damage multiplier (totalHit); nil = 1
-	Flat          func(FormulaInput) int64   // added to each hit after every reduction
+	Code      string
+	Name      string                     // latam-ro-calc's name
+	Ratio     func(FormulaInput) float64 // % of ATK/MATK, total for one use
+	Magic     bool                       // MATK-based (magic pipeline)
+	Element   string                     // fixed element ("" = weapon/endow)
+	ElementFn func(FormulaInput) string  // element by level or state; wins over Element
+	Hits      func(FormulaInput) int     // real damage multiplier (totalHit); nil = 1
+	Flat      func(FormulaInput) int64   // added to each hit after every reduction
 	// Base replaces the ATK chain (Sopro do Dragão): DEF is subtracted, then
 	// ranged %, equipment skill bonus, BaseMul and the element apply.
-	Base    func(FormulaInput, Result) int64
-	BaseMul func(FormulaInput) int64
-	CanCrit       func(FormulaInput) bool    // nil = no crits
-	CritRate      float64                    // fraction of the crit chance (baseCriPercentage)
-	CritDmg       float64                    // fraction of the crit damage bonus (criDmgPercentage)
+	Base          func(FormulaInput, Result) int64
+	BaseMul       func(FormulaInput) int64
+	CanCrit       func(FormulaInput) bool // nil = no crits
+	CritRate      float64                 // fraction of the crit chance (baseCriPercentage)
+	CritDmg       float64                 // fraction of the crit damage bonus (criDmgPercentage)
 	ForceCrit     bool
 	IgnoreDef     bool
 	IgnoreSoftDef bool
 	IgnoreRes     bool
-	HardDefFlat   bool // hard DEF is subtracted like soft DEF; no RES (Canhão de Prótons)
+	HardDefFlat   bool                    // hard DEF is subtracted like soft DEF; no RES (Canhão de Prótons)
 	Hit100        bool                    // never misses (latam-ro-calc isHit100)
 	Melee         func(FormulaInput) bool // nil = by weapon (ranged weapons are long range)
 	Weapons       []string                // required weapon types (rAthena SubType); empty = any

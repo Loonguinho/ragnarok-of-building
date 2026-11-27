@@ -8,6 +8,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op"
+	"gioui.org/unit"
 	"gioui.org/widget"
 
 	"ragnarok-of-building/internal/calc"
@@ -17,7 +18,7 @@ import (
 // ---- Menu (win-menu) ----
 
 type menuState struct {
-	undo [2]widget.Clickable
+	undo     [2]widget.Clickable
 	toggles  []widget.Clickable
 	cmds     [5]widget.Clickable
 	gear     widget.Clickable
@@ -575,7 +576,7 @@ func (a *App) statusBody(gtx C) D {
 				{"Esquiva", fmt.Sprintf("%d + %d", r.FLEE, r.FLEE2)},
 				{"ASPD", fmt.Sprint(r.ASPD)},
 			}),
-				tipped(&s.castTip, "Conj. var.", castVal, "Conjuração variável", view.CastLines(r, a.Lang)),
+				tipped(&s.castTip, "Conj. var.", castVal, "Conjuração variável", append(view.CastLines(r, a.Lang), a.V.CastSources(r, a.Lang)...)),
 				tipped(&s.tolTip, "Tolerâncias", a.T("ver"), "Tolerâncias a status", view.ToleranceLines(r, a.Lang)),
 			),
 		),
@@ -619,9 +620,16 @@ func (a *App) statusBody(gtx C) D {
 
 // tipRows lays attribute effect lines as "label  value" rows of a tooltip.
 func tipRows(th *Theme, lines []view.AttrLine) []layout.Widget {
+	// Wider when a line is long (the sets in Conjuração variável's sources).
+	w := unit.Dp(150)
+	for _, l := range lines {
+		if len([]rune(l.Label)) > 26 {
+			w = 210
+		}
+	}
 	var ws []layout.Widget
 	for _, l := range lines {
-		ws = append(ws, Row(0, Fixed(150, T(th, l.Label).C(ColLabel).W()), T(th, l.Value).W()))
+		ws = append(ws, RowTop(0, Fixed(w, T(th, l.Label).C(ColLabel).Wrapping().W()), T(th, l.Value).W()))
 	}
 	return ws
 }

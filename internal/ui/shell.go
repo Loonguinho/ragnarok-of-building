@@ -390,6 +390,7 @@ func (a *App) resumoBody(gtx C) D {
 				extra = append(extra, Row(4, killParts...), hit)
 				ws = append(ws, Row(14, extra...))
 			}
+			ws = append(ws, a.dpsRows(d, expected, cmp, cv.D, cexp)...)
 			if w := a.elementWarning(d); w != nil {
 				ws = append(ws, w)
 			}

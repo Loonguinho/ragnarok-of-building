@@ -256,8 +256,7 @@ func (a *App) equipSlot(gtx C, sv view.SlotView) D {
 		st.Pop()
 	}
 	if sv.Item != nil && cl.Hovered() {
-		id := sv.Item.ID
-		a.Desk.ShowTip(func(gtx C) D { return a.itemTip(gtx, id, nil) })
+		a.Desk.ShowTip(func(gtx C) D { return a.equippedTip(gtx, sv) })
 	}
 	return d
 }

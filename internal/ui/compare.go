@@ -376,6 +376,8 @@ func (a *App) compareSlot(gtx C, key string) D {
 	st.Pop()
 	if rm.Hovered() {
 		a.Desk.ShowTip(func(gtx C) D { return TipBox(gtx, T(th, a.T("Parar de comparar este slot")).W()) })
+	} else if sv.Item != nil && cl.Hovered() {
+		a.Desk.ShowTip(func(gtx C) D { return a.equippedTip(gtx, sv) })
 	}
 	return d
 }

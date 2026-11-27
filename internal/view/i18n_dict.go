@@ -569,6 +569,7 @@ var dict = map[string][2]string{
 	"Comparar no equipamento":       {"Compare in the equipment window", "Comparar en el equipo"},
 	"Isso já é o que a build usa.":  {"That is what the build already uses.", "Eso ya es lo que usa la build."},
 	"Comparando no equipamento: veja o Resumo.": {"Comparing in the equipment window: see the Summary.", "Comparando en el equipo: mira el Resumen."},
+	"Encantamentos":   {"Enchants", "Encantamientos"},
 	"Masculino":       {"Male", "Masculino"},
 	"Feminino":        {"Female", "Femenino"},
 	"Cabelo":          {"Hair", "Pelo"},

@@ -1,8 +1,8 @@
 # Development
 
-Stack: Go · native window drawn with [Gio](https://gioui.org) (no browser engine) · data from the LATAM client itself (+ Divine Pride for item icons) · PT-BR / ES / EN.
+Stack: Go · [Gio](https://gioui.org), compiled to WebAssembly and run in the browser · data from the LATAM client itself · PT-BR / ES / EN.
 
-The old web version (HTMX pages, the hosted server and its Docker image) was retired in November 2026; its last state is the `legacy-web` branch.
+The desktop program (`cmd/app`) was discontinued on 2026-11-26 and its releases were removed; its last state is the `desktop` branch, and the code still in `main` is due to be removed. The older HTMX web version lives on the `legacy-web` branch.
 
 ## Game data
 
@@ -20,7 +20,7 @@ The same Gio program, compiled to WebAssembly (`cmd/web`), published on GitHub P
 
 ## Publishing a version
 
-To publish a version, push a tag: `git tag v0.1.0` then `git push origin v0.1.0`. The `release` workflow tests, builds `cmd/app` for Windows and attaches the zip to a new release. GitHub has no game client, so the catalog the zip ships is the committed `data/gen/catalog.json.gz`: after a game patch, run `go run ./cmd/import` and commit it before tagging. To build it locally: `go run ./tools/buildexe` (or `go build -ldflags -H=windowsgui -o RagnarokOfBuilding.exe ./cmd/app`).
+Merging into `main` publishes: the `web` workflow tests, builds the site and deploys it to GitHub Pages. There are no releases or downloads any more. GitHub has no game client, so the site ships the committed `data/gen/catalog.json.gz`: after a game patch, run `go run ./cmd/import` and commit it.
 
 ## Running from source
 

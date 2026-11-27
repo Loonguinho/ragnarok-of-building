@@ -35,7 +35,7 @@ web:
 	cp "$$(go env GOROOT)/lib/wasm/wasm_exec.js" dist/web/
 	sed 's/__VERSION__/$(VERSION)/g' web/index.html > dist/web/index.html
 	cp cmd/app/icon.png dist/web/icon.png
-	cp data/gen/catalog.json.gz dist/web/
+	go run ./tools/websplit -in data/gen/catalog.json.gz -out dist/web
 	cp -r web/icons dist/web/icons
 	touch dist/web/.nojekyll
 

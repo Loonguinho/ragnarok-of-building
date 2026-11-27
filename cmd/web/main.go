@@ -48,6 +48,8 @@ func main() {
 	start := &ui.Startup{Th: th, Status: st.get, Invalidate: w.Invalidate}
 	var simulator *ui.App
 	ready := make(chan *ui.App, 1)
+	descs := make(chan itemDescs, len(gamedata.Langs))
+	askedDescs := map[string]bool{} // the frame goroutine's
 
 	go func() {
 		v, err := load(st, log)
@@ -90,10 +92,22 @@ func main() {
 				}
 				gtx := app.NewContext(&ops, e)
 				if simulator != nil {
+					select {
+					case d := <-descs:
+						simulator.V.PutItemDescs(d.lang, d.descs)
+						timing("item descriptions in place (" + d.lang + ")")
+					default:
+					}
 					simulator.Frame(gtx)
 					if !drawn {
 						drawn = true
 						timing("first simulator frame")
+					}
+					// The item descriptions come once the window is up,
+					// in its language (again when the language changes).
+					if l := simulator.Lang; !askedDescs[l] {
+						askedDescs[l] = true
+						go loadItemDescs(l, descs, w.Invalidate, log)
 					}
 				} else {
 					start.Frame(gtx)
@@ -121,9 +135,13 @@ func timing(step string) {
 func load(st *status, log *slog.Logger) (*view.Views, error) {
 	timing("program started")
 	st.say("Baixando os dados do jogo…")
-	b, err := fetch(pageURL("catalog.json.gz?v="+version), func(n int64) {
-		st.replaceLast(fmt.Sprintf("Baixando os dados do jogo… %.1f MB", float64(n)/(1<<20)))
-	})
+	// index.html started this download along with the program's.
+	b, err := awaitBytes(js.Global().Get("robCatalog"))
+	if err == errNoPromise {
+		b, err = fetch(pageURL("catalog.json.gz?v="+version), func(n int64) {
+			st.replaceLast(fmt.Sprintf("Baixando os dados do jogo… %.1f MB", float64(n)/(1<<20)))
+		})
+	}
 	if err != nil {
 		return nil, fmt.Errorf("não deu para baixar os dados do jogo: %w", err)
 	}

@@ -33,6 +33,13 @@
 <noscript>O Ragnarok of Building precisa de JavaScript ligado.</noscript>
 <script src="wasm_exec.js?v=__VERSION__"></script>
 <script>
+  // The game data downloads along with the program; cmd/web picks it up.
+  window.robCatalog = fetch("catalog.json.gz?v=__VERSION__").then((r) => {
+    if (!r.ok) throw new Error("catalog.json.gz: " + r.status);
+    return r.arrayBuffer();
+  });
+  window.robCatalog.catch(() => {}); // the program reports a failure
+
   // The window uses Alt+letter shortcuts (Alt+D, Alt+E...); keep the browser
   // from taking them (address bar, menus). The program still gets the key.
   window.addEventListener("keydown", (e) => {

@@ -263,3 +263,20 @@ func Langs() [][2]string {
 	}
 	return out
 }
+
+// Yield lets the browser draw during long work (see yield_js.go); off the
+// browser it does nothing.
+func Yield() { yield() }
+
+// PutItemDescs gives the catalog's items their descriptions in lang, when
+// they arrive apart from it (the web page: gamedata.ReadItemDescs), with
+// the sets the client's texts leave out (completeSetTexts). Call it on
+// the window's goroutine, or where nothing else runs meanwhile.
+func (v *Views) PutItemDescs(lang string, d gamedata.ItemDescs) {
+	c := v.s.opt.Catalog
+	if c == nil {
+		return
+	}
+	gamedata.PutItemDescs(c, lang, d)
+	completeSetTexts(c)
+}

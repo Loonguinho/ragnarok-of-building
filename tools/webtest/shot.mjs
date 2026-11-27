@@ -40,6 +40,10 @@ ws.onmessage = (m) => {
 };
 const send = (method, params = {}) => new Promise(r => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
 await send("Runtime.enable"); await send("Page.enable");
+// In front: a background tab gets its timers throttled, and Go in wasm
+// switches goroutines through them.
+await send("Page.bringToFront");
+await send("Emulation.setFocusEmulationEnabled", { enabled: true });
 await send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
 for (const s of steps) if (s.preload) await send("Page.addScriptToEvaluateOnNewDocument", { source: s.preload });
 await send("Network.enable");
@@ -64,4 +68,6 @@ for (const s of steps) {
   }
   if (s.nav) { await send("Page.navigate", { url: s.nav }); }
 }
+// Close the tab: one left open keeps running the program and slows the next runs.
+await fetch(`http://127.0.0.1:${port}/json/close/${t.id}`).catch(() => {});
 ws.close(); process.exit(0);

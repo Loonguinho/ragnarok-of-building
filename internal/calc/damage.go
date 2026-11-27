@@ -221,6 +221,9 @@ func Damage(b Build, r Result, c *gamedata.Catalog, m *gamedata.Monster, a Attac
 		wmin = math.Max(0, math.Trunc(watk-variance+statBonus))
 		wmax = math.Trunc(watk + variance + statBonus)
 	}
+	if b.Atk.States[stateKey(maximizePower)] > 0 { // Amplificar Poder
+		wmin = wmax
+	}
 
 	bn := r.Bonuses
 	scar := shadowScarPctOn(b, isMelee, false)

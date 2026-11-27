@@ -68,6 +68,9 @@ func ClassBuffsFor(c *gamedata.Catalog, jobID int) []ClassBuff {
 		}
 		cb := ClassBuff{Name: s.Name.Get("en"), Skill: s.Code, Label: s.Name.Get("pt"), Excl: e.Group,
 			Choices: [][2]string{{"0", "—"}}, Scripts: e.Levels}
+		if g, ok := buffExcl[s.Code]; ok {
+			cb.Excl = g
+		}
 		lvs := make([]int, 0, len(e.Levels))
 		for lv := range e.Levels {
 			lvs = append(lvs, lv)

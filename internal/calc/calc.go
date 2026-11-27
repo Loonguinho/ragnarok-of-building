@@ -177,13 +177,13 @@ type Result struct {
 	HP, SP, AP          int
 	StatusATK, EquipATK int // ATK shown as "StatusATK + EquipATK"
 	// Parts of EquipATK the damage formula treats differently.
-	WeaponATK        int // weapon's own ATK (after bWeaponAtkRate)
+	WeaponATK        int            // weapon's own ATK (after bWeaponAtkRate)
 	Ammo             *gamedata.Item // equipped ammunition; nil = none
 	AmmoATK          int            // its ATK (for the attacks that fire or throw it)
 	AmmoEle          string         // its element ("" = neutral)
 	AmmoFires        bool           // the weapon shoots it
-	WeaponRefineATK  int // refine bonus ATK
-	OtherEquipATK    int // armor ATK, bAtk, shadow weapon
+	WeaponRefineATK  int            // refine bonus ATK
+	OtherEquipATK    int            // armor ATK, bAtk, shadow weapon
 	WeaponLv         int
 	WeaponRefine     int
 	WeaponWeight     int           // tenths
@@ -384,6 +384,7 @@ func Normalize(b *Build, c *gamedata.Catalog) (notes []string) {
 			at.States[k] = clamp(v, 0, max(10, top[k]))
 		}
 	}
+	keepMaxOverthrust(at.States)
 	// One class buff per exclusive group (the three Mantras...): the first in order.
 	excl := map[string]bool{}
 	for _, cb := range ClassBuffsFor(c, b.Job) {

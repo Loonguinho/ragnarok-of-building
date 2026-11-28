@@ -85,6 +85,13 @@ func ClassBuffsFor(c *gamedata.Catalog, jobID int) []ClassBuff {
 			}
 			cb.Scripts = scripts
 		}
+		if _, ok := ratioBuffs[s.Code]; ok { // counted on the ratio, not as ATK%
+			scripts := map[int]string{}
+			for lv := range cb.Scripts {
+				scripts[lv] = ""
+			}
+			cb.Scripts = scripts
+		}
 		if autoBuffs[s.Code] {
 			cb.AutoSkill = s.ID
 			cb.Choices[0] = [2]string{strconv.Itoa(autoOff), "—"}

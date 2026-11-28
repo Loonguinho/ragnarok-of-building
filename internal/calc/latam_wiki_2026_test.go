@@ -86,9 +86,9 @@ func TestWikiCoefficientFixes(t *testing.T) {
 	}
 }
 
-// TestWiki2026CritHalf: the client's text for the 2026 skills that can
-// crit says "A chance é a metade de CRIT do usuário": half the chance, the
-// whole crit damage.
+// TestWiki2026CritHalf: the 2026 skills that can crit take the whole crit
+// chance and half the crit damage bonus (rAthena, latam-tools, the English
+// client text; an Engenheiro replay agrees).
 func TestWiki2026CritHalf(t *testing.T) {
 	for _, tc := range []struct{ job, code string }{
 		{"JT_MEISTER", "MT_TRIPLE_LASER"},
@@ -99,8 +99,8 @@ func TestWiki2026CritHalf(t *testing.T) {
 			t.Errorf("%s: no formula", tc.code)
 			continue
 		}
-		if f.CanCrit == nil || f.CritRate != 0.5 || (f.CritDmg != 0 && f.CritDmg != 1) {
-			t.Errorf("%s: can crit %v, crit rate part %v, crit damage part %v; want 0.5 and the whole damage", tc.code, f.CanCrit != nil, f.CritRate, f.CritDmg)
+		if f.CanCrit == nil || f.CritDmg != 0.5 || (f.CritRate != 0 && f.CritRate != 1) {
+			t.Errorf("%s: can crit %v, crit rate part %v, crit damage part %v; want the whole chance and half the damage", tc.code, f.CanCrit != nil, f.CritRate, f.CritDmg)
 		}
 	}
 }
